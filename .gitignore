@@ -1,0 +1,17 @@
+# This repository contains only the project README and src/.
+# Local reverse-engineering tools, emulators, and reference installations stay local.
+/VisualPinballX/
+/dasm-*/
+/ghidra_*/
+/pinmame/
+/other-examples/
+/temp/
+/design docs/
+/tools/
+
+# Local editor and operating-system state
+/.vscode/
+/.idea/
+*.code-workspace
+Thumbs.db
+Desktop.ini
