@@ -7,7 +7,9 @@
 /other-examples/
 /temp/
 /design docs/
-/tools/
+/tools/*
+!/tools/ghidra_scripts/
+!/tools/ghidra_scripts/*.java
 
 # Local editor and operating-system state
 /.vscode/
