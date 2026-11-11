@@ -16,6 +16,10 @@ to follow the annotated code. The most useful anchors are reset at `E388`, the
 timer-output interrupt at `E022`, periodic I/O refresh at `E28C`, and the
 momentary-solenoid helper at `F5DF`. The labels and comments in that project
 are generated reproducibly by `tools/ghidra_scripts/AnnotateEightBallChampHardware.java`.
+For a playfield-switch change, begin at the five-strobe/eight-return matrix
+scan at `E1F0` (`0020` drives the strobe; `0022` reads returns), then use the
+number-to-feature table in `HARDWARE_MAP.md` before looking for the game-rule
+handler.
 
 The operations manual is `docs/Eight_Ball_Champ_OPS.pdf`; its schematic
 section is the physical-hardware authority. Cross-check a proposed switch,

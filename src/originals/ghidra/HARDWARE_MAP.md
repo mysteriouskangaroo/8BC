@@ -18,7 +18,7 @@ and distinguishes confirmed facts from the remaining schematic-tracing work.
 | Address range | Purpose | Confidence |
 | --- | --- | --- |
 | `0000-001F` | 6803 internal registers (ports, timers, serial hardware) | Confirmed |
-| `0020-0023` | PIA0: lamp-matrix path plus other I/O | Confirmed by schematic net names and ROM use |
+| `0020-0023` | PIA0: multiplexed lamp-address and switch-matrix path | Confirmed by schematic net names and ROM use |
 | `0040-0043` | PIA1: momentary-solenoid path plus other I/O | Confirmed by schematic net names and ROM use |
 | `0080-00FF` | 6803 on-chip RAM | Processor architecture; verify against the decoder sheet if needed |
 | `1000-17FF` | 2 KiB working RAM, U4 (6116) | High confidence; the ROM actively uses this area |
@@ -45,6 +45,47 @@ bank-enable lines make up to 48 individually addressable lamp-driver paths.
 The timer output-compare service at `E022` jumps to the periodic I/O refresh
 routine at `E28C`, which repeatedly updates `0020` and strobes the associated
 control line. That behavior agrees with a multiplexed lamp matrix.
+
+## Confirmed switch matrix: PIA0 at `0020` / `0022`
+
+The same PIA0 port A is time-multiplexed for switch scanning. The ROM entry at
+`E1F0` writes the five one-hot values `10`, `08`, `04`, `02`, and `01` to
+`0020`, waits briefly, then reads `0022` at `E20B`. That is a five-strobe by
+eight-return switch scan: 40 possible switch positions. Firmware keeps the
+sampled state in RAM and combines successive samples for debounce/edge
+handling before game rules consume an event.
+
+The wiring table assigns a switch number as `(strobe × 8) + return + 1`.
+The scan order in the ROM is therefore strobe 4 down to strobe 0. The exact
+PIA-package identity (U7 versus U8) remains deliberately unnamed, but the
+address-level relationship is confirmed: `0020` drives the matrix strobe and
+`0022` reads its returns.
+
+### Requested playfield switches
+
+| Player-visible feature | Wiring-table name | Switch no. | Strobe | Return |
+| --- | --- | ---: | ---: | ---: |
+| Left inlane | `C` return lane | 17 | 2 | 0 |
+| Green top rollover, left | `H` top lane | 18 | 2 | 1 |
+| Green top rollover, middle | `A` top lane | 19 | 2 | 2 |
+| Green top rollover, right | `M` top lane | 20 | 2 | 3 |
+| Right inlane | `P` return lane | 21 | 2 | 4 |
+| Left outlane | Left outlane | 23 | 2 | 6 |
+| Right outlane | Right outlane | 24 | 2 | 7 |
+| Left orange star rollover | Left rollover button | 12 | 1 | 3 |
+| Right orange star rollover | Right rollover button | 13 | 1 | 4 |
+| Middle orange star rollover | Center rollover button | 29 | 3 | 4 |
+| Spinner | Spinner | 32 | 3 | 7 |
+
+The `C` / `H` / `A` / `M` / `P` locations are the five playfield positions
+used to spell **CHAMP**. The source matrix calls the two lower positions
+“return lanes”; here they are also described as left/right inlanes so the
+documentation matches the playfield terminology.
+
+The printed switch-summary list in some copies of the manual transposes the
+spinner and lane-change positions. The wiring matrix is internally consistent
+with the ROM's five-by-eight scan and is used here: **spinner = 32** and the
+cabinet lane-change input = **26**.
 
 ## Confirmed momentary-solenoid path: PIA1 at `0040-0043`
 

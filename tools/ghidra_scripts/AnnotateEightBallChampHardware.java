@@ -37,6 +37,11 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         if (oldSymbol != null && newSymbol == null) {
             oldSymbol.setName(newName, SourceType.USER_DEFINED);
         }
+        else if (oldSymbol != null) {
+            // A prior run used the old generated name. Remove only that
+            // exact label once its replacement already exists.
+            oldSymbol.delete();
+        }
         else if (newSymbol == null) {
             symbols.createLabel(address, newName, SourceType.USER_DEFINED);
         }
@@ -118,12 +123,14 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         label(0xe388, "RESET_AND_SWI_ENTRY");
         label(0xe50f, "PIA_INITIALIZATION");
         label(0xe28c, "PERIODIC_IO_REFRESH");
+        label(0xe1f0, "SWITCH_MATRIX_SCAN");
         label(0xe0a1, "MOMENTARY_SOLENOID_PULSE_END");
         label(0xf5df, "MOMENTARY_SOLENOID_PULSE");
         replaceCommentText(0xe032, CodeUnit.PRE_COMMENT,
             "External IRQ service.  This path accesses the PIA at 0020-0023; it is a key switch/input-processing anchor.",
             "External PIA interrupt service. It acknowledges PIA control/port activity at 0020-0023; the specific input source remains untraced.");
         preComment(0xe022, "Timer output-compare service. It enters the periodic I/O refresh at E28C.");
+        preComment(0xe1f0, "Switch-matrix scan: drive the five one-hot strobes 10, 08, 04, 02, 01 through PIA0 port A (0020); after a short delay read the eight returns from PIA0 port B (0022) and debounce the samples in RAM. See HARDWARE_MAP.md for switch numbers.");
         preComment(0xe28c, "Periodic I/O refresh. It multiplexes the lamp path at PIA0 and services other board I/O.");
         replaceCommentText(0xe0a1, CodeUnit.PRE_COMMENT,
             "Momentary-solenoid pulse end: when RAM 100D expires, force PIA1 port-B's low nibble to F (off/unwired U14 selection).",
@@ -134,9 +141,11 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
 
         // Board-level memory map. PIA0/PIA1 identify the schematic nets, not
         // the as-yet-untraced U7/U8 package positions.
-        renameOurLabel(0x0020, "PIA_0020_PORTA_OR_DDRA", "PIA0_PORTA_LAMP_ADDRESS");
+        renameOurLabel(0x0020, "PIA_0020_PORTA_OR_DDRA", "PIA0_PORTA_LAMP_ADDRESS_AND_SWITCH_STROBE");
+        renameOurLabel(0x0020, "PIA0_PORTA_LAMP_ADDRESS", "PIA0_PORTA_LAMP_ADDRESS_AND_SWITCH_STROBE");
         renameOurLabel(0x0021, "PIA_0020_CRA", "PIA0_CRA");
-        renameOurLabel(0x0022, "PIA_0020_PORTB_OR_DDRB", "PIA0_PORTB_OR_DDRB");
+        renameOurLabel(0x0022, "PIA_0020_PORTB_OR_DDRB", "PIA0_PORTB_SWITCH_RETURNS");
+        renameOurLabel(0x0022, "PIA0_PORTB_OR_DDRB", "PIA0_PORTB_SWITCH_RETURNS");
         renameOurLabel(0x0023, "PIA_0020_CRB", "PIA0_CRB_LAMP_STROBE");
         renameOurLabel(0x0040, "PIA_0040_PORTA_OR_DDRA", "PIA1_PORTA_OR_DDRA");
         renameOurLabel(0x0041, "PIA_0040_CRA", "PIA1_CRA");
@@ -148,9 +157,9 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         // The I/O registers themselves have no allocated listing units.  Put
         // the explanatory text on every instruction that touches them, where
         // it is useful while following the control flow.
-        commentReferencesTo(0x0020, "I/O: PIA0 port A / DDRA. In peripheral-data mode: PA00-PA03 select a lamp driver; PA05-PA07 select the U15-U17 lamp bank. U7/U8 package assignment is untraced.");
+        commentReferencesTo(0x0020, "I/O: PIA0 port A / DDRA. During lamp refresh, PA00-PA03 select a lamp driver and PA05-PA07 select the U15-U17 bank. At E1F0 the same port drives the five one-hot switch-matrix strobes. U7/U8 package assignment is untraced.");
         commentReferencesTo(0x0021, "I/O: PIA0 control register A. Bit 2 selects port-data versus data-direction access at 0020.");
-        commentReferencesTo(0x0022, "I/O: PIA0 port B / DDRB (CRB bit 2 selects). Its physical function is not yet traced.");
+        commentReferencesTo(0x0022, "I/O: PIA0 port B / DDRB (CRB bit 2 selects). In peripheral-data mode this is the eight switch-matrix return inputs; E1F0 samples it once per strobe.");
         commentReferencesTo(0x0023, "I/O: PIA0 control register B. Its CB2 output is CB02, the common lamp-strobe signal.");
         commentReferencesTo(0x0040, "I/O: PIA1 port A / DDRA. Its physical function is not yet traced.");
         commentReferencesTo(0x0041, "I/O: PIA1 control register A. Bit 2 selects port-data versus data-direction access at 0040.");
