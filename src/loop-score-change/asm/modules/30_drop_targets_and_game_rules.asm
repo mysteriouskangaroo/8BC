@@ -187,12 +187,16 @@ HANDLE_SWITCH_05_SAUCER:
         JSR $c27e                    ; $D051
         LDAA $10bd                   ; $D054
         BITA #$80                    ; $D057
-        BEQ $d06a                    ; $D059
+        BEQ CHECK_SAUCER_TERMINAL_STATE ; $D059: preserve original +$0E branch
         CLR $10bd                    ; $D05B
         LDAA $103b                   ; $D05E
         ORAA #$80                    ; $D061
         STAA $103b                   ; $D063
         JSR $cedc                    ; $D066
+CHECK_SAUCER_TERMINAL_STATE:
+; The low nibble of 10C1 advances through 01, 02, 04, and 08. The first
+; three states continue through D07A, which advances the 2x/3x/5x lamps.
+; Only terminal state 08 takes the fully-lit score branch below.
         LDAA $10c1                   ; $D069
         BITA #$08                    ; $D06C: fully lit saucer state
         BEQ $d07a                    ; $D06E: retain the ordinary 500-point path

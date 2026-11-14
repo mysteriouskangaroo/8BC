@@ -101,6 +101,9 @@ $variationByteChecks = @(
     @{ Address = 0xCBA6; Bytes = [byte[]](0xBD, 0xCC, 0x32) }
     @{ Address = 0xCC32; Bytes = [byte[]](0xC1, 0x01, 0x27, 0x04, 0x5A,
             0x7E, 0xC9, 0xF9, 0x7E, 0xC9, 0xEF) }
+    # Preserve the original branch into the saucer-state test. A target of
+    # D06A would enter in the middle of the three-byte LDAA at D069.
+    @{ Address = 0xD059; Bytes = [byte[]](0x27, 0x0E) }
     @{ Address = 0xD070; Bytes = [byte[]](0xBD, 0xC9, 0xA4) }
 )
 foreach ($check in $variationByteChecks) {
