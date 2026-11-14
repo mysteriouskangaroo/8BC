@@ -89,6 +89,27 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         }
     }
 
+    private void managedEolComment(int offset, String prefix, String text) {
+        CodeUnit unit = currentProgram.getListing().getCodeUnitContaining(at(offset));
+        if (unit == null) return;
+
+        String existing = unit.getComment(CodeUnit.EOL_COMMENT);
+        String retained = "";
+        if (existing != null) {
+            for (String line : existing.split("\\n")) {
+                if (!line.startsWith(prefix)) {
+                    retained += (retained.length() == 0 ? "" : "\n") + line;
+                }
+            }
+        }
+        unit.setComment(CodeUnit.EOL_COMMENT,
+            retained.length() == 0 ? text : retained + "\n" + text);
+    }
+
+    private void piaModeComment(int offset, String text) {
+        managedEolComment(offset, "PIA mode: ", "PIA mode: " + text);
+    }
+
     private void replaceCommentText(int offset, int type, String oldText, String newText) {
         CodeUnit unit = currentProgram.getListing().getCodeUnitAt(at(offset));
         if (unit == null) return;
@@ -141,16 +162,20 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
 
         // Board-level memory map. PIA0/PIA1 identify the schematic nets, not
         // the as-yet-untraced U7/U8 package positions.
-        renameOurLabel(0x0020, "PIA_0020_PORTA_OR_DDRA", "PIA0_PORTA_LAMP_ADDRESS_AND_SWITCH_STROBE");
-        renameOurLabel(0x0020, "PIA0_PORTA_LAMP_ADDRESS", "PIA0_PORTA_LAMP_ADDRESS_AND_SWITCH_STROBE");
+        renameOurLabel(0x0020, "PIA_0020_PORTA_OR_DDRA", "PIA0_PORTA_OR_DDRA");
+        renameOurLabel(0x0020, "PIA0_PORTA_LAMP_ADDRESS", "PIA0_PORTA_OR_DDRA");
+        renameOurLabel(0x0020, "PIA0_PORTA_LAMP_ADDRESS_AND_SWITCH_STROBE", "PIA0_PORTA_OR_DDRA");
         renameOurLabel(0x0021, "PIA_0020_CRA", "PIA0_CRA");
-        renameOurLabel(0x0022, "PIA_0020_PORTB_OR_DDRB", "PIA0_PORTB_SWITCH_RETURNS");
-        renameOurLabel(0x0022, "PIA0_PORTB_OR_DDRB", "PIA0_PORTB_SWITCH_RETURNS");
-        renameOurLabel(0x0023, "PIA_0020_CRB", "PIA0_CRB_LAMP_STROBE");
+        renameOurLabel(0x0022, "PIA_0020_PORTB_OR_DDRB", "PIA0_PORTB_OR_DDRB");
+        renameOurLabel(0x0022, "PIA0_PORTB_SWITCH_RETURNS", "PIA0_PORTB_OR_DDRB");
+        renameOurLabel(0x0023, "PIA_0020_CRB", "PIA0_CRB");
+        renameOurLabel(0x0023, "PIA0_CRB_LAMP_STROBE", "PIA0_CRB");
         renameOurLabel(0x0040, "PIA_0040_PORTA_OR_DDRA", "PIA1_PORTA_OR_DDRA");
         renameOurLabel(0x0041, "PIA_0040_CRA", "PIA1_CRA");
-        renameOurLabel(0x0042, "PIA_0040_PORTB_OR_DDRB", "PIA1_PORTB_MOMENTARY_SOLENOID_DATA");
-        renameOurLabel(0x0043, "PIA_0040_CRB", "PIA1_CRB_SOLENOID_BANK_SELECT");
+        renameOurLabel(0x0042, "PIA_0040_PORTB_OR_DDRB", "PIA1_PORTB_OR_DDRB");
+        renameOurLabel(0x0042, "PIA1_PORTB_MOMENTARY_SOLENOID_DATA", "PIA1_PORTB_OR_DDRB");
+        renameOurLabel(0x0043, "PIA_0040_CRB", "PIA1_CRB");
+        renameOurLabel(0x0043, "PIA1_CRB_SOLENOID_BANK_SELECT", "PIA1_CRB");
         label(0x1000, "WORK_RAM_U4_6116_START");
         label(0x17ff, "WORK_RAM_U4_6116_END");
 
@@ -165,6 +190,34 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         commentReferencesTo(0x0041, "I/O: PIA1 control register A. Bit 2 selects port-data versus data-direction access at 0040.");
         commentReferencesTo(0x0042, "I/O: PIA1 port B / DDRB. In peripheral-data mode bits 0-3 are PB10-PB13: the momentary-solenoid number to U14. The upper nibble is preserved by the pulse helper.");
         commentReferencesTo(0x0043, "I/O: PIA1 control register B. Its CB2 output is CB12, the momentary-solenoid bank select.");
+
+        // Mode-selected data/DDR accesses. These comments state what the
+        // instruction reaches at that point in control flow; the address
+        // labels above remain neutral because CRA/CRB bit 2 can bank the
+        // corresponding port address between its DDR and peripheral data.
+        piaModeComment(0xe520, "PIA0 CRA bit 2 is clear, so 0020 accesses DDRA.");
+        piaModeComment(0xe522, "PIA0 CRB bit 2 is clear, so 0022 accesses DDRB.");
+        piaModeComment(0xe524, "PIA1 CRA bit 2 is clear, so 0040 accesses DDRA.");
+        piaModeComment(0xe526, "PIA1 CRB bit 2 is clear, so 0042 accesses DDRB.");
+        piaModeComment(0xe537, "PIA0 CRA bit 2 is set, so 0020 accesses port-A peripheral data.");
+        piaModeComment(0xe539, "PIA1 CRA bit 2 is set, so 0040 accesses port-A peripheral data.");
+        piaModeComment(0xe547, "PIA0 CRB bit 2 is set, so 0022 accesses port-B peripheral data.");
+
+        piaModeComment(0xe1e9, "CRB was just written with 30 (bit 2 clear); this zero write programs PIA0 DDRB as all inputs for the switch returns.");
+        piaModeComment(0xe1ed, "Writing 34 sets CRB bit 2, restoring PIA0 port-B peripheral-data access before the scan.");
+        piaModeComment(0xe1f6, "PIA0 CRA bit 2 is set; this writes the next one-hot switch strobe to port A.");
+        piaModeComment(0xe20b, "PIA0 CRB bit 2 is set; this reads the eight switch returns from port B.");
+
+        piaModeComment(0xe29c, "CRB was just written with 30 (bit 2 clear), so this instruction writes PIA0 DDRB.");
+        piaModeComment(0xe2a0, "Writing 34 sets CRB bit 2, selecting PIA0 port-B peripheral data.");
+        piaModeComment(0xe2a2, "PIA0 CRB bit 2 is set, so this instruction writes port-B peripheral data.");
+        piaModeComment(0xe2a4, "PIA0 CRA bit 2 is set, so this instruction writes port-A peripheral data for the multiplexed I/O path.");
+
+        piaModeComment(0xe0a3, "PIA1 CRB bit 2 is set; this reads port-B peripheral data before selecting U14 M15.");
+        piaModeComment(0xe0a5, "PIA1 CRB bit 2 is set; this writes U14 selector F to end the momentary pulse.");
+        piaModeComment(0xf5e6, "Both 34 and 3C keep CRB bit 2 set, selecting PIA1 port-B peripheral data; bit 3 controls CB12.");
+        piaModeComment(0xf5ea, "PIA1 CRB bit 2 is set; this reads port-B peripheral data so the upper nibble can be preserved.");
+        piaModeComment(0xf5f4, "PIA1 CRB bit 2 is set; this writes the momentary-solenoid selector through port B.");
 
         println("Eight Ball Champ hardware annotations applied.");
     }
