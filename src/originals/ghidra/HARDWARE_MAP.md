@@ -11,20 +11,85 @@ and distinguishes confirmed facts from the remaining schematic-tracing work.
 - **Ghidra program:** `u3_cpu.128`, analyzed as a Motorola 6801/6803-family processor.
 
 ## Definitions
- PIA: A Peripheral Interface Adapter is a 40-pin integrated circuit designed by Motorola in the 1970s to provide parallel input/output (I/O) interfacing for the Motorola 6800 family of microprocessors. For example, In an 8-bit parallel interface (like the 6821 PIA), there are 8 distinct physical wires dedicated to data. When the microprocessor sends a byte of data (e.g., 10110011), all 8 bits are sent across the 8 wires at the exact same instant, synchronized by a clock or control signal. The clock / control signal ensures that the sender and the receiver are perfectly synchronized and know exactly when to transmit or read data.
 
-## Working memory map
+- **PIA:** A Peripheral Interface Adapter connects the CPU's data bus to external input and output pins. The CPU reads or writes its registers using ordinary memory-access instructions; the PIA then samples or changes several physical signals in parallel.
+- **Working memory map:** The CPU's address book for RAM, ROM, internal hardware registers, and memory-mapped external devices. A RAM write stores a byte, while a write to an I/O address such as `0042` changes a PIA register and can ultimately change physical output signals.
+- **Data-direction register (DDR):** One bit per PIA pin that selects whether that pin is an input or an output. A 6821 uses control-register bit 2 to select whether its port address accesses the DDR or the external-data register.
+
+## Working memory map (16-bit address bus)
 
 | Address range | Purpose | Confidence |
 | --- | --- | --- |
 | `0000-001F` | 6803 internal registers (ports, timers, serial hardware) | Confirmed |
 | `0020-0023` | PIA0: multiplexed lamp-address and switch-matrix path | Confirmed by schematic net names and ROM use |
+| `0024-003F` | No device identified | Untraced; no direct absolute ROM reference found |
 | `0040-0043` | PIA1: momentary-solenoid path plus other I/O | Confirmed by schematic net names and ROM use |
+| `0044-007F` | No device identified | Untraced; no direct absolute ROM reference found |
 | `0080-00FF` | 6803 on-chip RAM | Processor architecture; verify against the decoder sheet if needed |
+| `0100-0FFF` | No device identified | Untraced; no direct absolute ROM reference found |
 | `1000-17FF` | 2 KiB working RAM, U4 (6116) | High confidence; the ROM actively uses this area |
-| `C000-FFFF` | U3 CPU ROM | Confirmed |
+| `1800-BFFF` | No device identified; likely unused address space | Untraced; no direct absolute ROM reference found |
+| `C000-FFFF` | U3 CPU ROM (where the game code lives) | Confirmed |
 
-The two PIAs are the ROM's bridge to the machine. A 6821's registers are organized as port A/DDRA, control A, port B/DDRB, control B at offsets `+0` through `+3`. **PIA0** and **PIA1** are schematic-net identities, not physical-chip designators: the exact correspondence to packages **U7/U8** remains unverified because sheets 1–4 are absent from this manual scan.
+Note: `No device identified` does **not** establish an electrically open bus,
+a RAM mirror, or an expansion device; those possibilities require the missing
+CPU/address-decoder schematic sheets or measurement. The current Ghidra
+disassembly has no direct absolute ROM reference into any of those ranges.
+That is useful negative evidence, but an address calculated at runtime and
+accessed through the X index register might not appear as an absolute
+reference.
+
+### PIA address names and mode selection
+The two PIAs are the ROM's bridge to the machine: each connects eight input or
+output wires at a time, plus a few control wires. Each PIA occupies four CPU
+addresses: port A (or its direction settings), control A, port B (or its
+direction settings), and control B. **PIA0** and **PIA1** name the two
+schematic signal groups, not specific chips: the available manual pages do not
+yet prove which group is physical package **U7** or **U8**.
+
+The canonical Ghidra project gives the PIA addresses neutral register names. The port addresses have two mode-selected meanings, so their labels do not embed one particular lamp, switch, or solenoid use:
+
+| Address | Ghidra label | Register selected |
+| --- | --- | --- |
+| `0020` | `PIA0_PORTA_OR_DDRA` | PIA0 port-A data if `0021` CRA bit 2 is set; DDRA if clear |
+| `0021` | `PIA0_CRA` | PIA0 control register A |
+| `0022` | `PIA0_PORTB_OR_DDRB` | PIA0 port-B data if `0023` CRB bit 2 is set; DDRB if clear |
+| `0023` | `PIA0_CRB` | PIA0 control register B |
+| `0040` | `PIA1_PORTA_OR_DDRA` | PIA1 port-A data if `0041` CRA bit 2 is set; DDRA if clear |
+| `0041` | `PIA1_CRA` | PIA1 control register A |
+| `0042` | `PIA1_PORTB_OR_DDRB` | PIA1 port-B data if `0043` CRB bit 2 is set; DDRB if clear |
+| `0043` | `PIA1_CRB` | PIA1 control register B |
+
+For the address labels, only control-register **bit 2** changes what a port
+address means:
+
+| Control bit 2 | Access at port A or B address | Plain-language meaning |
+| --- | --- | --- |
+| `0` | DDRA or DDRB | Configure each of the eight pins: `0` is an input and `1` is an output. |
+| `1` | Port-A or port-B data register | Read the input pins or write the output pins. |
+
+Bits 0 and 1 are relevant, but not to this address choice: bit 0 enables or
+disables interrupts from the `CA1`/`CB1` control input, and bit 1 selects which
+edge triggers that input. Bits 3–5 configure the second control wire
+(`CA2`/`CB2`) as an interrupt input or an output control signal; bits 6–7 are
+read-only interrupt-status flags. The analysis calls out bit 2 most often
+because it alone changes whether an instruction at a port address is a pin
+configuration access or a live I/O access.
+
+These are not confirmed address aliases. An address alias would mean that two
+different CPU addresses select the same physical register, usually because
+some address lines are not decoded. No such duplicate decoding has been
+established here. Instead, each port address is an intentionally banked PIA
+register selected by control bit 2.
+
+The distinction is visible during initialization. Writes at `E520-E526`
+occur after the relevant control bit has been cleared and therefore configure
+the four DDRs. Writes at `E537`, `E539`, and `E547` occur after bit 2 has been
+set and therefore access peripheral-data registers. The switch scan similarly
+selects PIA0 DDRB at `E1E9`, restores port-B data access at `E1ED`, writes a
+strobe through port A at `E1F6`, and reads the returns through port B at
+`E20B`. Ghidra records these mode-specific meanings on the individual
+instructions rather than overloading the address labels.
 
 ## Confirmed lamp path: PIA0 at `0020-0023`
 
@@ -61,31 +126,59 @@ PIA-package identity (U7 versus U8) remains deliberately unnamed, but the
 address-level relationship is confirmed: `0020` drives the matrix strobe and
 `0022` reads its returns.
 
-### Requested playfield switches
+### Page 1-18 switch assembly identification
 
-| Player-visible feature | Wiring-table name | Switch no. | Strobe | Return |
-| --- | --- | ---: | ---: | ---: |
-| Left inlane | `C` return lane | 17 | 2 | 0 |
-| Green top rollover, left | `H` top lane | 18 | 2 | 1 |
-| Green top rollover, middle | `A` top lane | 19 | 2 | 2 |
-| Green top rollover, right | `M` top lane | 20 | 2 | 3 |
-| Right inlane | `P` return lane | 21 | 2 | 4 |
-| Left outlane | Left outlane | 23 | 2 | 6 |
-| Right outlane | Right outlane | 24 | 2 | 7 |
-| Left orange star rollover | Left rollover button | 12 | 1 | 3 |
-| Right orange star rollover | Right rollover button | 13 | 1 | 4 |
-| Middle orange star rollover | Center rollover button | 29 | 3 | 4 |
-| Spinner | Spinner | 32 | 3 | 7 |
+The following table accounts for every switch listed in the **Switch Assembly
+Identification Table** on manual page 1-18 and places it in the ROM's 5-by-8
+matrix. The switch identities are corrected to match the wiring/ROM evidence
+and the actual-machine switch test.
 
-The `C` / `H` / `A` / `M` / `P` locations are the five playfield positions
-used to spell **CHAMP**. The source matrix calls the two lower positions
-“return lanes”; here they are also described as left/right inlanes so the
-documentation matches the playfield terminology.
+| Switch self-test # | Established switch identity | Strobe | Return |
+| ---: | --- | ---: | ---: |
+| 01 | Right Thumper Bumper | 0 | 0 |
+| 02 | Left Thumper Bumper | 0 | 1 |
+| 03 | Right Slingshot | 0 | 2 |
+| 04 | Left Slingshot | 0 | 3 |
+| 05 | Saucer | 0 | 4 |
+| 06 | Credit | 0 | 5 |
+| 07 | Rebound | 0 | 6 |
+| 08 | Outhole | 0 | 7 |
+| 09 | Coin III (Right) | 1 | 0 |
+| 10 | Coin I (Left) | 1 | 1 |
+| 11 | Coin II (Middle) | 1 | 2 |
+| 12 | Left Rollover Button | 1 | 3 |
+| 13 | Right Rollover Button | 1 | 4 |
+| 14 | Not Used | 1 | 5 |
+| 15 | Tilt | 1 | 6 |
+| 16 | Slam | 1 | 7 |
+| 17 | "C" Return Lane | 2 | 0 |
+| 18 | "H" Top Lane | 2 | 1 |
+| 19 | "A" Top Lane | 2 | 2 |
+| 20 | "M" Top Lane | 2 | 3 |
+| 21 | "P" Return Lane | 2 | 4 |
+| 22 | Not Used | 2 | 5 |
+| 23 | Left Outlane | 2 | 6 |
+| 24 | Right Outlane | 2 | 7 |
+| 25 | Drop Target 1,2,9,10 | 3 | 0 |
+| 26 | Lane Change (Cabinet) | 3 | 1 |
+| 27 | Drop Target 3,11 | 3 | 2 |
+| 28 | Drop Target 4,5,12,13 | 3 | 3 |
+| 29 | Center Rollover Button | 3 | 4 |
+| 30 | Drop Target 6,14 | 3 | 5 |
+| 31 | Drop Target 7,15 | 3 | 6 |
+| 32 | Spinner | 3 | 7 |
+| 33 | Drop Target "E" | 4 | 0 |
+| 34 | Drop Target "I" | 4 | 1 |
+| 35 | Drop Target "G" | 4 | 2 |
+| 36 | Drop Target "H" | 4 | 3 |
+| 37 | Drop Target "T" | 4 | 4 |
 
-The printed switch-summary list in some copies of the manual transposes the
-spinner and lane-change positions. The wiring matrix is internally consistent
-with the ROM's five-by-eight scan and is used here: **spinner = 32** and the
-cabinet lane-change input = **26**.
+Note: Manual page 1-18 prints the names for switches 26 and 32 in the opposite positions. The table above uses the corrected machine mapping: **26 = Lane Change (Cabinet)** and **32 = Spinner**. This was determined on an actual machine switch test.
+
+Note: Page 1-18 lists switch self-test positions 01 through 37. Electrical matrix
+positions 38 through 40 (strobe 4, returns 5 through 7) are not named on that
+page, so they are intentionally not assigned a feature here.
+
 
 ## Confirmed momentary-solenoid path: PIA1 at `0040-0043`
 
@@ -106,31 +199,32 @@ schematic and driver table assign no physical coil to `M15`, ending the
 momentary pulse. This is the firmware safety mechanism that prevents a
 momentary coil from being held on indefinitely.
 
-### U14 decoder outputs identified by both schematic and driver table
+### U14 decoder outputs and page 1-18 solenoid identification
 
 The binary value on `PB10-PB13` selects U14 output `M0` through `M15`. These
 physical outputs are cross-checked by connector/pin in the schematic and the
 manual's *Solenoid Driver Locations* table:
 
-| U14 output | Connector / pin | Physical coil |
-| --- | --- | --- |
-| `M0` | J6-1 | Drop targets 1/2 |
-| `M1` | J6-2 | Drop target 3 |
-| `M2` | J6-3 | Drop targets 4/5 |
-| `M3` | J6-4 | Drop target 6 |
-| `M4` | J8-7 | Drop target 7 |
-| `M7` | J9-1 | Saucer |
-| `M8` | J9-2 | Right thumper bumper |
-| `M9` | J9-3 | Left thumper bumper |
-| `M10` | J9-4 | Right slingshot |
-| `M11` | J9-6 | Left slingshot |
-| `M13` | J9-8 | Outhole |
-| `M14` | J7-2 | Knocker |
+| U14 output | Connector / pin | Physical coil | Page 1-18 solenoid self-test # | Description on page 1-18 |
+| --- | --- | --- | ---: | --- |
+| `M0` | J6-1 | Drop targets 1/2 | 04 | Drop Target 1,2,9,10 |
+| `M1` | J6-2 | Drop target 3 | 05 | Drop Target 3,11 |
+| `M2` | J6-3 | Drop targets 4/5 | 06 | Drop Target 4,5,12,13 |
+| `M3` | J6-4 | Drop target 6 | 07 | Drop Target 6,14 |
+| `M4` | J8-7 | Drop target 7 | 08 | Drop Target 7,15 |
+| `M7` | J9-1 | Saucer | 01 | Saucer |
+| `M8` | J9-2 | Right thumper bumper | 03 | Right Thumper Bumper |
+| `M9` | J9-3 | Left thumper bumper | 02 | Left Thumper Bumper |
+| `M10` | J9-4 | Right slingshot | 09 | Right Slingshot |
+| `M11` | J9-6 | Left slingshot | 10 | Left Slingshot |
+| `M13` | J9-8 | Outhole | 11 | Outhole |
+| `M14` | J7-2 | Knocker | 12 | Knocker |
+| Not yet traced | -- | K1 Relay (Flipper Enable) | 13 | K1 Relay (Flipper Enable) |
 
 The schematic also shows `M5`, `M6`, and `M12`, but the Eight Ball Champ
 driver-location table does not give each one a physical-coil name. They remain
-unnamed here rather than guessed. The flipper-enable relay K1 is documented
-as a controlled coil on the board, but its U14 output still needs a complete
+unnamed here rather than guessed. The flipper-enable relay K1 is listed as
+solenoid self-test 13 on page 1-18, but its U14 output still needs a complete
 trace through the unavailable sheet(s).
 
 ## Executable starting points
