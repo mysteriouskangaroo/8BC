@@ -64,8 +64,12 @@ RESET_AND_SWI_ENTRY:
         dc.b $8C,$01,$00                                     ; $E3D3 unconfirmed: CPX #$100
         dc.b $26,$ED                                         ; $E3D6 unconfirmed: BNE $e3c5
         dc.b $BD,$E4,$9D                                     ; $E3D8 unconfirmed: JSR $e49d
+VERIFY_ROM_ADDITIVE_CHECKSUM:
+; Sum the 0x40 256-byte pages from C000-FFFF. The final 8-bit sum must be FF;
+; otherwise carry returns set and reset enters the failure loop at E3E0.
         dc.b $CE,$C0,$00                                     ; $E3DB unconfirmed: LDX #$c000
         dc.b $8D,$0D                                         ; $E3DE unconfirmed: BSR $e3ed
+ROM_CHECKSUM_FAILURE_LOOP:
         dc.b $25,$FE                                         ; $E3E0 unconfirmed: BCS $e3e0
         dc.b $3C                                             ; $E3E2 unconfirmed: PSHX
         dc.b $BD,$E4,$9D                                     ; $E3E3 unconfirmed: JSR $e49d

@@ -43,12 +43,15 @@ From a PowerShell prompt at the repository root, run:
 The script performs the structural build checks and records comparison data:
 
   1. Verifies the immutable reference ROM's SHA-1.
-  2. Assembles main.asm with DASM's 6803 processor definition.
-  3. Requires the output to be exactly 16,384 bytes.
-  4. Validates that every interrupt/reset vector points inside C000-FFFF.
-  5. Compares every rebuilt byte with the reference ROM.
-  6. Records the rebuilt SHA-1 and the number and first differences.
-  7. Packages the rebuilt CPU ROM with the three immutable sound ROMs as
+  2. Performs a first assembly with a generated checksum placeholder.
+  3. Calculates the compensation byte at C000, then reassembles so the final
+     listing and ROM contain that value.
+  4. Requires exactly 16,384 bytes and an eight-bit ROM sum of FF, as required
+     by the machine's startup check at E3DB-E40D.
+  5. Validates that every interrupt/reset vector points inside C000-FFFF.
+  6. Compares every rebuilt byte with the reference ROM.
+  7. Records the rebuilt SHA-1 and the number and first differences.
+  8. Packages the rebuilt CPU ROM with the three immutable sound ROMs as
      VisualPinballX/VPinMAME/roms/eballchp.zip.
 
 Generated files are written to ../build/:
@@ -56,6 +59,7 @@ Generated files are written to ../build/:
   u3_cpu.rebuilt.128  rebuilt ROM
   u3_cpu.rebuilt.lst  assembler listing
   u3_cpu.rebuilt.sym  symbol table
+  rom_checksum.inc    generated second-pass checksum value
   verification.txt   size, hash, and byte-comparison result
 
 The packaged PinMAME set contains exactly these archive entries:

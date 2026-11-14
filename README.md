@@ -72,7 +72,9 @@ MC6801/6803 disassembler; it is not a separate disassembler.
    into annotated instructions as Ghidra analysis confirms them.
 5. Run `src/originals/asm/build.ps1` after every source change. It requires a
    structurally valid fixed-address 16 KiB image and records its hash and byte
-   differences from the reference. It also packages the rebuilt CPU ROM with
+   differences from the reference. Its two-pass assembly generates the
+   startup-checksum compensation byte at `$C000` and refuses to package unless
+   the final eight-bit ROM sum is `$FF`. It also packages the rebuilt CPU with
    the unchanged sound ROMs as
    `VisualPinballX/VPinMAME/roms/eballchp.zip`. Use `-RequireByteIdentical`
    when checking the initial reconstruction or an intentionally unchanged
