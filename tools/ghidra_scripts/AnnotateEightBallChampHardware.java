@@ -8,6 +8,7 @@
 import ghidra.app.script.GhidraScript;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.CodeUnit;
+import ghidra.program.model.listing.Function;
 import ghidra.program.model.symbol.Reference;
 import ghidra.program.model.symbol.ReferenceIterator;
 import ghidra.program.model.symbol.SourceType;
@@ -27,6 +28,14 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         if (existing == null) {
             symbols.createLabel(address, name, SourceType.USER_DEFINED);
         }
+    }
+
+    private void ensureFunction(int offset, String name) throws Exception {
+        Address address = at(offset);
+        disassemble(address);
+        Function function = currentProgram.getFunctionManager().getFunctionAt(address);
+        if (function == null) function = createFunction(address, name);
+        else if (function.getName().startsWith("FUN_")) function.setName(name, SourceType.USER_DEFINED);
     }
 
     private void renameOurLabel(int offset, String oldName, String newName) throws Exception {
@@ -124,6 +133,8 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
 
     @Override
     public void run() throws Exception {
+        ensureFunction(0xed40, "RUN_AUTOMATIC_SOLENOID_SELF_TEST");
+
         // Interrupt/reset vector table.
         label(0xfff0, "VECTOR_SCI");
         label(0xfff2, "VECTOR_TIMER_OVERFLOW");
@@ -147,6 +158,15 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         label(0xe1f0, "SWITCH_MATRIX_SCAN");
         label(0xe0a1, "MOMENTARY_SOLENOID_PULSE_END");
         label(0xf5df, "MOMENTARY_SOLENOID_PULSE");
+        label(0xf5c2, "PULSE_MOMENTARY_SOLENOID_BLOCKING");
+        label(0xc0aa, "SOLENOID_SELF_TEST_TABLE_POINTER");
+        label(0xc0ba, "SOLENOID_SELF_TEST_MOMENTARY_BANK0");
+        label(0xc0c6, "SOLENOID_SELF_TEST_MOMENTARY_BANK0_END");
+        label(0xc0c7, "SOLENOID_SELF_TEST_MOMENTARY_BANK1_END");
+        label(0xc0c8, "SOLENOID_SELF_TEST_CONTINUOUS_OUTPUTS");
+        label(0xc0c9, "SOLENOID_SELF_TEST_CONTINUOUS_END");
+        label(0xef09, "INCREMENT_AND_DISPLAY_SELF_TEST_NUMBER");
+        label(0xef1a, "INCREMENT_BCD_SELF_TEST_NUMBER");
         replaceCommentText(0xe032, CodeUnit.PRE_COMMENT,
             "External IRQ service.  This path accesses the PIA at 0020-0023; it is a key switch/input-processing anchor.",
             "External PIA interrupt service. It acknowledges PIA control/port activity at 0020-0023; the specific input source remains untraced.");
@@ -157,6 +177,7 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
             "Momentary-solenoid pulse end: when RAM 100D expires, force PIA1 port-B's low nibble to F (off/unwired U14 selection).",
             "Momentary-solenoid pulse end: when RAM 100D expires, force PIA1 port-B's low nibble to F (U14 M15, which the available material does not assign to a coil).");
         preComment(0xf5df, "Momentary-solenoid pulse helper: A bits 0-3 select U14 M0-M15 through PIA1 PB10-PB13; A bit 7 selects CB12's bank; starts the four-tick pulse timer at 100D.");
+        preComment(0xed40, "Automatic solenoid self-test. C0AA points to the selector bytes at C0BA. The loop displays sequential BCD test numbers while firing M0, M1, M2, M3, M4, M7, M8, M9, M10, M11, M13, and M14 as tests 01-12. After two FF table terminators, the continuous-output table contains BF; EDBA writes it directly to PIA1 port B as test 13, the K1 flipper-enable relay. This ROM sequence independently confirms manual page 1-18.");
         preComment(0xe388, "Reset and SWI vector target.  Startup initializes the 6803 and external I/O before normal game operation.");
         preComment(0xe50f, "PIA setup sequence.  It configures both external 6821-compatible I/O address blocks.");
 
@@ -178,6 +199,22 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         renameOurLabel(0x0043, "PIA1_CRB_SOLENOID_BANK_SELECT", "PIA1_CRB");
         label(0x1000, "WORK_RAM_U4_6116_START");
         label(0x17ff, "WORK_RAM_U4_6116_END");
+        label(0x1026, "SWITCH_EVENTS_STROBE0");
+        label(0x1027, "SWITCH_EVENTS_STROBE1");
+        label(0x1028, "SWITCH_EVENTS_STROBE2");
+        label(0x1029, "SWITCH_EVENTS_STROBE3");
+        label(0x102a, "SWITCH_EVENTS_STROBE4");
+        label(0x102c, "SWITCH_SAMPLE_CURRENT_STROBE0");
+        label(0x102d, "SWITCH_SAMPLE_CURRENT_STROBE1");
+        label(0x102e, "SWITCH_SAMPLE_CURRENT_STROBE2");
+        label(0x102f, "SWITCH_SAMPLE_CURRENT_STROBE3");
+        label(0x1030, "SWITCH_SAMPLE_CURRENT_STROBE4");
+        label(0x1032, "SWITCH_SAMPLE_PREVIOUS_STROBE0");
+        label(0x1033, "SWITCH_SAMPLE_PREVIOUS_STROBE1");
+        label(0x1034, "SWITCH_SAMPLE_PREVIOUS_STROBE2");
+        label(0x1035, "SWITCH_SAMPLE_PREVIOUS_STROBE3");
+        label(0x1036, "SWITCH_SAMPLE_PREVIOUS_STROBE4");
+        label(0x103a, "LAMP_SHADOW_BANK_A_BYTE0");
 
         // The I/O registers themselves have no allocated listing units.  Put
         // the explanatory text on every instruction that touches them, where
@@ -207,6 +244,8 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         piaModeComment(0xe1ed, "Writing 34 sets CRB bit 2, restoring PIA0 port-B peripheral-data access before the scan.");
         piaModeComment(0xe1f6, "PIA0 CRA bit 2 is set; this writes the next one-hot switch strobe to port A.");
         piaModeComment(0xe20b, "PIA0 CRB bit 2 is set; this reads the eight switch returns from port B.");
+        managedEolComment(0xe211, "Switch events: ", "Switch events: OR a debounced closure into the event byte at X; on strobe 0, X=1026 and mask 0x40 is switch 07 Rebound.");
+        managedEolComment(0xe213, "Switch events: ", "Switch events: latch the accumulated closure bits for the current strobe; 1026 mask 0x40 is switch 07 Rebound.");
 
         piaModeComment(0xe29c, "CRB was just written with 30 (bit 2 clear), so this instruction writes PIA0 DDRB.");
         piaModeComment(0xe2a0, "Writing 34 sets CRB bit 2, selecting PIA0 port-B peripheral data.");
@@ -218,6 +257,12 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         piaModeComment(0xf5e6, "Both 34 and 3C keep CRB bit 2 set, selecting PIA1 port-B peripheral data; bit 3 controls CB12.");
         piaModeComment(0xf5ea, "PIA1 CRB bit 2 is set; this reads port-B peripheral data so the upper nibble can be preserved.");
         piaModeComment(0xf5f4, "PIA1 CRB bit 2 is set; this writes the momentary-solenoid selector through port B.");
+
+        managedEolComment(0xed46, "Solenoid test: ", "Solenoid test: load the pointer at C0AA to the momentary-selector table at C0BA.");
+        managedEolComment(0xed51, "Solenoid test: ", "Solenoid test: read the next selector; the table order is 00,01,02,03,04,07,08,09,0A,0B,0D,0E.");
+        managedEolComment(0xed57, "Solenoid test: ", "Solenoid test: fire this U14 selector through F5DF; EF1A advances the displayed number by one.");
+        managedEolComment(0xedba, "Solenoid test: ", "Solenoid test: write continuous pattern BF directly to PIA1 port B for displayed test 13 (K1 flipper-enable relay), not through U14.");
+        managedEolComment(0xef1a, "Solenoid test: ", "Solenoid test: increment the BCD display counter, proving the first table selector is test 01 and each following byte is the next test number.");
 
         println("Eight Ball Champ hardware annotations applied.");
     }
