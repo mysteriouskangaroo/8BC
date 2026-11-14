@@ -37,6 +37,7 @@ DROP_TARGET_5000_LAMP_SHADOW                 equ $103F
 CHAMP_LANE_STATE                             equ $1040
 CHAMP_MULTIPLIER_LAMP_SHADOW                 equ $1041
 SHARED_ORBIT_VALUE_LAMP_STATE                equ $1044
+EIGHT_LETTER_STATE                           equ $1045
 DROP_TARGET_5000_LAMP_FLASH_MASK             equ $10BF
 CHAMP_COMPLETION_STATE                       equ $10C0
 SUNK_POOL_BALLS_1_TO_7                       equ $10C3

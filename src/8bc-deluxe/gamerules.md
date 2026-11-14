@@ -17,7 +17,15 @@ This document translates `new-games-design-ideas/8 Ball Champ New Rules.pptx` in
   the separate pool-bonus lamps in `$1044` through 120K, 240K, and
   120K+240K; clears the sunk-ball state for a new rack; and then continues
   through the normal saucer scoring/progression code at `$D069`.
-- New pool balls are recorded in `$10C3`. The first-sink path is `$CE07`. The five E-I-G-H-T groups are balls 1+2, ball 3, balls 4+5, ball 6, and ball 7.
+- New pool balls are recorded in `$10C3`; their first-sink path is `$CE07`.
+  They activate the current Deluxe collect location, but they are separate
+  from the E-I-G-H-T targets and do not advance the spinner value.
+- Switches 33-37 are the five dedicated E, I, G, H, and T stand-up targets.
+  They share the original handler at `$CC7C`, whose active-low collected-letter
+  state is `$1045`. A target hit clears its corresponding bit only if that
+  letter was not already collected. When all five letters are collected, the
+  original handler awards the next BALL letter and rearms E-I-G-H-T so each
+  target can be collected again in the next round.
 - CHAMP letters use `$1040`. Completing the five letters reaches `$CB07`, which originally advances the playfield score multiplier `$10C0` through double, triple, and special states. All multiplier-aware scoring helpers read `$10C0`.
 
 ## Deluxe collect feature
@@ -71,10 +79,17 @@ or otherwise advance the collect feature.
 - While the feature is at spinner inactive, spinner pulses remain unlit 100-
   point shots. A newly sunk pool ball changes it to spinner active and displays
   its current value.
-- Each newly completed E-I-G-H-T letter advances the weighted three-bit spinner
-  value. Completing the whole word supplies the final completion step so the
-  top state is 9,000; this realizes the full binary sequence specified by the
-  slides.
+- Activating spinner collect only reveals its current value; activation does
+  not advance that value.
+- Each dedicated E-I-G-H-T target advances the spinner only when its letter was
+  not already collected in the current E-I-G-H-T round. Repeated hits on an
+  already-lit letter do not advance it.
+- Completing E-I-G-H-T lights the next BALL letter through the original rules
+  and resets the five-letter round, after which newly recollected E-I-G-H-T
+  letters can advance the spinner again.
+- The three independent value lamps form a binary counter with the exact
+  sequence 1,000 -> 3,000 -> 4,000 -> 5,000 -> 6,000 -> 8,000 -> 9,000. It
+  remains at 9,000 after reaching the top state.
 - While the spinner collect is active, every spin scores its displayed value
   using the current 1x/2x/3x playfield multiplier.
 - Spinner sounds follow the highest lit value lamp, matching the original
@@ -198,6 +213,11 @@ only the left or only the right bank without a coordinated VPX-table change
   active spins receive 2x/3x, and an unlit spin remains 100. Verify the sound
   tiers are 100 -> 100 sound, 1K -> 1K sound, 3K/4K -> 3K sound, and
   5K/6K/8K/9K -> 5K sound.
+- Verify activating spinner collect or sinking a pool ball does not advance its
+  accumulated value. Verify each dedicated E-I-G-H-T target advances exactly
+  once per letter round, an already-lit letter does not advance it, completing
+  E-I-G-H-T awards a BALL letter and rearms the five letters, and the visible
+  lamp combinations include both 8K and 9K.
 - Verify every spinner pulse restarts the inactivity window, a pulse inside two
   seconds continues scoring, and roughly two seconds with no pulse closes the
   collect and advances it to the right orbit.

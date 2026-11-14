@@ -319,47 +319,13 @@ DELUXE_FIRST_SINK_SHOW_ORBIT:
         BRA DELUXE_FIRST_SINK_COLLECT_ALREADY_ACTIVE
 
 DELUXE_FIRST_SINK_ACTIVATE_SPINNER:
+; Activating spinner collect only reveals the value already accumulated in
+; DELUXE_SPINNER_VALUE_MASK. It does not advance that value by itself.
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
         CLR $10b2
 DELUXE_FIRST_SINK_COLLECT_ALREADY_ACTIVE:
         PULA
-
-; B identifies the newly sunk pool ball. Singles 3, 6, and 7 immediately
-; complete I/H/T; paired groups complete E/G only when both bits are now set.
-        BITB #$64
-        BNE DELUXE_NEW_EIGHT_LETTER
-        BITB #$03
-        BEQ DELUXE_CHECK_G_LETTER
-        ANDA #$03
-        CMPA #$03
-        BEQ DELUXE_NEW_EIGHT_LETTER
-        BRA DELUXE_FIRST_SINK_CONTINUE
-DELUXE_CHECK_G_LETTER:
-        BITB #$18
-        BEQ DELUXE_FIRST_SINK_CONTINUE
-        ANDA #$18
-        CMPA #$18
-        BNE DELUXE_FIRST_SINK_CONTINUE
-
-DELUXE_NEW_EIGHT_LETTER:
-        LDAA DELUXE_SPINNER_VALUE_MASK
-        CMPA #$e0
-        BEQ DELUXE_FIRST_SINK_CONTINUE
-        ADDA #$20
-; The fifth letter reaches binary 6 (8,000); completing the whole E-I-G-H-T
-; word supplies the deck's final binary step to 7 (9,000).
-        CMPA #$c0
-        BNE DELUXE_STORE_SPINNER_VALUE
-        LDAA #$e0
-DELUXE_STORE_SPINNER_VALUE:
-        STAA DELUXE_SPINNER_VALUE_MASK
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
-        BNE DELUXE_FIRST_SINK_CONTINUE
-        LDAA DELUXE_SPINNER_VALUE_MASK
-        STAA $10b1
 
 DELUXE_FIRST_SINK_CONTINUE:
         LDAA PENDING_SOUND_COMMAND
@@ -368,6 +334,35 @@ DELUXE_FIRST_SINK_CONTINUE:
         PSHB
         PSHA
         JMP $ce1a
+
+DELUXE_RECORD_NEW_EIGHT_LETTER:
+; The shared switch-33-through-37 handler reaches CC91 only when the dedicated
+; E/I/G/H/T target's active-low bit at 1045 is still set. Perform the three
+; displaced original instructions first, then advance the spinner value once.
+; A repeated hit on a letter whose lamp is already on branches around this
+; hook at CC8F, so it cannot advance the spinner.
+        COMA
+        ANDA 0,X
+        STAA 0,X
+        LDAA DELUXE_SPINNER_VALUE_MASK
+        CMPA #DELUXE_SPINNER_ALL_VALUE_LAMPS
+        BEQ DELUXE_NEW_EIGHT_LETTER_DONE
+; The weighted three-lamp sequence is $20,$40,$60,$80,$A0,$C0,$E0:
+; 1K -> 3K -> 4K -> 5K -> 6K -> 8K -> 9K.
+        ADDA #DELUXE_SPINNER_1000_LAMP
+        STAA DELUXE_SPINNER_VALUE_MASK
+; Update the live lamp state only while spinner collect is active. Otherwise
+; the accumulated value remains hidden in 10EE until a pool ball activates it.
+        LDAA DELUXE_COLLECT_STATE
+        ANDA #DELUXE_COLLECT_STATE_MASK
+        CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
+        BNE DELUXE_NEW_EIGHT_LETTER_DONE
+        LDAA DELUXE_SPINNER_VALUE_MASK
+        STAA $10b1
+DELUXE_NEW_EIGHT_LETTER_DONE:
+; X still points at 1045. Resume where the original code reloads that byte and
+; checks whether all five E-I-G-H-T letters have completed.
+        JMP $cc96
 
 DELUXE_HANDLE_HOLE_STATE:
 ; D069 jumps here after canonical sound/effect setup. Preserve normal 2x/3x/5x

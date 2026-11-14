@@ -117,6 +117,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xC529; Bytes = [byte[]](0x20);             Name = 'original spinner preset bypass' }
     @{ Address = 0xC5B5; Opcode = 0xBD; Target = 'DELUXE_LOAD_ORBIT_STATE_FOR_SAVE'; Name = 'retained orbit-value player save' }
     @{ Address = 0xCA3B; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPINNER'; Name = 'spinner switch handler' }
+    @{ Address = 0xCC91; Opcode = 0x7E; Target = 'DELUXE_RECORD_NEW_EIGHT_LETTER'; Name = 'new E-I-G-H-T letter spinner advancement' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }

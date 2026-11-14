@@ -39,7 +39,7 @@ AWARD_FIRST_SINK_AND_RECORD_POOL_BALL:
         ORAA SUNK_POOL_BALLS_1_TO_7  ; $CE0D: $BA,$10,$C3
 ; Drop target: preserve this ball as sunk in the seven-bit state at 10C3.
         STAA SUNK_POOL_BALLS_1_TO_7  ; $CE10: $B7,$10,$C3
-        JMP DELUXE_AFTER_FIRST_SINK  ; $CE13: activate collect/advance spinner
+        JMP DELUXE_AFTER_FIRST_SINK  ; $CE13: activate the current collect location only
         DECA                         ; $CE16: $4A
         PULB                         ; $CE17: $33
         PSHB                         ; $CE18: $37
