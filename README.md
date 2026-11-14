@@ -15,8 +15,9 @@ solenoids, sound board, and MPU remain in use.
 25d310f169b92ce6b348330816ddc3b5710e57da
 ```
 
-No work product overwrites that file.  Future modified images belong under
-`src/new-roms/build/` and must be compared against this baseline.
+No work product overwrites that file. Canonical rebuilt images are generated
+under `src/originals/build/`; modified images belong under the named
+variation's `build/` directory and must be compared against this baseline.
 
 ## Ghidra project
 
@@ -40,10 +41,12 @@ MC6801/6803 disassembler; it is not a separate disassembler.
 | --- | --- |
 | `src/originals/roms/` | Untouched CPU and sound ROMs. |
 | `src/originals/ghidra/` | Ghidra project analyzing the untouched CPU ROM. |
-| `src/new-roms/ghidra/` | Independent Ghidra working copy for labels, comments, and analysis edits. |
-| `src/new-roms/asm/` | Hand-curated, reassemblable DASM source as it is reconstructed. |
-| `src/new-roms/build/` | Generated modified ROM images and listings; never an original ROM. |
-| `src/new-roms/notes/` | Rule changes, hardware map notes, and testing records. |
+| `src/originals/asm/` | Canonical commented DASM source for behaviorally faithful builds. |
+| `src/originals/build/` | Generated canonical ROM, listing, symbols, and verification report. |
+| `src/loop-score-change/ghidra/` | Independent Ghidra copy for the named behavior variation. |
+| `src/loop-score-change/asm/` | Copy of verified canonical source once behavior changes begin. |
+| `src/loop-score-change/build/` | Generated modified ROM images and listings. |
+| `src/loop-score-change/notes/` | Rule-change and emulator/machine test records. |
 
 ## Initial vector map
 
@@ -65,15 +68,23 @@ MC6801/6803 disassembler; it is not a separate disassembler.
 2. Identify the Bally 6803 memory map, PIA accesses, RAM variables, and the
    main game loop.
 3. Label switch, scoring, bonus, lamp, solenoid, and game-state routines.
-4. Convert confirmed regions into an annotated, reassemblable source tree.
-5. Use the local DASM installation to create a fixed-address 16 KiB image and
-   prove that an unmodified rebuild is byte-identical to the original before
-   changing any rule.
+4. Continue converting unclassified `dc.b` regions in the canonical assembly
+   into annotated instructions as Ghidra analysis confirms them.
+5. Run `src/originals/asm/build.ps1` after every source change. It requires a
+   structurally valid fixed-address 16 KiB image and records its hash and byte
+   differences from the reference. It also packages the rebuilt CPU ROM with
+   the unchanged sound ROMs as
+   `VisualPinballX/VPinMAME/roms/eballchp.zip`. Use `-RequireByteIdentical`
+   when checking the initial reconstruction or an intentionally unchanged
+   baseline.
+6. Validate canonical and modified builds in PinMAME before treating them as
+   runnable or suitable for an EPROM.
 
 ## Local tools
 
-- `dasm-2.20.14.1-win-x64/dasm.exe` is the local 6803-capable assembler we
-  will use only after the source is accurately reconstructed.
+- `dasm-2.20.14.1-win-x64/dasm.exe` is the local 6803-capable assembler used
+  by `src/originals/asm/build.ps1`. Full recompilation instructions are in
+  `src/originals/asm/readme.txt`.
 - Ghidra is installed with the GhidraMC6800 extension. Use
   `MC6801:BE:16:default` for this ROM; do **not** decode it as Ghidra's
   built-in 6809 language.

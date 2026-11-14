@@ -11,6 +11,9 @@
 !/tools/ghidra_scripts/
 !/tools/ghidra_scripts/*.java
 
+# Reproducible assembler products; canonical source remains tracked.
+/src/**/build/*
+
 # Local editor and operating-system state
 /.vscode/
 /.idea/
