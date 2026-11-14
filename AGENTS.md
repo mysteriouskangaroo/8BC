@@ -35,10 +35,20 @@ pre-build archive as a recoverable backup. The PinMAME smoke test must
 exercise the exact complete archive produced by the build, not construct a
 different test-only ROM set.
 
+Every CPU-ROM build must preserve the machine's internal startup integrity
+check. Assemble in two passes: generate the compensation byte at `C000`,
+reassemble so the listing and ROM agree, and require the eight-bit sum of all
+16 KiB from `C000-FFFF` to equal `FF` before comparing, packaging, or testing.
+Never bypass the check in a hardware-targeted image. The canonical value is
+`88`; variations will usually generate another value. A finite-frame PinMAME
+run can falsely pass while the CPU spins in the checksum-failure loop at
+`E3E0`, so process survival is not a substitute for this build-time check.
+
 Do not overstate the automated PinMAME smoke test. A successful finite-frame
-run proves only that PinMAME loaded the ROM, reached reset execution, continued
-running, and exited cleanly. It does not validate game rules or physical
-outputs. Interactive gameplay and service-mode testing are still required
+run proves only that PinMAME loaded the ROM, executed the CPU, and exited
+cleanly; it can even pass while startup is stuck in a tight loop. It does not
+validate boot completion, game rules, or physical outputs. Interactive
+gameplay and service-mode testing are still required
 before calling an image gameplay-ready, and timing/safety review of hardware
 I/O is required before calling it suitable to burn and install in a machine.
 

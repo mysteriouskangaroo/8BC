@@ -4,6 +4,7 @@
         processor 6803
 
         include "symbols.inc"
+        include "../build/rom_checksum.inc"
 
         org $C000
         include "modules/00_tables_lamps_sound.asm"

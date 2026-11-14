@@ -3,7 +3,11 @@
 ; Dispatch tables and early shared routines, including periodic lamp effects and controller-to-sound-board output.
 ; Generated from the canonical Ghidra listing; later restructuring requires build and behavior validation.
 
-        dc.b $88,$42,$33,$38,$2D,$38,$30,$33,$2D,$30,$35,$20,$55,$33,$40,$00 ; $C000 data/unclassified
+ROM_ADDITIVE_CHECKSUM_COMPENSATION_BYTE:
+; Startup at E3DB-E40D sums all 16 KiB and requires an 8-bit result of FF.
+; build.ps1 generates this byte in a first pass, then reassembles and verifies it.
+        dc.b ROM_ADDITIVE_CHECKSUM_COMPENSATION_VALUE         ; $C000 generated checksum compensation
+        dc.b $42,$33,$38,$2D,$38,$30,$33,$2D,$30,$35,$20,$55,$33,$40,$00 ; $C001 ROM identifier and checksum metadata
         dc.b $00                                             ; $C010 data/unclassified
 PLAYFIELD_SWITCH_HANDLER_TABLE:
         dc.b $F8,$A8                                         ; $C011 data/unclassified

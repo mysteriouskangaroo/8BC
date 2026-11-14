@@ -247,6 +247,11 @@ The startup/PIA configuration sequence is concentrated around `E388` and
 `E50F-E547`.  Hardware accesses to `0020-0023` and `0040-0043` are therefore
 the best places to correlate firmware behavior with the wiring diagrams.
 
+Startup also verifies the CPU ROM at `E3DB-E40D`: it sums all `0x40` pages
+from `C000-FFFF` and requires the eight-bit result to be `FF`. On failure it
+spins at `E3E0` before normal initialization. Byte `C000` is a checksum
+compensation byte; every build must generate it and verify the final sum.
+
 ## Physical machine model
 
 The manual identifies U1 as the 6803 CPU, U4 as the 6116 RAM, and U7/U8 as

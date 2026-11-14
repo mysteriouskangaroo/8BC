@@ -153,6 +153,9 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         label(0xe05c, "IRQ_TIMER_INPUT_CAPTURE");
         label(0xe387, "IRQ_NMI");
         label(0xe388, "RESET_AND_SWI_ENTRY");
+        label(0xc000, "ROM_ADDITIVE_CHECKSUM_COMPENSATION_BYTE");
+        label(0xe3db, "VERIFY_ROM_ADDITIVE_CHECKSUM");
+        label(0xe3e0, "ROM_CHECKSUM_FAILURE_LOOP");
         label(0xe50f, "PIA_INITIALIZATION");
         label(0xe28c, "PERIODIC_IO_REFRESH");
         label(0xe1f0, "SWITCH_MATRIX_SCAN");
@@ -179,6 +182,7 @@ public class AnnotateEightBallChampHardware extends GhidraScript {
         preComment(0xf5df, "Momentary-solenoid pulse helper: A bits 0-3 select U14 M0-M15 through PIA1 PB10-PB13; A bit 7 selects CB12's bank; starts the four-tick pulse timer at 100D.");
         preComment(0xed40, "Automatic solenoid self-test. C0AA points to the selector bytes at C0BA. The loop displays sequential BCD test numbers while firing M0, M1, M2, M3, M4, M7, M8, M9, M10, M11, M13, and M14 as tests 01-12. After two FF table terminators, the continuous-output table contains BF; EDBA writes it directly to PIA1 port B as test 13, the K1 flipper-enable relay. This ROM sequence independently confirms manual page 1-18.");
         preComment(0xe388, "Reset and SWI vector target.  Startup initializes the 6803 and external I/O before normal game operation.");
+        preComment(0xe3db, "Startup ROM integrity check. Sum 0x40 256-byte pages from C000-FFFF and require the low eight-bit result to equal FF. C000 is the build-generated compensation byte. Failure returns carry set and spins at E3E0 before normal game initialization.");
         preComment(0xe50f, "PIA setup sequence.  It configures both external 6821-compatible I/O address blocks.");
 
         // Board-level memory map. PIA0/PIA1 identify the schematic nets, not
