@@ -151,9 +151,13 @@ DELUXE_CHAMP_DONE:
 
 DELUXE_HANDLE_ORBIT:
 ; CB4F/CB53 select sound $2A/$29 for right/left before reaching this routine.
-; A failed common gate unwinds this call exactly as it did in the original.
+; The common gate stores that selector at 1024, then overwrites B while testing
+; the score-enable lamp bits. Read the stored command to identify the side; B
+; is no longer a valid discriminator after the call. A failed gate still
+; unwinds this call exactly as it did in the original.
         JSR QUEUE_SOUND_AND_CHECK_SCORE_GATE
-        CMPB #$29
+        LDAA PENDING_SOUND_COMMAND
+        CMPA #$29
         BEQ DELUXE_HANDLE_LEFT_ORBIT
 
 DELUXE_HANDLE_RIGHT_ORBIT:
