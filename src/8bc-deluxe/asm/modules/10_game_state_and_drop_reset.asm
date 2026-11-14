@@ -129,7 +129,7 @@ START_BALL_STATE:
         dc.b $B6,$10,$41                                     ; $C5AE unconfirmed: LDAA CHAMP_MULTIPLIER_LAMP_SHADOW
         dc.b $8A,$F0                                         ; $C5B1 unconfirmed: ORAA #$f0
         dc.b $A7,$06                                         ; $C5B3 unconfirmed: STAA $6,X
-        dc.b $B6,$10,$44                                     ; $C5B5 unconfirmed: LDAA $1044
+        JSR DELUXE_LOAD_ORBIT_STATE_FOR_SAVE                 ; $C5B5: save retained value even while collect lamp is hidden
         dc.b $A7,$07                                         ; $C5B8 unconfirmed: STAA $7,X
         dc.b $B6,$10,$45                                     ; $C5BA unconfirmed: LDAA $1045
         dc.b $A7,$08                                         ; $C5BD unconfirmed: STAA $8,X

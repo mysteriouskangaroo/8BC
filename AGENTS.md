@@ -35,6 +35,15 @@ pre-build archive as a recoverable backup. The PinMAME smoke test must
 exercise the exact complete archive produced by the build, not construct a
 different test-only ROM set.
 
+After every assembly or code change that can affect a ROM image, automatically
+run that source tree's build script before handing the work back; do not wait
+for the user to request a build. A successful variation build must also deploy
+its validated `eballchp.zip` through the normal build flow to
+`VisualPinballX/VPinMAME/roms/`. If the build fails, fix it and rebuild, or
+report the failure explicitly instead of presenting the code change as
+complete or leaving a stale ZIP in place. Documentation-only changes do not
+require a rebuild unless they accompany a code change.
+
 Every CPU-ROM build must preserve the machine's internal startup integrity
 check. Assemble in two passes: generate the compensation byte at `C000`,
 reassemble so the listing and ROM agree, and require the eight-bit sum of all

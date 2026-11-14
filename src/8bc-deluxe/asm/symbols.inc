@@ -42,14 +42,16 @@ CHAMP_COMPLETION_STATE                       equ $10C0
 SUNK_POOL_BALLS_1_TO_7                       equ $10C3
 DROP_TARGET_SWITCH_CLOSURE_LATCHES           equ $10C5
 ; Deluxe per-ball state follows the original four 9-byte player records at
-; $10C7-$10EA. These bytes are reset by DELUXE_INITIALIZE_BALL.
+; $10C7-$10EA. These bytes are reset/captured by DELUXE_INITIALIZE_BALL.
 DELUXE_COLLECT_STATE                         equ $10EB
 DELUXE_SPINNER_IDLE_TIMER                    equ $10EC
 DELUXE_CHAMP_COMPLETION_COUNT                equ $10ED
 DELUXE_SPINNER_VALUE_MASK                    equ $10EE
+DELUXE_ORBIT_VALUE_STATE                     equ $10EF
 
 DELUXE_COLLECT_LOCATION_MASK                 equ $03
-DELUXE_COLLECT_INACTIVE                      equ $00
+DELUXE_COLLECT_ACTIVE                        equ $04
+DELUXE_COLLECT_STATE_MASK                    equ $07
 DELUXE_COLLECT_LEFT_ORBIT                    equ $01
 DELUXE_COLLECT_SPINNER                       equ $02
 DELUXE_COLLECT_RIGHT_ORBIT                   equ $03

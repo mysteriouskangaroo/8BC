@@ -22,8 +22,9 @@ This document translates `new-games-design-ideas/8 Ball Champ New Rules.pptx` in
 
 ## Deluxe collect feature
 
-The collect feature has four logical states: inactive, left orbit, spinner,
-and right orbit.
+The collect feature has six ordered states:
+
+`left orbit inactive -> left orbit active -> spinner inactive -> spinner active -> right orbit inactive -> right orbit active -> left orbit inactive`
 
 In this section, a **newly sunk pool ball** means the first hit that changes
 that ball's bit in `$10C3` from clear to set and lights its sunk-ball lamp.
@@ -31,13 +32,15 @@ Hitting a ball that is already sunk (its lamp is already on) follows the
 existing 5,000-point path at `$D034`; it does **not** activate, move, restart,
 or otherwise advance the collect feature.
 
-1. A newly sunk pool ball activates the feature at the left orbit when it is
-   inactive.
-2. Sinking another new pool ball while a collect is already active does not
-   move or replace that collect.
-3. Collect order is left orbit -> spinner -> right orbit -> loops back to left orbit.
-4. Starting a new ball resets the feature to inactive; the next new pool ball
-   starts again at the left orbit.
+1. Starting a new ball places the feature at **left orbit inactive**.
+2. A newly sunk pool ball changes the current location from inactive to active;
+   it does not change the location.
+3. Collecting an active location clears its active state and advances to the
+   next location's inactive state. The next newly sunk ball is required to
+   activate that new location.
+4. Sinking additional new pool balls while the current location is already
+   active has no collect-state effect. They are not queued for later stages.
+5. Hitting an inactive collect location does not advance the sequence.
 
 ### Left orbit
 
@@ -52,8 +55,11 @@ or otherwise advance the collect feature.
   operator's retain setting has carried a higher orbit value forward, that
   higher value is preserved instead of being reduced to 10,000.
 - When the left-orbit collect is active, switch 12 awards the current shared
-  orbit value using the original handler, advances that value by 10,000, and
-  moves the collect to the spinner.
+  orbit value using the original handler and runs the original fast upward
+  arrow-chase collect animation. Only after that animation finishes does it
+  advance the value by 10,000, hide the orbit-value arrows, and move the
+  feature to **spinner inactive**. A later newly sunk pool ball must activate
+  the spinner.
 - Collecting the left orbit also authorizes the saucer's eventual 100,000 award
   for the remainder of the ball.
 
@@ -62,26 +68,35 @@ or otherwise advance the collect feature.
 - An unlit spinner scores 100 points per spin and does not use the playfield
   multiplier.
 - The spinner collect begins at 1,000 at the start of every ball.
+- While the feature is at spinner inactive, spinner pulses remain unlit 100-
+  point shots. A newly sunk pool ball changes it to spinner active and displays
+  its current value.
 - Each newly completed E-I-G-H-T letter advances the weighted three-bit spinner
   value. Completing the whole word supplies the final completion step so the
   top state is 9,000; this realizes the full binary sequence specified by the
   slides.
 - While the spinner collect is active, every spin scores its displayed value
   using the current 1x/2x/3x playfield multiplier.
+- Spinner sounds follow the highest lit value lamp, matching the original
+  sound tiers: unlit 100 uses the 100 sound; 1,000 uses the 1,000 sound; 3,000
+  and 4,000 use the 3,000 sound; and 5,000, 6,000, 8,000, and 9,000 use the
+  5,000 sound.
 - The collect remains active while the spinner is producing switch pulses.
   Every pulse scores and restarts an approximately two-second inactivity timer;
   another pulse inside that window continues the same collect and can add more
   score.
 - Only after approximately two seconds with no further spinner pulse is the
-  spinner considered to have stopped. The collect then closes and moves to the
-  right orbit.
+  spinner considered to have stopped. The collect then closes and advances to
+  **right orbit inactive**; a later newly sunk pool ball must activate it.
 - Spinner value lamps are shown only while the spinner is the active collect.
 
 ### Right orbit
 
 - When the right-orbit collect is active, switch 13 awards the same shared
-  orbit value as the left side, advances it by 10,000 through the original
-  synchronized-value handler, and moves the collect to the left orbit.
+  orbit value as the left side and runs the original fast upward arrow-chase
+  collect animation. Only after that animation finishes does it advance the
+  value by 10,000, hide the orbit-value arrows, and move to **left orbit
+  inactive**.
 - When it is not active, switch 13 awards 5,000 and does not advance the shared
   orbit value.
 
@@ -129,35 +144,60 @@ or otherwise advance the collect feature.
 ## Deluxe implementation state
 
 The original four-player records occupy `$10C7-$10EA`. Deluxe uses the next
-four working-RAM bytes for per-ball state:
+five working-RAM bytes for per-ball state:
 
 | Address | Meaning |
 | --- | --- |
-| `$10EB` | Collect location in bits 0-1; hole-waiting flag in bit 6; left-collect authorization in bit 7 |
+| `$10EB` | Collect location in bits 0-1; active flag in bit 2; hole-waiting flag in bit 6; left-collect authorization in bit 7 |
 | `$10EC` | Spinner inactivity countdown |
 | `$10ED` | CHAMP completion count for the current ball |
 | `$10EE` | Spinner weighted binary value mask (`$20/$40/$80`) |
+| `$10EF` | Retained orbit-value low nibble while inactive orbit lamps are hidden |
 
 The original `$10B1` byte remains the live spinner-lamp mask. It is zero when
 the spinner collect is inactive and mirrors `$10EE` only while the spinner is
 the active collect.
 
+The original `$1044` byte still drives the live orbit-value lamps and retains
+its unrelated upper-bit meanings. Deluxe shadows only its orbit-value low
+nibble in `$10EF`, allowing an inactive orbit stage to be dark without losing
+its next value. The player-record save hook substitutes that retained nibble,
+preserving the original multiplayer and operator-retention behavior.
+
+The original machine does not provide separate ROM lamp outputs for the left
+and right orbit-value arrows. Its synchronized orbit state drives both physical
+arrow banks together. The included VPX table mirrors that wiring by mapping
+each of its five orbit lamp numbers to a pair of table light objects. Therefore
+the ROM can show or hide the orbit arrows as a group, but it cannot illuminate
+only the left or only the right bank without a coordinated VPX-table change
+(or physical lamp-driver rewiring on a real machine).
+
 ## Required gameplay verification
 
-- Start a new game and verify the first newly sunk ball activates left collect.
-- Verify additional newly sunk balls do not move an already active collect.
+- Start a new game and verify it begins at left-orbit inactive and the first
+  newly sunk ball activates that same location.
+- Verify the complete sequence is left inactive -> left active -> spinner
+  inactive -> spinner active -> right inactive -> right active -> left
+  inactive, with a distinct newly sunk ball required for each activation.
+- Verify additional newly sunk balls while a location is already active do not
+  move it and are not queued to activate the following location.
 - Verify hitting an already-sunk ball still follows its existing 5,000-point
   path and does not activate, move, restart, or advance the collect feature.
 - Verify unlit left/right orbit shots score 5,000 without advancing their value.
 - Verify the first active left-orbit collect lights at 10,000 (or preserves a
   higher retained value), scores that amount, and advances the shared value by
   10,000.
-- Verify left collect -> spinner -> right collect -> left collect rotation.
+- Verify collecting left and right hides their active orbit indication while
+  retaining the next orbit value, and that a later activation restores it.
+  On each collect, verify the original fast upward arrow chase completes before
+  the arrows turn off and the logical state advances.
 - Verify the left orbit's original 100,000/special terminal behavior remains
   collectible while the Deluxe collect is at the spinner or right orbit, and
   that doing so does not move the Deluxe collect.
 - Verify spinner values and lamps advance through the weighted binary states,
-  active spins receive 2x/3x, and an unlit spin remains 100.
+  active spins receive 2x/3x, and an unlit spin remains 100. Verify the sound
+  tiers are 100 -> 100 sound, 1K -> 1K sound, 3K/4K -> 3K sound, and
+  5K/6K/8K/9K -> 5K sound.
 - Verify every spinner pulse restarts the inactivity window, a pulse inside two
   seconds continues scoring, and roughly two seconds with no pulse closes the
   collect and advances it to the right orbit.

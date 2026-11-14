@@ -97,21 +97,36 @@ if ($rebuiltBytes[0] -ne $checksumCompensation -or $startupChecksum -ne 0xFF) {
     throw "Startup checksum finalization failed: C000 is $('$' + $rebuiltBytes[0].ToString('X2')), sum is $('$' + $startupChecksum.ToString('X2'))."
 }
 
-# These fixed-address checks make the build fail if a rule hook is displaced,
-# omitted, or points at a different expansion routine. They complement the
-# assembler's symbol/listing output with an explicit executable-image check.
+function Get-DasmSymbolAddress([string]$Name) {
+    $escapedName = [regex]::Escape($Name)
+    $symbolLine = Select-String -LiteralPath $symbols -Pattern ('^' + $escapedName + '\s+([0-9A-Fa-f]+)\s') | Select-Object -First 1
+    if (-not $symbolLine) {
+        throw "Required DASM symbol '$Name' is missing from $symbols."
+    }
+    return [Convert]::ToInt32($symbolLine.Matches[0].Groups[1].Value, 16)
+}
+
+# These checks keep each rule hook at its required original ROM address and
+# resolve the expansion target from DASM's current symbol output. The target
+# routines may move as their implementations grow, but an omitted, displaced,
+# or misdirected hook still fails the executable-image validation.
 $deluxeHookChecks = @(
-    @{ Address = 0xC1DB; Bytes = [byte[]](0x7E, 0xD5, 0x50); Name = 'common special points handler' }
-    @{ Address = 0xC14E; Bytes = [byte[]](0xBD, 0xD3, 0xB2); Name = 'periodic inactivity timer' }
-    @{ Address = 0xC521; Bytes = [byte[]](0xBD, 0xD3, 0xDC); Name = 'new-ball initialization' }
+    @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
+    @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic inactivity timer' }
+    @{ Address = 0xC521; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_BALL'; Name = 'new-ball initialization' }
     @{ Address = 0xC529; Bytes = [byte[]](0x20);             Name = 'original spinner preset bypass' }
-    @{ Address = 0xCA3B; Bytes = [byte[]](0x7E, 0xD3, 0xF9); Name = 'spinner switch handler' }
-    @{ Address = 0xCB07; Bytes = [byte[]](0x7E, 0xD4, 0x2F); Name = 'CHAMP completion handler' }
-    @{ Address = 0xCB55; Bytes = [byte[]](0x7E, 0xD4, 0x57); Name = 'left/right orbit handler' }
-    @{ Address = 0xCE13; Bytes = [byte[]](0x7E, 0xD4, 0xB9); Name = 'newly sunk ball handler' }
-    @{ Address = 0xD069; Bytes = [byte[]](0x7E, 0xD5, 0x23); Name = 'saucer progression handler' }
+    @{ Address = 0xC5B5; Opcode = 0xBD; Target = 'DELUXE_LOAD_ORBIT_STATE_FOR_SAVE'; Name = 'retained orbit-value player save' }
+    @{ Address = 0xCA3B; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPINNER'; Name = 'spinner switch handler' }
+    @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
+    @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
+    @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
+    @{ Address = 0xD069; Opcode = 0x7E; Target = 'DELUXE_HANDLE_HOLE_STATE'; Name = 'saucer progression handler' }
 )
 foreach ($check in $deluxeHookChecks) {
+    if ($check.Target) {
+        $targetAddress = Get-DasmSymbolAddress $check.Target
+        $check.Bytes = [byte[]]($check.Opcode, (($targetAddress -shr 8) -band 0xFF), ($targetAddress -band 0xFF))
+    }
     $offset = $check.Address - 0xC000
     for ($byteIndex = 0; $byteIndex -lt $check.Bytes.Length; $byteIndex++) {
         if ($rebuiltBytes[$offset + $byteIndex] -ne $check.Bytes[$byteIndex]) {
