@@ -179,6 +179,11 @@ Note: Page 1-18 lists switch self-test positions 01 through 37. Electrical matri
 positions 38 through 40 (strobe 4, returns 5 through 7) are not named on that
 page, so they are intentionally not assigned a feature here.
 
+The switch-to-rule execution traces, beginning with switch 07 Rebound and the
+CHAMP playfield multiplier, are kept in [GAME_RULE_TRACES.md](GAME_RULE_TRACES.md).
+This file stops at the verified electrical mapping; the trace document follows
+those inputs through scoring, lamps, sounds, and game state.
+
 
 ## Confirmed momentary-solenoid path: PIA1 at `0040-0043`
 
@@ -199,33 +204,29 @@ schematic and driver table assign no physical coil to `M15`, ending the
 momentary pulse. This is the firmware safety mechanism that prevents a
 momentary coil from being held on indefinitely.
 
-### U14 decoder outputs and page 1-18 solenoid identification
+### Solenoid self-test outputs and page 1-18 identification
 
-The binary value on `PB10-PB13` selects U14 output `M0` through `M15`. These
-physical outputs are cross-checked by connector/pin in the schematic and the
-manual's *Solenoid Driver Locations* table:
+The binary value on `PB10-PB13` selects U14 output `M0` through `M15`. These physical outputs are cross-checked by connector/pin in the schematic and the manual's *Solenoid Driver Locations* table:
 
-| U14 output | Connector / pin | Physical coil | Page 1-18 solenoid self-test # | Description on page 1-18 |
+| Driver output | Connector / pin | Physical coil | Page 1-18 solenoid self-test # | Description on page 1-18 |
 | --- | --- | --- | ---: | --- |
-| `M0` | J6-1 | Drop targets 1/2 | 04 | Drop Target 1,2,9,10 |
-| `M1` | J6-2 | Drop target 3 | 05 | Drop Target 3,11 |
-| `M2` | J6-3 | Drop targets 4/5 | 06 | Drop Target 4,5,12,13 |
-| `M3` | J6-4 | Drop target 6 | 07 | Drop Target 6,14 |
-| `M4` | J8-7 | Drop target 7 | 08 | Drop Target 7,15 |
-| `M7` | J9-1 | Saucer | 01 | Saucer |
-| `M8` | J9-2 | Right thumper bumper | 03 | Right Thumper Bumper |
-| `M9` | J9-3 | Left thumper bumper | 02 | Left Thumper Bumper |
+| `M0` | J6-1 | Drop targets 1/2 | 01 | Drop Target 1,2,9,10 |
+| `M1` | J6-2 | Drop target 3 | 02 | Drop Target 3,11 |
+| `M2` | J6-3 | Drop targets 4/5 | 03 | Drop Target 4,5,12,13 |
+| `M3` | J6-4 | Drop target 6 | 04 | Drop Target 6,14 |
+| `M4` | J8-7 | Drop target 7 | 05 | Drop Target 7,15 |
+| `M7` | J9-1 | Saucer | 06 | Saucer |
+| `M8` | J9-2 | Right thumper bumper | 07 | Right Thumper Bumper |
+| `M9` | J9-3 | Left thumper bumper | 08 | Left Thumper Bumper |
 | `M10` | J9-4 | Right slingshot | 09 | Right Slingshot |
 | `M11` | J9-6 | Left slingshot | 10 | Left Slingshot |
 | `M13` | J9-8 | Outhole | 11 | Outhole |
 | `M14` | J7-2 | Knocker | 12 | Knocker |
-| Not yet traced | -- | K1 Relay (Flipper Enable) | 13 | K1 Relay (Flipper Enable) |
+| Continuous output (`BF` in ROM test table) | On control board | K1 Relay (Flipper Enable) | 13 | K1 Relay (Flipper Enable) |
 
-The schematic also shows `M5`, `M6`, and `M12`, but the Eight Ball Champ
-driver-location table does not give each one a physical-coil name. They remain
-unnamed here rather than guessed. The flipper-enable relay K1 is listed as
-solenoid self-test 13 on page 1-18, but its U14 output still needs a complete
-trace through the unavailable sheet(s).
+Note: Page 1-18's solenoid-test numbering conflicts with the numbered locator drawing on page 1-19 and with some replacement manual scans. Analysis of the ROM's automatic solenoid test confirms page 1-18, so its numbering is used in the table above. The instruction-level evidence is recorded in the canonical Ghidra comments.
+
+Note: The schematic also shows `M5`, `M6`, and `M12`, but the Eight Ball Champ driver-location table does not give each one a physical-coil name. They remain unnamed here rather than guessed. They are also absent from the ROM's automatic-test selector sequence.
 
 ## Executable starting points
 
