@@ -38,6 +38,7 @@ CHAMP_LANE_STATE                             equ $1040
 CHAMP_MULTIPLIER_LAMP_SHADOW                 equ $1041
 SHARED_ORBIT_VALUE_LAMP_STATE                equ $1044
 EIGHT_LETTER_STATE                           equ $1045
+HOLE_BONUS_LAMP_SHADOW                       equ $1043
 DROP_TARGET_5000_LAMP_FLASH_MASK             equ $10BF
 CHAMP_COMPLETION_STATE                       equ $10C0
 ORBIT_SPECIAL_FLASH_MASK                     equ $10C2
@@ -71,6 +72,11 @@ DELUXE_COLLECT_SPINNER                       equ $02
 DELUXE_COLLECT_RIGHT_ORBIT                   equ $03
 DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT         equ $40
 DELUXE_LEFT_COLLECT_AUTHORIZED               equ $80
+
+HOLE_BONUS_2X_STATE                          equ $01
+HOLE_BONUS_3X_STATE                          equ $02
+HOLE_BONUS_5X_STATE                          equ $04
+HOLE_100000_STATE                            equ $08
 
 DELUXE_SPINNER_1000_LAMP                     equ $20
 DELUXE_SPINNER_3000_LAMP                     equ $40

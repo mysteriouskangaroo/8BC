@@ -106,7 +106,7 @@ FLASH_CHAMP_MULTIPLIER_LAMPS:
 ; CHAMP lamp flash: XOR stable state 10C0 into blinking lamp shadow 1041; never use 1041 as a gameplay condition.
         STAA $7,X                    ; $C1B8: $A7,$07
         LDAA $9,X                    ; $C1BA: $A6,$09
-        EORA $10c1                   ; $C1BC: $B8,$10,$C1
+        JSR DELUXE_APPLY_HOLE_FLASH_MASK ; $C1BC: suppress terminal 100K flash while unarmed
         STAA $9,X                    ; $C1BF: $A7,$09
         LDAA $a,X                    ; $C1C1: $A6,$0A
         EORA $10c2                   ; $C1C3: $B8,$10,$C2

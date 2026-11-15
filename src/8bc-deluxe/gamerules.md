@@ -83,8 +83,9 @@ does not collect the lit 8-ball is not an activation event.
   advance the value by 10,000, hide the orbit-value arrows, and move the
   feature to **spinner inactive**. A later newly sunk pool ball must activate
   the spinner.
-- Collecting the left orbit also authorizes the saucer's eventual 100,000 award
-  for the remainder of the ball.
+- Each new activation that lights the left-orbit collect authorizes one future
+  saucer 100,000 award. Collecting the orbit is not required to create that
+  authorization, and the authorization persists after the orbit advances.
 
 ### Spinner
 
@@ -133,11 +134,17 @@ does not collect the lit 8-ball is not an activation event.
 ## Hole / saucer
 
 - The existing bonus progression remains 2x -> 3x -> 5x -> 100,000.
-- Reaching the step beyond 5x does not light or award 100,000 until the left
-  orbit collect has also been made during that ball.
-- If the hole progression reaches that point first, it waits there. Collecting
-  the left orbit later lights 100,000 without requiring the collect feature to
-  remain at the left orbit.
+- The left-orbit collect activation and the saucer progression are independent
+  gates. Newly lighting the left-orbit collect can arm one 100,000 award, but
+  it never advances 2x, 3x, or 5x and cannot cause the saucer to skip 5x.
+- The player must actually collect the lit 5x saucer step before 100,000 can
+  blink. If 5x is collected first, the progression waits there until the next
+  left-orbit activation. If the left orbit was activated first, 100,000 begins
+  blinking immediately after the later 5x collection.
+- Collecting the lit 100,000 consumes that left-orbit authorization and turns
+  off 100,000. The bonus multiplier remains at 5x; only the live 100,000 flash
+  and award are disabled. A later new left-orbit activation can arm and light
+  one more 100,000 award without replaying the multiplier progression.
 - Once qualified, the 100,000 award retains its original playfield-multiplier
   behavior.
 - Bonus progression, left-orbit authorization, and the waiting qualification
@@ -304,8 +311,12 @@ only the left or only the right bank without a coordinated VPX-table change
 - Verify every spinner pulse restarts the inactivity window, a pulse inside two
   seconds continues scoring, and roughly two seconds with no pulse closes the
   collect and advances it to the right orbit.
-- Verify the saucer cannot light/award 100,000 until both the post-5x step and
-  left collect authorization have occurred, in either order.
+- Verify the saucer displays and collects 2x, then 3x, then 5x without a left-
+  orbit activation changing those steps. Verify 100,000 cannot blink until
+  both 5x has been collected and the left-orbit collect has been newly lit, in
+  either order. After collecting 100,000, verify it turns off and cannot be
+  awarded again until a later new left-orbit activation rearms it, while end-
+  of-ball bonus and the 5x indication remain at 5x throughout.
 - Complete at least four 8-ball racks in one ball and verify the center inserts
   remain capped at their 120K+240K display while every completed rack is still
   counted at drain. With six completed racks, verify the completed-rack portion
