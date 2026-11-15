@@ -220,10 +220,10 @@ does not collect the lit 8-ball is not an activation event.
   target.
 - Called ball score begins at a 10,000 playfield value, displayed as 1,000
   under Deluxe's divide-by-ten score scale. Every successful called ball
-  advances the next value by 20,000 playfield points: 10,000, 30,000, 50,000,
-  and so on (displayed as 1,000, 3,000, 5,000...).
+  advances the next value by 10,000 playfield points: 10,000, 20,000, 30,000,
+  and so on (displayed as 1,000, 2,000, 3,000...).
 - Collecting the lit 8-ball to complete a rack always awards the current Called
-  ball score and then advances its next value by 20,000, even though balls 1-7
+  ball score and then advances its next value by 10,000, even though balls 1-7
   are the ones selected by the spoken call.
 - Each Called ball award uses the current 1x/2x/3x playfield multiplier.
   An uncalled first sink retains its normal 2,500 playfield value, displayed as
@@ -333,7 +333,7 @@ per-player counters:
 | `$10F5` | Working B-A-L-L countdown, reloaded for each bonus-multiplier pass |
 | `$10F6-$10F9` | Completed-rack counters for players 1-4 |
 | `$10FA-$10FD` | Completed B-A-L-L-letter counters for players 1-4 |
-| `$10FE` | Active player's Called ball score in displayed 1,000-point units (odd values 1, 3, 5...) |
+| `$10FE` | Active player's Called ball score in displayed 1,000-point units (values 1, 2, 3...) |
 | `$10FF-$1102` | Called ball scores for players 1-4 |
 | `$1103` | Called-ball lamp ID whose reversible flash overlay is currently applied |
 
@@ -391,8 +391,8 @@ only the left or only the right bank without a coordinated VPX-table change
   retains the physical 5,000 lamp effect, and does not activate, move, restart,
   or advance the collect feature.
 - Follow the spoken call and verify the first three successful called balls
-  award 1,000/3,000/5,000 at 1x, 2,000/6,000/10,000 at 2x, or
-  3,000/9,000/15,000 at 3x, replacing rather than adding the normal 250-point
+  award 1,000/2,000/3,000 at 1x, 2,000/4,000/6,000 at 2x, or
+  3,000/6,000/9,000 at 3x, replacing rather than adding the normal 250-point
   first-sink award. Verify an incorrect first sink does not advance the value.
 - Verify the individually numbered physical drop-target lamp for the spoken
   ball flashes: targets 1-7 for solids and 9-15 for stripes. Verify the five
@@ -400,7 +400,7 @@ only the left or only the right bank without a coordinated VPX-table change
   the called indication, and an incorrect sink leaves or moves it only as
   dictated by the next spoken call.
 - Complete a rack with the lit 8-ball and verify it awards the current Called
-  ball value, then advances that player's next value by 20,000 playfield
+  ball value, then advances that player's next value by 10,000 playfield
   points. Drain and verify the next ball retains the advanced value. In a
   four-player game, advance each player differently and verify their values
   restore independently; start a new game and verify all return to 10,000.

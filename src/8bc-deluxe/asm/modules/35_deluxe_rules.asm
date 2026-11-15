@@ -326,10 +326,10 @@ DELUXE_COMPARE_CALLED_BALL_ID:
         RTS
 
 DELUXE_AWARD_AND_ADVANCE_CALLED_BALL_SCORE:
-; The active byte stores displayed thousands: 1, 3, 5... corresponds to the
-; requested 10K, 30K, 50K... playfield values after Deluxe's divide-by-ten
+; The active byte stores displayed thousands: 1, 2, 3... corresponds to the
+; requested 10K, 20K, 30K... playfield values after Deluxe's divide-by-ten
 ; score scale. Award the current value through the CHAMP multiplier, then add
-; two displayed thousands (20K playfield). Values above 240 are split across
+; one displayed thousand (10K playfield). Values above 240 are split across
 ; two normalized queue additions so B plus the existing decimal digit cannot
 ; overflow; this does not alter the score or multiplier. Treat zero from an
 ; older saved game/NVRAM image as the initial value, and saturate at 255.
@@ -349,7 +349,7 @@ DELUXE_AWARD_CALLED_BALL_SCORE_LOW_CHUNK:
         LDAA DELUXE_CALLED_BALL_SCORE_1000S
         CMPA #$ff
         BEQ DELUXE_CALLED_BALL_SCORE_ADVANCED
-        ADDA #$02
+        ADDA #$01
         STAA DELUXE_CALLED_BALL_SCORE_1000S
 DELUXE_CALLED_BALL_SCORE_ADVANCED:
         RTS
@@ -371,7 +371,7 @@ DELUXE_AFTER_FIRST_SINK:
 DELUXE_AFTER_EIGHT_BALL:
 ; CFAE calls this immediately after the original 8-ball completion sequence
 ; clears the balls-1-through-7 rack state. Award the active player's current
-; Called ball score and advance it by 20K playfield value, then treat the
+; Called ball score and advance it by 10K playfield value, then treat the
 ; committed 8-ball collect as one new-ball event for Deluxe and record the
 ; completed rack. Saturating at 255 prevents theoretical counter/value wraps.
 ; The activation helper is deliberately a no-op if the current stage is active,

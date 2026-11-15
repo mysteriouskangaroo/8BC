@@ -126,8 +126,8 @@ When the IDs differ, it applies Deluxe's divide-by-ten score scale to the
 normal 2,500 playfield value and awards **250 Deluxe points** through the
 current CHAMP playfield multiplier. When the IDs match, it instead awards that
 player's Called ball score through the same multiplier. The per-player value
-starts at 10,000 playfield / 1,000 displayed and advances by 20,000 playfield /
-2,000 displayed after each successful call. The collected 8-ball path at
+starts at 10,000 playfield / 1,000 displayed and advances by 10,000 playfield /
+1,000 displayed after each successful call. The collected 8-ball path at
 `CFAE` also awards and advances this value. Active state is at `10FE`; parallel
 player values are at `10FF-1102` and use the existing `C4E6` new-game and
 `C603` player-restore hooks, so drains preserve the value while a new game
