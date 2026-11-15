@@ -97,3 +97,6 @@ MC6801/6803 disassembler; it is not a separate disassembler.
 The `temp/` and `other-examples/` directories are older Bally examples and use
 different hardware/toolchains; they are reference material, not build inputs
 for this machine.
+
+## Burning ROM
+Weebly board: you need a blank M27C160 chip

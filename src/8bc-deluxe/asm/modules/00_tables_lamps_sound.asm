@@ -96,9 +96,11 @@ PERIODIC_GAMEPLAY_TIMERS_AND_EFFECTS:
         LDAA $4,X                    ; $C1A5: $A6,$04
         EORA $10be                   ; $C1A7: $B8,$10,$BE
         STAA $4,X                    ; $C1AA: $A7,$04
-        LDAA $5,X                    ; $C1AC: $A6,$05
-        EORA DROP_TARGET_5000_LAMP_FLASH_MASK ; $C1AE: $B8,$10,$BF
-        STAA $5,X                    ; $C1B1: $A7,$05
+        JSR DELUXE_FLASH_DROP_TARGET_LAMPS ; $C1AC: preserve original 5,000 flash and overlay the called target
+        NOP                          ; $C1AF: fixed-address padding
+        NOP                          ; $C1B0: fixed-address padding
+        NOP                          ; $C1B1: fixed-address padding
+        NOP                          ; $C1B2: fixed-address padding
 FLASH_CHAMP_MULTIPLIER_LAMPS:
 ; CHAMP lamp animation only. XOR authoritative CHAMP_COMPLETION_STATE at 10C0 into CHAMP_MULTIPLIER_LAMP_SHADOW at 1041. Because the shadow blinks, gameplay rules must read 10C0 instead: test 0x20 for triple first, then 0x10 for double.
         LDAA $7,X                    ; $C1B3: $A6,$07

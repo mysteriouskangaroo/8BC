@@ -111,6 +111,39 @@ The timer output-compare service at `E022` jumps to the periodic I/O refresh
 routine at `E28C`, which repeatedly updates `0020` and strobes the associated
 control line. That behavior agrees with a multiplexed lamp matrix.
 
+### Numbered pool-ball drop-target lamps
+
+The manual lamp chart, cross-checked against the
+[PinWiki Eight Ball Champ lamp chart](https://www.pinwiki.com/wiki/index.php/Eight_Ball_Champ),
+identifies the fourteen individually numbered Phase-A drop-target lamps below.
+[PinMAME's Bally 6803 connector table](https://github.com/vpinball/pinmame/blob/master/src/wpc/by6803.c)
+converts each connector pin to its controller lamp number. The ROM serializer
+at `E107-E1EF` consumes the
+six-byte Phase-A shadow at `103A-103F` as interleaved U15/U16/U17 triples;
+following that order gives the exact shadow byte and bit in the last column.
+
+| Driver | Connector | Lamp description | Wire code/color | PinMAME lamp | ROM shadow |
+| --- | --- | --- | --- | ---: | --- |
+| Q57 | J10-18 | Drop Target 1 | 58 Wht-Blk | 35 | `103B` bit 0 |
+| Q26 | J10-4 | Drop Target 2 | 41 Grn-Red | 4 | `103B` bit 1 |
+| Q43 | J10-11 | Drop Target 3 | 43 Grn-Yel | 20 | `103B` bit 2 |
+| Q58 | J10-19 | Drop Target 4 | 10 Red | 36 | `103B` bit 3 |
+| Q27 | J10-5 | Drop Target 5 | 60 Brn | 5 | `103B` bit 4 |
+| Q44 | J10-12 | Drop Target 6 | 34 Yel-Grn | 21 | `103B` bit 5 |
+| Q59 | J10-14 | Drop Target 7 | 36 Yel-Brn | 37 | `103B` bit 6 |
+| Q45 | J10-10 | Drop Target 9 | 57 Wht-Orn | 22 | `103C` bit 0 |
+| Q60 | J10-13 | Drop Target 10 | 51 Wht-Red | 38 | `103C` bit 1 |
+| Q29 | J11-8 | Drop Target 11 | 67 Brn-Orn | 7 | `103C` bit 2 |
+| Q46 | J11-16 | Drop Target 12 | 53 Wht-Yel | 23 | `103C` bit 3 |
+| Q61 | J11-6/J12-10 | Drop Target 13 | 12 Red-Blu | 39 | `103C` bit 4 |
+| Q30 | J11-12/J12-14 | Drop Target 14 | 45 Grn-Wht | 8 | `103C` bit 5 |
+| Q47 | J11-11/J12-6 | Drop Target 15 | 13 Red-Yel | 24 | `103C` bit 6 |
+
+These are distinct from the five shared **5,000 Drop Target** lamps on J13.
+Those shared lamps occupy `103F` bits 0-4 and correspond to target groups 1/2,
+3, 4/5, 6, and 7. Keeping the two sets separate is essential when implementing
+an indication for one specifically called pool ball.
+
 ## Confirmed switch matrix: PIA0 at `0020` / `0022`
 
 The same PIA0 port A is time-multiplexed for switch scanning. The ROM entry at
@@ -284,3 +317,7 @@ Ghidra labels and comments use these rules:
 The Ghidra annotations are deliberately kept in this original analysis
 project.  Experimental rules changes belong in the separately named variation
 directory, not here.
+
+
+## More information
+https://www.pinwiki.com/wiki/index.php/Eight_Ball_Champ

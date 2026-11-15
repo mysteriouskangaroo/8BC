@@ -46,6 +46,7 @@ DELUXE_INITIALIZE_BALL:
         CLR DELUXE_CHAMP_COMPLETION_COUNT
         CLR DELUXE_BONUS_RACKS_REMAINING
         CLR DELUXE_BONUS_BALL_LETTERS_REMAINING
+        CLR DELUXE_CALLED_BALL_FLASH_APPLIED_ID
         CLR $10b1
         CLR $10b2
         LDAA #DELUXE_SPINNER_1000_LAMP
@@ -833,6 +834,77 @@ DELUXE_LOAD_ORBIT_STATE_FOR_SAVE:
         RTS
 DELUXE_LOAD_LIVE_ORBIT_STATE_FOR_SAVE:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
+        RTS
+
+DELUXE_FLASH_DROP_TARGET_LAMPS:
+; C1AC calls this only when the canonical lamp-flash divider reaches its edge.
+; First reproduce the displaced 103F/10BF operation for the five shared 5,000
+; lamps. Then maintain a reversible overlay on exactly one individually
+; numbered called-ball lamp. Recording the ID whose XOR is currently applied
+; lets the next edge restore the original shadow state before changing calls or
+; ending the flash. Entry X is 103A; preserve X and B for C1B3 onward.
+        LDAA $05,X
+        EORA DROP_TARGET_5000_LAMP_FLASH_MASK
+        STAA $05,X
+        PSHB
+        PSHX
+        LDAA DELUXE_CALLED_BALL_FLASH_APPLIED_ID
+        BEQ DELUXE_CALLED_BALL_FLASH_CHECK_CURRENT
+        CMPA CALLED_POOL_BALL_SOUND_ID
+        BNE DELUXE_CALLED_BALL_FLASH_RESTORE_PREVIOUS
+; The same call is still active. Removing the prior overlay is this edge's
+; off-phase; leave it unapplied until the next canonical flash edge.
+        BSR DELUXE_XOR_CALLED_BALL_LAMP_FOR_ID
+        CLR DELUXE_CALLED_BALL_FLASH_APPLIED_ID
+        BRA DELUXE_CALLED_BALL_FLASH_DONE
+DELUXE_CALLED_BALL_FLASH_RESTORE_PREVIOUS:
+        BSR DELUXE_XOR_CALLED_BALL_LAMP_FOR_ID
+        CLR DELUXE_CALLED_BALL_FLASH_APPLIED_ID
+DELUXE_CALLED_BALL_FLASH_CHECK_CURRENT:
+        LDAA CALLED_POOL_BALL_SOUND_ID
+        BEQ DELUXE_CALLED_BALL_FLASH_DONE
+        ANDA #$07
+        BEQ DELUXE_CALLED_BALL_FLASH_DONE
+        LDAB #$01
+DELUXE_CALLED_BALL_LAMP_MASK_LOOP:
+        DECA
+        BEQ DELUXE_CALLED_BALL_LAMP_MASK_READY
+        ASLB
+        BRA DELUXE_CALLED_BALL_LAMP_MASK_LOOP
+DELUXE_CALLED_BALL_LAMP_MASK_READY:
+        BITB SUNK_POOL_BALLS_1_TO_7
+        BNE DELUXE_CALLED_BALL_FLASH_DONE
+        LDAA CALLED_POOL_BALL_SOUND_ID
+        BSR DELUXE_XOR_CALLED_BALL_LAMP_FOR_ID
+        LDAA CALLED_POOL_BALL_SOUND_ID
+        STAA DELUXE_CALLED_BALL_FLASH_APPLIED_ID
+DELUXE_CALLED_BALL_FLASH_DONE:
+        PULX
+        PULB
+        RTS
+
+DELUXE_XOR_CALLED_BALL_LAMP_FOR_ID:
+; Input A is a valid called speech ID. IDs 51-57 map to balls 1-7 in 103B;
+; IDs 59-5F map to balls 9-15 in 103C. In either bank, the low three ID bits
+; select the exact target lamp bit 0-6.
+        CMPA #$59
+        BCS DELUXE_CALLED_BALL_SELECT_SOLIDS_LAMP
+        LDX #DROP_TARGET_BALLS_9_TO_15_LAMP_SHADOW
+        BRA DELUXE_CALLED_BALL_SELECT_LAMP_BIT
+DELUXE_CALLED_BALL_SELECT_SOLIDS_LAMP:
+        LDX #DROP_TARGET_BALLS_1_TO_7_LAMP_SHADOW
+DELUXE_CALLED_BALL_SELECT_LAMP_BIT:
+        ANDA #$07
+        LDAB #$01
+DELUXE_CALLED_BALL_XOR_MASK_LOOP:
+        DECA
+        BEQ DELUXE_CALLED_BALL_XOR_MASK_READY
+        ASLB
+        BRA DELUXE_CALLED_BALL_XOR_MASK_LOOP
+DELUXE_CALLED_BALL_XOR_MASK_READY:
+        TBA
+        EORA $00,X
+        STAA $00,X
         RTS
 
 DELUXE_PREPEND_STARTUP_SUPER:

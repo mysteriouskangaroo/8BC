@@ -135,6 +135,25 @@ resets every player to 10,000. Restore and award both normalize a zero legacy
 record to the initial value before scoring, allowing existing NVRAM to migrate
 without producing a zero-point first award.
 
+The visual call indication uses the same authoritative `10C4` ID and hooks the
+original lamp-flash block at `C1AC`, after its established divider and gameplay
+gates. This is important: toggling from the earlier `C14E` periodic entry can
+run faster than PinMAME's lamp-smoothing boundary and appear steady. The hook
+first reproduces the displaced five-lamp `103F`/`10BF` operation, then overlays
+the individual called lamp at the canonical visible cadence. Byte `1103`
+records which called ID is currently XORed into the shadow, allowing the next
+edge to restore it before the call moves or ends.
+
+The manual/PinWiki lamp rows identify fourteen individual Phase-A lamps: Drop
+Target 1-7 and Drop Target 9-15. PinMAME's Bally 6803 connector conversion and
+the ROM serializer at `E107-E1EF` map targets 1-7 to `103B` bits 0-6 and
+targets 9-15 to `103C` bits 0-6. Called speech IDs `51-57` select the first
+byte and `59-5F` select the second; the low three ID bits select the exact lamp
+bit. The five shared 5,000 target lamps remain at `103F` bits 0-4. A ball
+already set in `10C3` is omitted, so a sunk ball cannot continue carrying the
+called indication. The complete physical and emulator mapping is recorded in
+[HARDWARE_MAP.md](HARDWARE_MAP.md).
+
 The paired switches require two first-sink hits. Switch 25 records ball 1 on
 its first eligible hit and ball 2 on its next eligible hit; switch 28 does the
 same for balls 4 and 5. Only after both bits belonging to the pair are set is

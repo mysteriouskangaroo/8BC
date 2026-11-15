@@ -36,6 +36,8 @@ SWITCH_SAMPLE_PREVIOUS_STROBE2               equ $1034
 SWITCH_SAMPLE_PREVIOUS_STROBE3               equ $1035
 SWITCH_SAMPLE_PREVIOUS_STROBE4               equ $1036
 LAMP_SHADOW_BANK_A_BYTE0                     equ $103A
+DROP_TARGET_BALLS_1_TO_7_LAMP_SHADOW         equ $103B
+DROP_TARGET_BALLS_9_TO_15_LAMP_SHADOW        equ $103C
 DROP_TARGET_5000_LAMP_SHADOW                 equ $103F
 CHAMP_LANE_STATE                             equ $1040
 CHAMP_MULTIPLIER_LAMP_SHADOW                 equ $1041
@@ -66,6 +68,7 @@ DELUXE_PLAYER_RACK_COUNTS                    equ $10F6
 DELUXE_PLAYER_BALL_LETTER_COUNTS             equ $10FA
 DELUXE_CALLED_BALL_SCORE_1000S               equ $10FE
 DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $10FF
+DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1103
 
 ; C9A6 accepts B as a count of displayed 1,000-point units and applies the
 ; authoritative CHAMP playfield multiplier before normalizing pending score.

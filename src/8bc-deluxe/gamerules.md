@@ -210,6 +210,14 @@ does not collect the lit 8-ball is not an activation event.
 - The spoken “Sink the N ball” selection is the authoritative call. Sinking
   that exact ball for the first time replaces its normal 2,500 playfield-value
   award with the active player's Called ball score.
+- While the call is active and that ball remains unsunk, the lamp on its
+  individually numbered physical drop target flashes at the game's normal
+  lamp-flash cadence. Balls 1-7 use the seven solid-ball target lamps and balls
+  9-15 use the seven stripe-ball target lamps. The five shared 5,000 target
+  lamps retain their original behavior and are not used for this indication.
+  After the ball is sunk, its numbered target lamp stops carrying the called
+  indication; the next spoken selection moves the flash to the newly called
+  target.
 - Called ball score begins at a 10,000 playfield value, displayed as 1,000
   under Deluxe's divide-by-ten score scale. Every successful called ball
   advances the next value by 20,000 playfield points: 10,000, 30,000, 50,000,
@@ -307,7 +315,7 @@ does not collect the lit 8-ball is not an activation event.
 ## Deluxe implementation state
 
 The original four-player records occupy `$10C7-$10EA`. Deluxe uses `$10EB`
-through `$1102` for active state, temporary bonus/display work, and parallel
+through `$1103` for active state, temporary bonus/display work, and parallel
 per-player counters:
 
 | Address | Meaning |
@@ -327,6 +335,7 @@ per-player counters:
 | `$10FA-$10FD` | Completed B-A-L-L-letter counters for players 1-4 |
 | `$10FE` | Active player's Called ball score in displayed 1,000-point units (odd values 1, 3, 5...) |
 | `$10FF-$1102` | Called ball scores for players 1-4 |
+| `$1103` | Called-ball lamp ID whose reversible flash overlay is currently applied |
 
 The canonical new-game loop initializes all four original player records at
 `$C4E6`; Deluxe hooks the same loop to clear the prior collect state before
@@ -385,6 +394,11 @@ only the left or only the right bank without a coordinated VPX-table change
   award 1,000/3,000/5,000 at 1x, 2,000/6,000/10,000 at 2x, or
   3,000/9,000/15,000 at 3x, replacing rather than adding the normal 250-point
   first-sink award. Verify an incorrect first sink does not advance the value.
+- Verify the individually numbered physical drop-target lamp for the spoken
+  ball flashes: targets 1-7 for solids and 9-15 for stripes. Verify the five
+  shared 5,000 target lamps retain their original behavior, no sunk ball keeps
+  the called indication, and an incorrect sink leaves or moves it only as
+  dictated by the next spoken call.
 - Complete a rack with the lit 8-ball and verify it awards the current Called
   ball value, then advances that player's next value by 20,000 playfield
   points. Drain and verify the next ball retains the advanced value. In a
