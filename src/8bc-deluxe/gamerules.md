@@ -248,10 +248,12 @@ per-player counters:
 | `$10FA-$10FD` | Completed B-A-L-L-letter counters for players 1-4 |
 
 The canonical new-game loop initializes all four original player records at
-`$C4E6`; Deluxe hooks the same loop to clear all eight parallel counters. The
-canonical player restore ends at `$C603`; Deluxe loads `$10F0/$10F4` from the
-selected player's parallel entries there. Counter increments are written back
-immediately, so drain animations cannot erase another player's progress.
+`$C4E6`; Deluxe hooks the same loop to clear the prior collect state before
+capturing the new game's baseline orbit value and to clear all eight parallel
+counters. The canonical player restore ends at `$C603`; Deluxe loads
+`$10F0/$10F4` from the selected player's parallel entries there. Counter
+increments are written back immediately, so drain animations cannot erase
+another player's progress.
 
 The original `$10B1` byte remains the live spinner-lamp mask. It is zero when
 the spinner collect is inactive and mirrors `$10EE` only while the spinner is

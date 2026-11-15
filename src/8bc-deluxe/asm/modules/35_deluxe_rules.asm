@@ -407,9 +407,13 @@ DELUXE_AFTER_EIGHT_WORD_COUNTED:
 
 DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
 ; The canonical new-game loop at C4E6 visits player numbers 4, 3, 2, and 1 and
-; initializes each original nine-byte player record. Clear the active Deluxe
-; counters and write zero to the matching parallel record before executing the
-; displaced original record initializer at C58C.
+; initializes each original nine-byte player record. Clear the previous game's
+; collect state first so DELUXE_LOAD_ORBIT_STATE_FOR_SAVE takes its new-game
+; path and stores the freshly initialized live orbit value instead of stale
+; DELUXE_ORBIT_VALUE_STATE. Then clear the active Deluxe counters and write zero
+; to the matching parallel record before executing the displaced original
+; record initializer at C58C.
+        CLR DELUXE_COLLECT_STATE
         CLR DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CLR DELUXE_COMPLETED_BALL_LETTERS
         JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
