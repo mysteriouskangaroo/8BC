@@ -228,7 +228,10 @@ RESET_AND_REARM_POOL_BALL_DROP_TARGETS:
         dc.b $C6,$5A                                         ; $C6C4 unconfirmed: LDAB #$5a
         dc.b $BD,$C9,$19                                     ; $C6C6 unconfirmed: JSR $c919
 PULSE_ALL_POOL_BALL_DROP_TARGET_RESET_COILS:
-; Reset and rearm all five pool-ball drop-target groups. Pulse U14 selectors M0-M4 in turn; after each reset, C6F7-C6FC clears only that group's physical closure latch in 10C5. The sunk-ball record at 10C3 is preserved, so the next hit can take the 5,000-point branch.
+; Reset and rearm all five pool-ball drop-target groups. Pulse U14 selectors
+; M0-M4 in turn; after each reset, C6F7-C6FC clears only that group's physical
+; closure latch in 10C5. The sunk-ball record at 10C3 is preserved, so the next
+; hit can take the scaled 500-point branch (original 5,000).
         dc.b $8D,$22                                         ; $C6C9 unconfirmed: BSR $c6ed
         dc.b $8D,$19                                         ; $C6CB unconfirmed: BSR $c6e6
         dc.b $8D,$10                                         ; $C6CD unconfirmed: BSR $c6df
@@ -292,7 +295,12 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         dc.b $B6,$10,$C3,$27,$47,$86,$01,$B5,$10,$C3,$26,$05,$48,$26,$F8,$20 ; $C7BD data/unclassified
         dc.b $3B,$43,$B4,$10,$C3,$B7,$10,$C3,$8D,$68,$F6,$10,$3D,$B6,$10,$C3 ; $C7CD data/unclassified
         dc.b $2A,$07,$C4,$7F,$F7,$10,$3D,$20,$05,$CA,$80,$F7,$10,$3D,$BD,$C9 ; $C7DD data/unclassified
-        dc.b $45,$26,$5A,$CE,$00,$01,$BD,$F4,$1C,$CE,$50,$00,$BD,$F4,$11,$86 ; $C7ED data/unclassified
+        dc.b $45,$26,$5A                                     ; $C7ED original score-gate tail
+        LDX #$1000                                          ; $C7F0: scaled first part of the pool-ball bonus
+        JSR ADD_LOW_BCD_SCORE                               ; $C7F3: add 1,000 instead of 10,000
+        LDX #$500                                           ; $C7F6: scaled second part of the pool-ball bonus
+        JSR ADD_LOW_BCD_SCORE                               ; $C7F9: add 500 instead of 5,000
+        dc.b $86                                             ; $C7FC original LDAA opcode
         dc.b $37,$BD,$C2,$7E,$F6,$10,$BB,$BD,$C9,$19,$20,$B4 ; $C7FD original per-ball bonus loop tail
         JMP DELUXE_PROCESS_COMPLETED_RACK_BONUS               ; $C809: use the RAM rack count instead of the three-state lamp encoding
         dc.b $85                                              ; $C80C superseded original completed-rack test tail
@@ -328,8 +336,10 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         dc.b $8D,$36,$B6,$10,$45,$85,$02,$26,$07,$8A,$02,$B7,$10,$45,$8D,$28 ; $C8C9 data/unclassified
         dc.b $B6,$10,$45,$85,$04,$26,$07,$8A,$04,$B7,$10,$45,$8D,$1A,$B6,$10 ; $C8D9 data/unclassified
         dc.b $45,$85,$08,$26,$07,$8A,$08,$B7,$10,$45,$8D,$0C,$B6,$10,$45,$85 ; $C8E9 data/unclassified
-        dc.b $10,$26,$1A,$8A,$10,$B7,$10,$45,$BD,$C9,$45,$26,$10,$CE,$00,$01 ; $C8F9 data/unclassified
-        dc.b $BD,$F4,$1C,$86,$38,$BD,$C2,$7E                 ; $C909 original 10,000-point award and sound
+        dc.b $10,$26,$1A,$8A,$10,$B7,$10,$45,$BD,$C9,$45,$26,$10 ; $C8F9 original final E-I-G-H-T-letter test
+        LDX #$1000                                          ; $C906: scale the direct 10,000-point bonus unit to 1,000
+        JSR ADD_LOW_BCD_SCORE                               ; $C909: bonus bypasses APPLY_PENDING_SCORE
+        dc.b $86,$38,$BD,$C2,$7E                             ; $C90C original bonus sound
         LDAB #DELUXE_EIGHT_BONUS_LETTER_DELAY                ; $C911: slightly faster than original $0B letter delay
         dc.b $BD,$C9,$19,$39                                 ; $C913 original delay call and return
         dc.b $C6,$0A                                         ; $C917 unconfirmed: LDAB #$a

@@ -34,7 +34,7 @@
         dc.b $05,$20,$0E,$C6,$04,$20,$0A,$C6,$03,$20,$06,$C6,$02,$20,$02,$C6 ; $C995 data/unclassified
         dc.b $01,$B6,$10,$C0,$84,$30,$27,$0B,$8D,$09,$B6,$10,$C0,$85,$10,$26 ; $C9A5 data/unclassified
         dc.b $02,$8D,$00,$37,$FB,$00,$97,$F7,$00,$97,$BD,$FA,$1A,$33,$39 ; $C9B5 data/unclassified
-AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER:
+AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER:
         LDAB #$5                     ; $C9C4: $C6,$05
         BRA $c9ce                    ; $C9C6: $20,$06
         dc.b $C6,$03,$20,$02,$C6,$01                         ; $C9C8 data/unclassified
@@ -47,43 +47,49 @@ AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER:
         BNE $c9e0                    ; $C9DC: $26,$02
         BSR $c9e0                    ; $C9DE: $8D,$00
         PSHB                         ; $C9E0: $37
-        ADDB.w PENDING_SCORE_100S    ; $C9E1: $FB,$00,$95
-        STAB.w PENDING_SCORE_100S    ; $C9E4: $F7,$00,$95
+        ADDB.w PENDING_SCORE_10S     ; $C9E1: queue five 10-point units = 50 displayed points
+        STAB.w PENDING_SCORE_10S     ; $C9E4
         JSR NORMALIZE_PENDING_SCORE_DIGITS ; $C9E7: $BD,$FA,$1A
         PULB                         ; $C9EA: $33
         RTS                          ; $C9EB: $39
         dc.b $BD,$C9,$A0                                     ; $C9EC data/unclassified
-AWARD_5000_POINTS_WITH_PLAYFIELD_MULTIPLIER:
+AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER:
         LDAB #$5                     ; $C9EF: $C6,$05
-        BRA AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER ; $C9F1: $20,$06
-AWARD_3000_POINTS_WITH_PLAYFIELD_MULTIPLIER:
-; Award the manual's 3,000-point CHAMP lane value through the common playfield multiplier. This runs before a just-completed CHAMP advances 10C0, so the completing lane uses the multiplier that was active before completion.
+        BRA AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER ; $C9F1: $20,$06
+AWARD_300_POINTS_WITH_PLAYFIELD_MULTIPLIER:
+; Award the scaled 300-point CHAMP lane value (the playfield/manual says 3,000)
+; through the common playfield multiplier. This runs before a just-completed
+; CHAMP advances 10C0, so the completing lane uses the multiplier that was
+; active before completion.
         LDAB #$3                     ; $C9F3: $C6,$03
-        BRA AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER ; $C9F5: $20,$02
+        BRA AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER ; $C9F5: $20,$02
         dc.b $C6,$01                                         ; $C9F7 data/unclassified
-AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER:
+AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER:
         LDAA CHAMP_COMPLETION_STATE  ; $C9F9: $B6,$10,$C0
 ; Multiplier award: mask the authoritative state to the double/triple bits.
         ANDA #$30                    ; $C9FC: $84,$30
-        BEQ ADD_PENDING_SCORE_1000S  ; $C9FE: $27,$0B
-        BSR ADD_PENDING_SCORE_1000S  ; $CA00: $8D,$09
+        BEQ ADD_PENDING_SCORE_100S   ; $C9FE: $27,$0B
+        BSR ADD_PENDING_SCORE_100S   ; $CA00: $8D,$09
 ; Multiplier award: any active multiplier adds a second copy of the base award.
         LDAA CHAMP_COMPLETION_STATE  ; $CA02: $B6,$10,$C0
         BITA #$10                    ; $CA05: $85,$10
 ; Multiplier award: if double bit 0x10 is set, stop at two copies; valid triple states have 0x20 set and 0x10 clear.
-        BNE ADD_PENDING_SCORE_1000S  ; $CA07: $26,$02
-        BSR ADD_PENDING_SCORE_1000S  ; $CA09: $8D,$00
+        BNE ADD_PENDING_SCORE_100S   ; $CA07: $26,$02
+        BSR ADD_PENDING_SCORE_100S   ; $CA09: $8D,$00
 ; Multiplier award: triple adds the third copy of the base award.
-ADD_PENDING_SCORE_1000S:
+ADD_PENDING_SCORE_100S:
         PSHB                         ; $CA0B: $37
-        ADDB.w PENDING_SCORE_1000S   ; $CA0C: $FB,$00,$96
-        STAB.w PENDING_SCORE_1000S   ; $CA0F: $F7,$00,$96
+        ADDB.w PENDING_SCORE_100S    ; $CA0C: queue B scaled 100-point units
+        STAB.w PENDING_SCORE_100S    ; $CA0F
         JSR NORMALIZE_PENDING_SCORE_DIGITS ; $CA12: $BD,$FA,$1A
         PULB                         ; $CA15: $33
         RTS                          ; $CA16: $39
         dc.b $C6,$03,$20,$02                                 ; $CA17 data/unclassified
-AWARD_10_POINTS_WITH_PLAYFIELD_MULTIPLIER:
-; Common 10-point award. Read CHAMP_COMPLETION_STATE at 10C0: 0x10 means playfield double and 0x20 means playfield triple. Valid game states keep those bits mutually exclusive; test 0x20 first, then 0x10, when adding new rules.
+AWARD_1_POINT_WITH_PLAYFIELD_MULTIPLIER:
+; Common scaled 1-point award (the playfield/manual says 10). Read
+; CHAMP_COMPLETION_STATE at 10C0: 0x10 means playfield double and 0x20 means
+; playfield triple. Valid game states keep those bits mutually exclusive; test
+; 0x20 first, then 0x10, when adding new rules.
         LDAB #$1                     ; $CA1B: $C6,$01
         LDAA CHAMP_COMPLETION_STATE  ; $CA1D: $B6,$10,$C0
         ANDA #$30                    ; $CA20: $84,$30
@@ -94,10 +100,11 @@ AWARD_10_POINTS_WITH_PLAYFIELD_MULTIPLIER:
         BNE ADD_PENDING_SCORE_LOW_DIGIT ; $CA2B: $26,$02
         BSR ADD_PENDING_SCORE_LOW_DIGIT ; $CA2D: $8D,$00
 ADD_PENDING_SCORE_LOW_DIGIT:
-; Add B to the lowest pending-score digit at 0094, then normalize carries through FA1A. One unit here is 10 displayed points.
+; Add B to the lowest pending-score digit at 0094, then normalize carries
+; through FA1A. Deluxe makes one unit here one displayed point.
         PSHB                         ; $CA2F: $37
-        ADDB.w PENDING_SCORE_10S     ; $CA30: $FB,$00,$94
-        STAB.w PENDING_SCORE_10S     ; $CA33: $F7,$00,$94
+        ADDB.w PENDING_SCORE_1S      ; $CA30: $FB,$00,$94
+        STAB.w PENDING_SCORE_1S      ; $CA33: $F7,$00,$94
         JSR NORMALIZE_PENDING_SCORE_DIGITS ; $CA36: $BD,$FA,$1A
         PULB                         ; $CA39: $33
         RTS                          ; $CA3A: $39
@@ -109,10 +116,11 @@ ADD_PENDING_SCORE_LOW_DIGIT:
         dc.b $C0,$84,$C0,$27,$14,$81,$C0,$27,$10,$B6,$10,$C0,$88,$C0,$B7,$10 ; $CA7B data/unclassified
         dc.b $C0,$B6,$10,$41,$8A,$C0,$B7,$10,$41,$39         ; $CA8B data/unclassified
 HANDLE_SWITCH_07_REBOUND:
-; Switch 07 Rebound handler. Queue sound command 0x22, pass the common score gate, then award the manual's 10-point value through CA1B.
+; Switch 07 Rebound handler. Queue sound command 0x22, pass the common score
+; gate, then award the scaled 1-point value (manual/playfield 10) through CA1B.
         LDAB #$22                    ; $CA95: $C6,$22
         BSR QUEUE_SOUND_AND_CHECK_SCORE_GATE ; $CA97: $8D,$11
-        JMP AWARD_10_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $CA99: $7E,$CA,$1B
+        JMP AWARD_1_POINT_WITH_PLAYFIELD_MULTIPLIER ; $CA99: $7E,$CA,$1B
         dc.b $C6,$20,$8D,$0A,$7E,$C9,$F7,$C6,$31,$8D,$03,$7E,$C9,$C4 ; $CA9C data/unclassified
 QUEUE_SOUND_AND_CHECK_SCORE_GATE:
 ; Common switch setup/gate. Store the caller-provided sound command in B at 1024, then continue to scoring only if lamp-shadow byte 103A has bits 7 and 6 both set. The exact physical lamp identities of those two gate bits remain untraced.
@@ -131,7 +139,7 @@ HANDLE_CHAMP_LANE_SWITCH:
         LDAB #$25                    ; $CAD4: $C6,$25
         BSR QUEUE_SOUND_AND_CHECK_SCORE_GATE ; $CAD6: $8D,$D2
         PSHA                         ; $CAD8: $36
-        JSR AWARD_3000_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $CAD9: $BD,$C9,$F3
+        JSR AWARD_300_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $CAD9: $BD,$C9,$F3
 ; CHAMP timing: score this lane with the currently active multiplier before advancing the completion state.
         PULA                         ; $CADC: $32
         LDX #$1040                   ; $CADD: $CE,$10,$40

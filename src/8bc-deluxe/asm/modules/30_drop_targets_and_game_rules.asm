@@ -4,7 +4,11 @@
 ; Generated from the canonical Ghidra listing; later restructuring requires build and behavior validation.
 
 HANDLE_PAIRED_POOL_BALL_DROP_TARGET:
-; Paired pool-ball drop-target handler for switches 25 (balls 1/2) and 28 (balls 4/5). Ignore a closure already latched in 10C5. Otherwise latch it, award 500 and record the first unsunk ball bit in 10C3; only after both bits in the pair are set does a later rearmed hit take the 5,000-point branch at D034.
+; Paired pool-ball drop-target handler for switches 25 (balls 1/2) and 28
+; (balls 4/5). Ignore a closure already latched in 10C5. Otherwise latch it,
+; award the scaled 50 points (original 500), and record the first unsunk ball
+; bit in 10C3; only after both bits in the pair are set does a later rearmed
+; hit take the scaled 500-point branch (original 5,000) at D034.
         LDAB #$24                    ; $CDD8: $C6,$24
         JSR QUEUE_SOUND_AND_CHECK_SCORE_GATE ; $CDDA: $BD,$CA,$AA
         BITA DROP_TARGET_SWITCH_CLOSURE_LATCHES ; $CDDD: $B5,$10,$C5
@@ -32,7 +36,7 @@ HANDLE_PAIRED_POOL_BALL_DROP_TARGET:
 AWARD_FIRST_SINK_AND_RECORD_POOL_BALL:
 ; First-sink path. C9C4 awards 500 points through the active playfield double/triple multiplier, then this code ORs the selected ball bit into SUNK_POOL_BALLS_1_TO_7 at 10C3 and starts its ball/lamp effects.
         PSHA                         ; $CE07: $36
-        JSR AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $CE08: $BD,$C9,$C4
+        JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $CE08: $BD,$C9,$C4
 ; Drop target: award the first-sink base value of 500 points; the shared helper applies playfield double/triple.
         PULA                         ; $CE0B: $32
         PSHA                         ; $CE0C: $36
@@ -145,7 +149,11 @@ AWARD_FIRST_SINK_AND_RECORD_POOL_BALL:
         dc.b $10,$26,$05,$84,$7F,$B7,$10,$44                 ; $CFFC data/unclassified
         RTS                          ; $D004: $39
 HANDLE_SINGLE_POOL_BALL_DROP_TARGET:
-; Single pool-ball drop-target handler for switches 27, 30, and 31 (balls 3, 6, and 7). Ignore a closure already latched in 10C5. Otherwise award 500 and set its 10C3 sunk bit on the first hit, or take the 5,000-point branch at D034 when already sunk.
+; Single pool-ball drop-target handler for switches 27, 30, and 31 (balls 3,
+; 6, and 7). Ignore a closure already latched in 10C5. Otherwise award the
+; scaled 50 points (original 500) and set its 10C3 sunk bit on the first hit,
+; or take the scaled 500-point branch (original 5,000) at D034 when already
+; sunk.
         LDAB #$24                    ; $D005: $C6,$24
         JSR QUEUE_SOUND_AND_CHECK_SCORE_GATE ; $D007: $BD,$CA,$AA
         BITA DROP_TARGET_SWITCH_CLOSURE_LATCHES ; $D00A: $B5,$10,$C5
@@ -174,7 +182,7 @@ AWARD_LIT_DROP_TARGET_5000:
         LDAB #$ff                    ; $D034: $C6,$FF
         STAB DROP_TARGET_5000_LAMP_SHADOW ; $D036: $F7,$10,$3F
 ; Drop target: set the shared 5,000 drop-target lamp shadow at 103F to FF.
-        JSR AWARD_5000_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $D039: $BD,$C9,$EF
+        JSR AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $D039: $BD,$C9,$EF
 ; Drop target: award the already-sunk value of 5,000 points; the shared helper applies playfield double/triple.
         LDAB #$1e                    ; $D03C: $C6,$1E
         JSR $c919                    ; $D03E: $BD,$C9,$19

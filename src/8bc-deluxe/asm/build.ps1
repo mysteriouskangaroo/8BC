@@ -106,10 +106,11 @@ function Get-DasmSymbolAddress([string]$Name) {
     return [Convert]::ToInt32($symbolLine.Matches[0].Groups[1].Value, 16)
 }
 
-# These checks keep each rule hook at its required original ROM address and
-# resolve the expansion target from DASM's current symbol output. The target
-# routines may move as their implementations grow, but an omitted, displaced,
-# or misdirected hook still fails the executable-image validation.
+# These checks keep each rule hook at its required original ROM address,
+# resolve expansion targets from DASM's current symbol output, and lock down
+# behavior-critical fixed-address instruction sequences such as the Deluxe
+# divide-by-ten score mapping. An omitted, displaced, or misdirected change
+# still fails executable-image validation.
 $deluxeHookChecks = @(
     @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
     @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic inactivity timer' }
@@ -128,6 +129,8 @@ $deluxeHookChecks = @(
     @{ Address = 0xC8A0; Bytes = [byte[]](0x10);             Name = 'faster B-A-L-L bonus-pass delay' }
     @{ Address = 0xC8A6; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS'; Name = 'completed B-A-L-L bonus loop' }
     @{ Address = 0xC912; Bytes = [byte[]](0x09);             Name = 'faster E-I-G-H-T bonus-letter delay' }
+    @{ Address = 0xC7F0; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11, 0xCE, 0x05, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,500-point pool-ball drain bonus' }
+    @{ Address = 0xC906; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,000-point E-I-G-H-T drain-bonus unit' }
     @{ Address = 0xCA3B; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPINNER'; Name = 'spinner switch handler' }
     @{ Address = 0xCC91; Opcode = 0x7E; Target = 'DELUXE_RECORD_NEW_EIGHT_LETTER'; Name = 'new E-I-G-H-T letter spinner advancement' }
     @{ Address = 0xCCD4; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_WORD_COMPLETION'; Name = 'completed E-I-G-H-T word B-A-L-L counter' }
@@ -136,6 +139,13 @@ $deluxeHookChecks = @(
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
     @{ Address = 0xCFAE; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_BALL'; Name = 'collected 8-ball activation handler' }
     @{ Address = 0xD069; Opcode = 0x7E; Target = 'DELUXE_HANDLE_HOLE_STATE'; Name = 'saucer progression handler' }
+    @{ Address = 0xF3B2; Bytes = [byte[]](0xCE, 0x00, 0x01); Name = 'canonical 10-point queue maps to displayed 1' }
+    @{ Address = 0xF3C4; Bytes = [byte[]](0xCE, 0x00, 0x10); Name = 'canonical 100-point queue maps to displayed 10' }
+    @{ Address = 0xF3D6; Bytes = [byte[]](0xCE, 0x01, 0x00); Name = 'canonical 1,000-point queue maps to displayed 100' }
+    @{ Address = 0xF3E8; Bytes = [byte[]](0xCE, 0x10, 0x00); Name = 'canonical 10,000-point queue maps to displayed 1,000' }
+    @{ Address = 0xF3EB; Bytes = [byte[]](0x20, 0x24); Name = 'scaled 1,000 uses low BCD addend half' }
+    @{ Address = 0xF3FA; Bytes = [byte[]](0xCE, 0x00, 0x01); Name = 'canonical 100,000-point queue maps to displayed 10,000' }
+    @{ Address = 0xF40C; Bytes = [byte[]](0xCE, 0x00, 0x10); Name = 'canonical 1,000,000-point queue maps to displayed 100,000' }
 )
 foreach ($check in $deluxeHookChecks) {
     if ($check.Target) {
@@ -188,7 +198,7 @@ $report = @(
     "Byte differences: $differenceCount"
     "Startup checksum compensation at C000: $('$' + $checksumCompensation.ToString('X2'))"
     "Startup additive checksum: $('$' + $startupChecksum.ToString('X2')) (PASS)"
-    "Deluxe fixed-address hook checks: $($deluxeHookChecks.Count) (PASS)"
+    "Deluxe fixed-address executable checks: $($deluxeHookChecks.Count) (PASS)"
     $vectorLines
 )
 if ($firstDifferences.Count -ne 0) {

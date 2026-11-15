@@ -205,63 +205,69 @@
         dc.b $39                                             ; $F383 unconfirmed: RTS
         dc.b $8D,$F0,$27,$FB,$8D,$07,$20,$F8                 ; $F384 data/unclassified
 APPLY_PENDING_SCORE:
-; Apply the pending score in 0094-0099 to the active player's displayed score over successive main-loop passes.
+; Apply the pending score in 0094-0099 to the active player's displayed score
+; over successive main-loop passes. Deluxe shifts every canonical queue class
+; down one decimal place: 10 becomes 1, 100 becomes 10, and so on. This uses
+; the formerly fixed-zero ones digit and extends the effective old-score range
+; to 99,999,990 while preserving all relative rule values and multipliers.
         LDAA $100f                   ; $F38C: $B6,$10,$0F
         BNE $f3a4                    ; $F38F: $26,$13
         LDAA.w $009a                 ; $F391: $B6,$00,$9A
         ANDA #$22                    ; $F394: $84,$22
         BEQ $f3a5                    ; $F396: $27,$0D
         LDX #$0                      ; $F398: $CE,$00,$00
-        STX.w PENDING_SCORE_10S      ; $F39B: $FF,$00,$94
-        STX.w PENDING_SCORE_1000S    ; $F39E: $FF,$00,$96
-        STX.w PENDING_SCORE_100000S  ; $F3A1: $FF,$00,$98
+        STX.w PENDING_SCORE_1S       ; $F39B: clear 0094-0095
+        STX.w PENDING_SCORE_100S     ; $F39E: clear 0096-0097
+        STX.w PENDING_SCORE_10000S   ; $F3A1: clear 0098-0099
         RTS                          ; $F3A4: $39
-        LDAA.w PENDING_SCORE_10S     ; $F3A5: $B6,$00,$94
+        LDAA.w PENDING_SCORE_1S      ; $F3A5: canonical 10-point queue
         BEQ $f3b7                    ; $F3A8: $27,$0D
-        DEC.w PENDING_SCORE_10S      ; $F3AA: $7A,$00,$94
+        DEC.w PENDING_SCORE_1S       ; $F3AA
         LDAA #$0                     ; $F3AD: $86,$00
         JSR $f4b5                    ; $F3AF: $BD,$F4,$B5
-        LDX #$10                     ; $F3B2: $CE,$00,$10
+        LDX #$1                      ; $F3B2: add one displayed point
         BRA $f411                    ; $F3B5: $20,$5A
-        LDAA.w PENDING_SCORE_100S    ; $F3B7: $B6,$00,$95
+        LDAA.w PENDING_SCORE_10S     ; $F3B7: canonical 100-point queue
         BEQ $f3c9                    ; $F3BA: $27,$0D
-        DEC.w PENDING_SCORE_100S     ; $F3BC: $7A,$00,$95
+        DEC.w PENDING_SCORE_10S      ; $F3BC
         LDAA #$1                     ; $F3BF: $86,$01
         JSR $f4b5                    ; $F3C1: $BD,$F4,$B5
-        LDX #$100                    ; $F3C4: $CE,$01,$00
+        LDX #$10                     ; $F3C4: add ten displayed points
         BRA $f411                    ; $F3C7: $20,$48
-        LDAA.w PENDING_SCORE_1000S   ; $F3C9: $B6,$00,$96
+        LDAA.w PENDING_SCORE_100S    ; $F3C9: canonical 1,000-point queue
         BEQ $f3db                    ; $F3CC: $27,$0D
-        DEC.w PENDING_SCORE_1000S    ; $F3CE: $7A,$00,$96
+        DEC.w PENDING_SCORE_100S     ; $F3CE
         LDAA #$2                     ; $F3D1: $86,$02
         JSR $f4b5                    ; $F3D3: $BD,$F4,$B5
-        LDX #$1000                   ; $F3D6: $CE,$10,$00
+        LDX #$100                    ; $F3D6: add one hundred displayed points
         BRA $f411                    ; $F3D9: $20,$36
-        LDAA.w PENDING_SCORE_10000S  ; $F3DB: $B6,$00,$97
+        LDAA.w PENDING_SCORE_1000S   ; $F3DB: canonical 10,000-point queue
         BEQ $f3ed                    ; $F3DE: $27,$0D
-        DEC.w PENDING_SCORE_10000S   ; $F3E0: $7A,$00,$97
+        DEC.w PENDING_SCORE_1000S    ; $F3E0
         LDAA #$3                     ; $F3E3: $86,$03
         JSR $f4b5                    ; $F3E5: $BD,$F4,$B5
-        LDX #$1                      ; $F3E8: $CE,$00,$01
-        BRA $f41c                    ; $F3EB: $20,$2F
-        LDAA.w PENDING_SCORE_100000S ; $F3ED: $B6,$00,$98
+        LDX #$1000                   ; $F3E8: add one thousand displayed points
+        BRA $f411                    ; $F3EB: use low four-digit BCD addend
+        LDAA.w PENDING_SCORE_10000S  ; $F3ED: canonical 100,000-point queue
         BEQ $f3ff                    ; $F3F0: $27,$0D
-        DEC.w PENDING_SCORE_100000S  ; $F3F2: $7A,$00,$98
+        DEC.w PENDING_SCORE_10000S   ; $F3F2
         LDAA #$4                     ; $F3F5: $86,$04
         JSR $f4b5                    ; $F3F7: $BD,$F4,$B5
-        LDX #$10                     ; $F3FA: $CE,$00,$10
+        LDX #$1                      ; $F3FA: add ten thousand displayed points
         BRA $f41c                    ; $F3FD: $20,$1D
-        LDAA.w PENDING_SCORE_1000000S ; $F3FF: $B6,$00,$99
+        LDAA.w PENDING_SCORE_100000S ; $F3FF: canonical 1,000,000-point queue
         BEQ $f3a4                    ; $F402: $27,$A0
-        DEC.w PENDING_SCORE_1000000S ; $F404: $7A,$00,$99
+        DEC.w PENDING_SCORE_100000S  ; $F404
         LDAA #$5                     ; $F407: $86,$05
         JSR $f4b5                    ; $F409: $BD,$F4,$B5
-        LDX #$100                    ; $F40C: $CE,$01,$00
+        LDX #$10                     ; $F40C: add one hundred thousand points
         BRA $f41c                    ; $F40F: $20,$0B
+ADD_LOW_BCD_SCORE:
         CLR.w $0087                  ; $F411: $7F,$00,$87
         CLR.w $0088                  ; $F414: $7F,$00,$88
         STX.w $0089                  ; $F417: $FF,$00,$89
         BRA $f425                    ; $F41A: $20,$09
+ADD_HIGH_BCD_SCORE:
         CLR.w $0089                  ; $F41C: $7F,$00,$89
         CLR.w $008a                  ; $F41F: $7F,$00,$8A
         STX.w $0087                  ; $F422: $FF,$00,$87
@@ -706,30 +712,31 @@ MOMENTARY_SOLENOID_PULSE:
         dc.b $BD,$F6,$68,$CE,$16,$84,$BD,$F6,$38,$BD,$F6,$26,$25,$0A,$86,$0C ; $F9FF data/unclassified
         dc.b $C6,$30,$BD,$F5,$C2,$BD,$EA,$19,$7E,$F9,$A0     ; $FA0F data/unclassified
 NORMALIZE_PENDING_SCORE_DIGITS:
-; Normalize the pending-score digits 0094-0098 by carrying each value of ten into the next decimal place.
-        LDAA.w PENDING_SCORE_10S     ; $FA1A: $B6,$00,$94
+; Normalize the scaled pending-score digits 0094-0098 by carrying each value
+; of ten into the next displayed decimal place.
+        LDAA.w PENDING_SCORE_1S      ; $FA1A: $B6,$00,$94
         SUBA #$a                     ; $FA1D: $80,$0A
         BCS $fa29                    ; $FA1F: $25,$08
-        STAA.w PENDING_SCORE_10S     ; $FA21: $B7,$00,$94
-        INC.w PENDING_SCORE_100S     ; $FA24: $7C,$00,$95
+        STAA.w PENDING_SCORE_1S      ; $FA21: $B7,$00,$94
+        INC.w PENDING_SCORE_10S      ; $FA24: $7C,$00,$95
         BRA $fa1d                    ; $FA27: $20,$F4
-        LDAA.w PENDING_SCORE_100S    ; $FA29: $B6,$00,$95
+        LDAA.w PENDING_SCORE_10S     ; $FA29: $B6,$00,$95
         SUBA #$a                     ; $FA2C: $80,$0A
         BCS $fa38                    ; $FA2E: $25,$08
-        STAA.w PENDING_SCORE_100S    ; $FA30: $B7,$00,$95
-        INC.w PENDING_SCORE_1000S    ; $FA33: $7C,$00,$96
+        STAA.w PENDING_SCORE_10S     ; $FA30: $B7,$00,$95
+        INC.w PENDING_SCORE_100S     ; $FA33: $7C,$00,$96
         BRA $fa2c                    ; $FA36: $20,$F4
-        LDAA.w PENDING_SCORE_1000S   ; $FA38: $B6,$00,$96
+        LDAA.w PENDING_SCORE_100S    ; $FA38: $B6,$00,$96
         SUBA #$a                     ; $FA3B: $80,$0A
         BCS $fa47                    ; $FA3D: $25,$08
-        STAA.w PENDING_SCORE_1000S   ; $FA3F: $B7,$00,$96
-        INC.w PENDING_SCORE_10000S   ; $FA42: $7C,$00,$97
+        STAA.w PENDING_SCORE_100S    ; $FA3F: $B7,$00,$96
+        INC.w PENDING_SCORE_1000S    ; $FA42: $7C,$00,$97
         BRA $fa3b                    ; $FA45: $20,$F4
-        LDAA.w PENDING_SCORE_10000S  ; $FA47: $B6,$00,$97
+        LDAA.w PENDING_SCORE_1000S   ; $FA47: $B6,$00,$97
         SUBA #$a                     ; $FA4A: $80,$0A
         BCS $f9de                    ; $FA4C: $25,$90
-        STAA.w PENDING_SCORE_10000S  ; $FA4E: $B7,$00,$97
-        INC.w PENDING_SCORE_100000S  ; $FA51: $7C,$00,$98
+        STAA.w PENDING_SCORE_1000S   ; $FA4E: $B7,$00,$97
+        INC.w PENDING_SCORE_10000S   ; $FA51: $7C,$00,$98
         BRA $fa4a                    ; $FA54: $20,$F4
         dc.b $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ; $FA56 data/unclassified
         dc.b $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF ; $FA66 data/unclassified

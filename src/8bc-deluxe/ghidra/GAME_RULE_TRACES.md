@@ -30,7 +30,7 @@ PIA0 scan E1F0 -> debounced event at 1026 mask 0x40
                   -> dispatcher E5BD -> table entry C013
                   -> Rebound handler CA95
                   -> sound command 0x22 + score gate
-                  -> 10/20/30-point award CA1B
+                  -> original 10/20/30-point queue at CA1B
                   -> pending score 0094-0099 -> displayed player score
 ```
 
@@ -60,17 +60,22 @@ physical lamp names represented by these two gate bits have not yet been
 traced through the schematic, so they remain unnamed.
 
 When the gate passes, `CA1B` adds one unit to the lowest pending-score digit
-at `0094`, i.e. **10 displayed points**. It repeats that addition according to
-the authoritative playfield-multiplier state described below. `FA1A` carries
+at `0094`. The canonical ROM displays that unit as 10 points; Deluxe's common
+transfer at `F38C` deliberately maps it to **1 displayed point**. Every higher
+pending class is likewise shifted down one decimal position. `FA1A` carries
 decimal overflow through `0094-0098`, and `F38C` transfers the pending amount
 into the active player's displayed score over subsequent main-loop passes.
+The end-of-ball bonus is the exception to this queue path: its calls at
+`C7F0-C7FB` and `C906-C90B` feed the BCD score adder directly, so Deluxe also
+scales those constants from 10,000 + 5,000 to 1,000 + 500 per pool ball and
+from 10,000 to 1,000 per E-I-G-H-T bonus step.
 
 This trace establishes a reusable analysis pattern for the other playfield
 switches: locate the event bit, resolve its `C011` table entry, follow the
 handler's RAM changes and helper calls, then follow queued score, sound, lamp,
 and solenoid work to their periodic output routines.
 
-## Pool-ball drop targets: first sink and later 5,000
+## Pool-ball drop targets: first sink and later scaled 500
 
 The five switch groups numbered 25, 27, 28, 30, and 31 feed two shared rule
 handlers. Their entries in the normal-play table are ordered by the
@@ -90,12 +95,12 @@ The important state bytes have separate jobs:
 | --- | --- |
 | `10C3` | Persistent seven-bit record of pool balls 1 through 7 already sunk |
 | `10C5` | Physical-closure latch for the five drop-target switch groups |
-| `10BF` | Mask for the five 5,000 drop-target lamp effects |
+| `10BF` | Mask for the five physical 5,000 drop-target lamp effects |
 
 On a new physical closure, either handler first sets the corresponding bit in
 `10C5`. If that bit was already set, it returns without scoring again while
 the switch remains closed. For a ball not yet recorded in `10C3`, the path at
-`CE07` calls `C9C4`, which adds **500 points**, applies the current CHAMP
+`CE07` calls `C9C4`, which adds **50 Deluxe points** (original 500), applies the current CHAMP
 playfield double/triple multiplier, and records the ball's bit in `10C3`.
 
 The paired switches require two first-sink hits. Switch 25 records ball 1 on
@@ -105,8 +110,8 @@ the group in its later-value state. The single switches need only their one
 corresponding bit.
 
 When the relevant sunk bit or bits are already set, the branch at `D034`
-calls `C9EF`, awarding **5,000 points**, again through the current playfield
-multiplier. It also updates the associated 5,000 lamp effect through `10BF`
+calls `C9EF`, awarding **500 Deluxe points** (original 5,000), again through
+the current playfield multiplier. It also updates the physical 5,000 lamp effect through `10BF`
 and lamp shadow `103F`.
 
 The reset sequence explains how the physical target's return changes the next
@@ -114,9 +119,9 @@ hit without losing the sunk-ball state. `C6C9-C6F6` pulses reset selectors
 `M0`, `M1`, `M2`, `M3`, and `M4`. After each pulse, `C6F7-C6FC` clears that
 group's bit in `10C5`, rearming the switch for another closure. It deliberately
 does **not** clear `10C3`. Consequently, the reset target comes back up, its
-next closure is accepted, and the preserved sunk-ball bit selects 5,000
+next closure is accepted, and the preserved sunk-ball bit selects the scaled 500
 instead of the original 500. This is the ROM implementation of the observed
-rule, with the two paired groups becoming worth 5,000 after both balls in the
+rule, with the two paired groups becoming worth 500 after both balls in the
 pair have first been sunk.
 
 ## Playfield Scores Double and Triple
@@ -149,7 +154,7 @@ are mutually exclusive:
 | `E0` | **Triple** remains active; fourth-or-later completion also recorded in bit `0x80` |
 
 Switches 17 through 21 share the CHAMP-lane handler at `CAD4`. Each lane first
-receives its 3,000-point award through `C9F3`, using the multiplier that was
+receives its scaled 300-point award (original 3,000) through `C9F3`, using the multiplier that was
 already active. The handler then records that lane in `1040`; when all five
 letters are complete, `CB07-CB23` advances `10C0` through
 `00 -> 10 -> 20 -> 60 -> E0`. Consequently, the lane that completes CHAMP for

@@ -119,7 +119,7 @@ DELUXE_SPINNER_SKIP_3000:
         BEQ DELUXE_SPINNER_SCORE_READY
         ADDB #$05
 DELUXE_SPINNER_SCORE_READY:
-        JMP AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER
+        JMP AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER
 
 DELUXE_SCORE_UNLIT_SPINNER:
 ; Unlike the lit collect value, the unlit 100-point value is deliberately
@@ -282,18 +282,20 @@ DELUXE_HIDE_INACTIVE_ORBIT_LAMPS:
         RTS
 
 DELUXE_SCORE_UNLIT_ORBIT:
-; The first original orbit score-table entry proves the base value is 5,000.
+; The first original orbit score-table entry proves the printed base value is
+; 5,000; Deluxe's global score scale makes the displayed award 500.
 ; Bypassing CB5C prevents an unlit hit from advancing the shared value.
         TBA
         JSR $c27e
-        JMP AWARD_5000_POINTS_WITH_PLAYFIELD_MULTIPLIER
+        JMP AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER
 
 DELUXE_AFTER_FIRST_SINK:
 ; CE13 jumps here with A equal to the newly updated sunk-ball mask and the
 ; selected target bit saved on top of the stack. Restore that exact stack
 ; shape before returning to the canonical first-sink animation at CE1A.
 ; Already-sunk targets never reach this hook: they branch to the canonical
-; 5,000-point path at D034 and cannot change the deluxe collect state.
+; scaled 500-point path (original 5,000) at D034 and cannot change the Deluxe
+; collect state.
         PULB
         PSHB
         PSHA
@@ -479,9 +481,9 @@ DELUXE_BEGIN_BALL_LETTER_BONUS_PASS:
 
 DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS:
 ; C8A6 is reached after the current partial E-I-G-H-T letters have been worth
-; 10,000 each. Feed one completed B-A-L-L letter back through the untouched
-; five-letter loop at C8A1, producing 5 * 10,000 = 50,000 per B-A-L-L letter
-; on every bonus-multiplier pass.
+; a scaled 1,000 each. Feed one completed B-A-L-L letter back through the
+; five-letter loop at C8A1, producing 5 * 1,000 = 5,000 per B-A-L-L letter on
+; every bonus-multiplier pass.
         LDAA DELUXE_BONUS_BALL_LETTERS_REMAINING
         BEQ DELUXE_BALL_LETTER_BONUS_DONE
         DECA
@@ -534,9 +536,9 @@ DELUXE_BEGIN_BONUS_PASS:
 
 DELUXE_PROCESS_COMPLETED_RACK_BONUS:
 ; C809 reaches this after all individually sunk balls in the current partial
-; rack have received their normal 15,000-point bonus unit. Feed one completed
-; rack at a time back through the untouched eight-ball unit loop at C81C. Each
-; rack therefore contributes 8 * 15,000 = 120,000 on every multiplier pass.
+; rack have received their scaled 1,500-point bonus unit. Feed one completed
+; rack at a time back through the eight-ball unit loop at C81C. Each rack
+; therefore contributes 8 * 1,500 = 12,000 on every multiplier pass.
         LDAA DELUXE_BONUS_RACKS_REMAINING
         BEQ DELUXE_COMPLETED_RACK_BONUS_DONE
         DECA
@@ -696,7 +698,7 @@ DELUXE_HOLE_TERMINAL_STATE:
         LDAA DELUXE_COLLECT_STATE
         ORAA #DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT
         STAA DELUXE_COLLECT_STATE
-        JSR AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER
+        JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER
         LDAA $10c1
         JMP $d08c
 
@@ -753,8 +755,8 @@ DELUXE_LOAD_LIVE_ORBIT_STATE_FOR_SAVE:
 
 DELUXE_AWARD_SPECIAL_POINTS:
 ; All original special collectors converge at C1DB. Award an additional
-; 250,000 through the same multiplier-aware helpers used by normal scoring:
-; 100,000 + 100,000 + 50,000 gives 250K/500K/750K at playfield 1x/2x/3x.
+; scaled 25,000 through the same multiplier-aware helpers used by normal
+; scoring: 10,000 + 10,000 + 5,000 gives 25K/50K/75K at 1x/2x/3x.
 ; Then execute C1DB's displaced instruction and resume the original special
 ; processing, including its adjustment-controlled award and knocker behavior.
         JSR $c96c

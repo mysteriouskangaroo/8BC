@@ -2,22 +2,58 @@
 
 This document translates `new-games-design-ideas/8 Ball Champ New Rules.pptx` into an implementation contract. The original ROM trace is used to resolve its descriptions of the existing rules and uncertain base values.
 
+## Deluxe score scale
+
+Deluxe stores and displays every gameplay award at one tenth of the original
+manual/playfield value. Normal playfield awards use the common pending-score
+transfer, which maps the original decimal queues to the next lower display
+digit and makes the formerly unused ones digit meaningful. The end-of-ball
+bonus bypasses those queues and is scaled separately at its two direct BCD
+score-adder call sites. Thus original 10 scores 1, original 4,500 scores 450,
+original 15,000 bonus scores 1,500, and original 250,000 scores 25,000.
+Relative values, playfield multipliers, bonus multipliers, score sounds, and
+award timing are unchanged. The seven-digit display can represent the
+equivalent of 99,999,990 original points as a Deluxe score of 9,999,999.
+
+Printed playfield inserts retain their physical legends. In this document,
+phrases such as the **100,000 insert** identify that lamp or feature; an
+explicit score describes the scaled Deluxe award.
+
+Install this ROM with reset working RAM/NVRAM. The operations manual confirms
+that registers 12-14 are operator-entered replay/extra-ball thresholds and
+register 15 is the operator-entered High Score to Date, each accepting values
+through 9,999,999. Re-enter them at one tenth of the former settings. The
+manual's recommended settings therefore translate as follows:
+
+| Setting | Original recommendation | Deluxe setting |
+| --- | ---: | ---: |
+| 3-ball first replay | 1,500,000 | 150,000 |
+| 3-ball second replay | 3,000,000 | 300,000 |
+| 3-ball High Score to Date | 4,000,000 | 400,000 |
+| 5-ball first replay | 2,000,000 | 200,000 |
+| 5-ball second replay | 4,000,000 | 400,000 |
+| 5-ball High Score to Date | 5,000,000 | 500,000 |
+| Extra-ball thresholds | 2,000,000 / 3,700,000 | 200,000 / 370,000 |
+
+The manual defines Match against the tens digit, and the ROM continues to do
+so. Activating the ones digit does not change Match probability or presentation.
+
 ## Existing rules established in the original ROM
 
 - Switch 32 is the spinner. Its original handler is at `$CA3B`.
-- Spinner value/lamp state is stored at `$10B1`. The bit state is changed by completing the C-H-A-M-P rollovers. The three lamp bits represent 1,000, 3,000, and 5,000. Any subsequent completion of C-H-A-M-P after 5,000 keeps it at the 5,000 bit. 
-- Switches 12 and 13 are the left and right rollover buttons. They enter the shared orbit-value handler at `$CB53` and `$CB4F`. Its first score-table entry calls `$C9EF`, establishing **5,000** as the unlit/default orbit score.
-- The original orbit-value handler keeps the left and right values synchronized, advances the lit value by 10,000, and honors the operator setting that controls whether that value is retained between balls. At 100,000, it lights a special collect on each orbit. Thereafter, it continues to award 100,000 for each rollover.
+- Spinner value/lamp state is stored at `$10B1`. The bit state is changed by completing the C-H-A-M-P rollovers. The three physical lamp bits are labeled 1,000, 3,000, and 5,000; their Deluxe awards are 100, 300, and 500. Any subsequent completion after the 5,000 lamp keeps that bit selected.
+- Switches 12 and 13 are the left and right rollover buttons. They enter the shared orbit-value handler at `$CB53` and `$CB4F`. Its first score-table entry calls `$C9EF`, establishing **500 Deluxe points** (original 5,000) as the unlit/default orbit score.
+- The original orbit-value handler keeps the left and right values synchronized, advances the printed lit value by 10,000 (1,000 Deluxe points), and honors the operator setting that controls whether that value is retained between balls. At the printed 100,000 state, it lights a special collect on each orbit and awards 10,000 Deluxe points per collection.
 - Switch 05 is the saucer/hole. State `$10C1` controls its progression through
-  the 2x, 3x, and 5x bonus multipliers to the terminal 100,000-point state.
-  Bit `$08` selects the repeatable 100,000-point saucer award at `$D070`,
+  the 2x, 3x, and 5x bonus multipliers to the terminal 100,000 insert.
+  Bit `$08` selects its repeatable 10,000-point Deluxe award at `$D070`,
   which is also affected by the current playfield multiplier. Once balls 1-7
   have been sunk (`$10C3 = $7F`), the saucer lights to collect the 8-ball. The
   next saucer hit runs the 8-ball collection routine at `$CEDC`: it advances
   the separate pool-bonus lamps in `$1044` through 120K, 240K, and
   120K+240K; clears the sunk-ball state for a new rack; and then continues
   through the normal saucer scoring/progression code at `$D069`.
-- The original drain-bonus routine at `$C765` awards 15,000 for each sunk pool
+- The original drain-bonus routine at `$C765` awards 1,500 Deluxe points for each sunk pool
   ball and repeats that award pass for the selected 2x, 3x, or 5x bonus. Its
   completed-rack calculation originally used only the two 120K/240K lamp bits
   in `$1044`, which can encode no more than three completed racks.
@@ -41,7 +77,7 @@ The collect feature has six ordered states:
 In this section, a **newly sunk pool ball** means the first hit that changes
 that ball's bit in `$10C3` from clear to set and lights its sunk-ball lamp.
 Hitting a ball that is already sunk (its lamp is already on) follows the
-existing 5,000-point path at `$D034`; it does **not** activate, move, restart,
+existing 500-point Deluxe path at `$D034`; it does **not** activate, move, restart,
 or otherwise advance the collect feature.
 
 Collecting the lit 8-ball at the saucer is also one new-ball activation event.
@@ -62,7 +98,7 @@ does not collect the lit 8-ball is not an activation event.
 
 ### Left orbit
 
-- When it is not active, switch 12 awards 5,000 and does not collect or advance
+- When it is not active, switch 12 awards 500 and does not collect or advance
   the retained orbit value, including when that value has reached the original
   100,000/special terminal state. A qualified terminal special remains stored
   and can be collected later when the orbit is active; inactive rollover hits
@@ -74,25 +110,27 @@ does not collect the lit 8-ball is not an activation event.
   retained qualification. The original already-collected latch in `$10A0` bit
   `$20` prevents it from being relit after collection during the same ball.
 - When a newly sunk ball first activates the collect feature at the left orbit,
-  the original 5,000 baseline is promoted to a lit 10,000 value. If the
+  the original 5,000 baseline is promoted to the printed 10,000 value, which
+  awards 1,000 Deluxe points. If the
   operator's retain setting has carried a higher orbit value forward, that
   higher value is preserved instead of being reduced to 10,000.
 - When the left-orbit collect is active, switch 12 awards the current shared
   orbit value using the original handler and runs the original fast upward
   arrow-chase collect animation. Only after that animation finishes does it
-  advance the value by 10,000, hide the orbit-value arrows, and move the
+  advance the printed value by 10,000 (1,000 Deluxe points), hide the
+  orbit-value arrows, and move the
   feature to **spinner inactive**. A later newly sunk pool ball must activate
   the spinner.
 - Each new activation that lights the left-orbit collect authorizes one future
-  saucer 100,000 award. Collecting the orbit is not required to create that
+  saucer 100,000-insert award of 10,000 Deluxe points. Collecting the orbit is not required to create that
   authorization, and the authorization persists after the orbit advances.
 
 ### Spinner
 
-- An unlit spinner scores 100 points per spin and does not use the playfield
+- An unlit spinner scores 10 points per spin and does not use the playfield
   multiplier.
-- The spinner collect begins at 1,000 at the start of every ball.
-- While the feature is at spinner inactive, spinner pulses remain unlit 100-
+- The spinner collect begins at 100 Deluxe points (the printed 1,000 lamp) at the start of every ball.
+- While the feature is at spinner inactive, spinner pulses remain unlit 10-
   point shots. A newly sunk pool ball changes it to spinner active and displays
   its current value.
 - Activating spinner collect only reveals its current value; activation does
@@ -104,14 +142,15 @@ does not collect the lit 8-ball is not an activation event.
   and resets the five-letter round, after which newly recollected E-I-G-H-T
   letters can advance the spinner again.
 - The three independent value lamps form a binary counter with the exact
-  sequence 1,000 -> 3,000 -> 4,000 -> 5,000 -> 6,000 -> 8,000 -> 9,000. It
-  remains at 9,000 after reaching the top state.
+  printed sequence 1,000 -> 3,000 -> 4,000 -> 5,000 -> 6,000 -> 8,000 ->
+  9,000, awarding 100 -> 300 -> 400 -> 500 -> 600 -> 800 -> 900 Deluxe
+  points. It remains at 900 after reaching the top state.
 - While the spinner collect is active, every spin scores its displayed value
   using the current 1x/2x/3x playfield multiplier.
 - Spinner sounds follow the highest lit value lamp, matching the original
-  sound tiers: unlit 100 uses the 100 sound; 1,000 uses the 1,000 sound; 3,000
-  and 4,000 use the 3,000 sound; and 5,000, 6,000, 8,000, and 9,000 use the
-  5,000 sound.
+  sound tiers: unlit 10 uses the original 100 sound; 100 uses the original
+  1,000 sound; printed 3,000 and 4,000 use the 3,000 sound; and printed 5,000,
+  6,000, 8,000, and 9,000 use the 5,000 sound.
 - The collect remains active while the spinner is producing switch pulses.
   Every pulse scores and restarts an approximately two-second inactivity timer;
   another pulse inside that window continues the same collect and can add more
@@ -126,16 +165,18 @@ does not collect the lit 8-ball is not an activation event.
 - When the right-orbit collect is active, switch 13 awards the same shared
   orbit value as the left side and runs the original fast upward arrow-chase
   collect animation. Only after that animation finishes does it advance the
-  value by 10,000, hide the orbit-value arrows, and move to **left orbit
+  printed value by 10,000 (1,000 Deluxe points), hide the orbit-value arrows, and move to **left orbit
   inactive**.
-- When it is not active, switch 13 awards 5,000 and does not advance the shared
+- When it is not active, switch 13 awards 500 and does not advance the shared
   orbit value.
 
 ## Hole / saucer
 
-- The existing bonus progression remains 2x -> 3x -> 5x -> 100,000.
+- The existing bonus progression remains 2x -> 3x -> 5x -> the 100,000 insert,
+  whose Deluxe award is 10,000.
 - The left-orbit collect activation and the saucer progression are independent
-  gates. Newly lighting the left-orbit collect can arm one 100,000 award, but
+  gates. Newly lighting the left-orbit collect can arm one printed 100,000
+  insert award (10,000 Deluxe points), but
   it never advances 2x, 3x, or 5x and cannot cause the saucer to skip 5x.
 - The player must actually collect the lit 5x saucer step before 100,000 can
   blink. If 5x is collected first, the progression waits there until the next
@@ -144,8 +185,8 @@ does not collect the lit 8-ball is not an activation event.
 - Collecting the lit 100,000 consumes that left-orbit authorization and turns
   off 100,000. The bonus multiplier remains at 5x; only the live 100,000 flash
   and award are disabled. A later new left-orbit activation can arm and light
-  one more 100,000 award without replaying the multiplier progression.
-- Once qualified, the 100,000 award retains its original playfield-multiplier
+  one more scaled 10,000 award without replaying the multiplier progression.
+- Once qualified, the scaled 10,000 award retains its original playfield-multiplier
   behavior.
 - Bonus progression, left-orbit authorization, and the waiting qualification
   all reset when a new ball starts.
@@ -158,11 +199,11 @@ does not collect the lit 8-ball is not an activation event.
   Because those two lamps can represent only one, two, or three completed
   racks, both remain lit for any count of three or more; the RAM counter, not
   the lamps, is authoritative for scoring.
-- At drain, each completed rack is worth `8 * 15,000 = 120,000`, and each ball
-  already sunk in the unfinished current rack adds another 15,000.
+- At drain, each completed rack is worth `8 * 1,500 = 12,000`, and each ball
+  already sunk in the unfinished current rack adds another 1,500 Deluxe points.
 - The existing 1x/2x/3x/5x end-of-ball bonus multiplier applies to the entire
-  result. For example, six completed racks contribute `6 * 120,000` before
-  the multiplier, plus 15,000 for each sunk ball in the current partial rack.
+  result. For example, six completed racks contribute `6 * 12,000` before
+  the multiplier, plus 1,500 for each sunk ball in the current partial rack.
 - Each player's completed-rack counter carries across that player's balls and
   is restored after the intervening players' turns. All four counters reset at
   the start of a new game. Each one-byte counter saturates at 255 rather than
@@ -186,9 +227,9 @@ does not collect the lit 8-ball is not an activation event.
   rack total to the number of B-A-L-L letters collected. It stays on that total
   throughout the B-A-L-L/E-I-G-H-T bonus phase, then the genuine credit count
   is restored.
-- At drain, each completed B-A-L-L letter is worth five original 10,000-point
-  E-I-G-H-T units, or 50,000. Each E-I-G-H-T letter collected toward the next
-  B-A-L-L letter adds another 10,000.
+- At drain, each completed B-A-L-L letter is worth five scaled 1,000-point
+  E-I-G-H-T units, or 5,000. Each E-I-G-H-T letter collected toward the next
+  B-A-L-L letter adds another 1,000.
 - The 1x/2x/3x/5x end-of-ball bonus multiplier applies to the complete result.
   Each player's counter carries across their later balls, saturates at 255,
   and resets only with a new game. The two-digit display caps at 99 without
@@ -212,8 +253,8 @@ does not collect the lit 8-ball is not an activation event.
 
 ## Specials
 
-- Collecting any special also awards 250,000 points multiplied by the current
-  playfield value: 250,000 at 1x, 500,000 at 2x, or 750,000 at 3x.
+- Collecting any special also awards 25,000 points multiplied by the current
+  playfield value: 25,000 at 1x, 50,000 at 2x, or 75,000 at 3x.
 - These points are additional to the original adjustment-controlled special
   award and do not replace its sound, animation, or knocker behavior.
 - The points are awarded only when a lit special is actually collected, not
@@ -222,8 +263,9 @@ does not collect the lit 8-ball is not an activation event.
   and then fall through to the common special-award path at `$C1DB`; one
   original collector enters `$C1DB` directly. All five confirmed collection
   routes therefore pass through `$C1DB`. Deluxe hooks that single convergence
-  point, adds two multiplier-aware 100,000 awards plus one multiplier-aware
-  50,000 award, and resumes the untouched original routine at `$C1DE`.
+  point, adds two scaled multiplier-aware 10,000 awards plus one scaled
+  multiplier-aware 5,000 award, and resumes the untouched original routine at
+  `$C1DE`.
 
 ## Deluxe implementation state
 
@@ -282,29 +324,38 @@ only the left or only the right bank without a coordinated VPX-table change
   inactive, with a distinct newly sunk ball required for each activation.
 - Verify additional newly sunk balls while a location is already active do not
   move it and are not queued to activate the following location.
-- Verify hitting an already-sunk ball still follows its existing 5,000-point
+- After reset, enter replay/extra-ball thresholds and High Score to Date at
+  one tenth of the former values. Verify the displays accept the scaled values
+  and the awards occur at those thresholds.
+- Verify a manual/playfield 10-point Rebound scores 1, a 500-point target
+  scores 50, a 3,000-point CHAMP lane scores 300, and a combined 4,500-point
+  award path scores 450. Verify carries use the ones digit correctly across
+  9 -> 10, 99 -> 100, and 999 -> 1,000.
+- Verify Match retains the factory tens-digit behavior and approximately 10%
+  award probability even when the score's ones digit is nonzero.
+- Verify hitting an already-sunk ball still follows its scaled 500-point
   path and does not activate, move, restart, or advance the collect feature.
 - Verify collecting the lit 8-ball activates the current location when it is
   inactive, does nothing to an already-active collect state, and is never
   queued for the next location. Verify ordinary saucer hits do not activate it.
-- Verify unlit left/right orbit shots score 5,000 without advancing their value.
-- Verify the first active left-orbit collect lights at 10,000 (or preserves a
-  higher retained value), scores that amount, and advances the shared value by
-  10,000.
+- Verify unlit left/right orbit shots score 500 without advancing their value.
+- Verify the first active left-orbit collect lights the printed 10,000 insert
+  (or preserves a higher retained value), scores 1,000, and advances the shared
+  printed value by 10,000 / Deluxe value by 1,000.
 - Verify collecting left and right hides their active orbit indication while
   retaining the next orbit value, and that a later activation restores it.
   On each collect, verify the original fast upward arrow chase completes before
   the arrows turn off and the logical state advances.
-- Verify an inactive left rollover still scores only 5,000 at the retained
+- Verify an inactive left rollover still scores only 500 at the retained
   100,000/special terminal state and does not consume the special. Verify the
   special indication is hidden whenever neither orbit is active, begins
   blinking when the collect activates at either orbit, and hides again when
-  that orbit collect advances. Verify the original 100,000/special behavior
-  occurs when the active orbit collects it.
+  that orbit collect advances. Verify the printed 100,000/special behavior
+  occurs when the active orbit collects it and awards 10,000 Deluxe points.
 - Verify spinner values and lamps advance through the weighted binary states,
-  active spins receive 2x/3x, and an unlit spin remains 100. Verify the sound
-  tiers are 100 -> 100 sound, 1K -> 1K sound, 3K/4K -> 3K sound, and
-  5K/6K/8K/9K -> 5K sound.
+  active spins receive 2x/3x, and an unlit spin remains 10. Verify the score /
+  original-sound tiers are 10 -> 100 sound, 100 -> 1K sound, 300/400 -> 3K
+  sound, and 500/600/800/900 -> 5K sound.
 - Verify activating spinner collect or sinking a pool ball does not advance its
   accumulated value. Verify each dedicated E-I-G-H-T target advances exactly
   once per letter round, an already-lit letter does not advance it, completing
@@ -314,23 +365,23 @@ only the left or only the right bank without a coordinated VPX-table change
   seconds continues scoring, and roughly two seconds with no pulse closes the
   collect and advances it to the right orbit.
 - Verify the saucer displays and collects 2x, then 3x, then 5x without a left-
-  orbit activation changing those steps. Verify 100,000 cannot blink until
+  orbit activation changing those steps. Verify the 100,000 insert cannot blink until
   both 5x has been collected and the left-orbit collect has been newly lit, in
-  either order. After collecting 100,000, verify it turns off and cannot be
+  either order. After collecting it, verify it awards 10,000 at 1x, turns off, and cannot be
   awarded again until a later new left-orbit activation rearms it, while end-
   of-ball bonus and the 5x indication remain at 5x throughout.
 - Complete at least four 8-ball racks in one ball and verify the center inserts
   remain capped at their 120K+240K display while every completed rack is still
   counted at drain. With six completed racks, verify the completed-rack portion
-  is 720,000 at 1x, 1,440,000 at 2x, 2,160,000 at 3x, or 3,600,000 at 5x,
-  plus 15,000 times the multiplier for each sunk ball in the partial rack.
+  is 72,000 at 1x, 144,000 at 2x, 216,000 at 3x, or 360,000 at 5x,
+  plus 1,500 times the multiplier for each sunk ball in the partial rack.
 - During that drain bonus, verify the credit display shows `06` for six
   completed racks, remains stable through every multiplier pass, and restores
   the exact prior credit count after the following B-A-L-L bonus finishes.
 - Complete E-I-G-H-T at least five times in one ball. Verify all four physical
   B-A-L-L inserts remain lit after the fourth completion, the fifth completion
   is retained in RAM, and the credit display changes to `05` after the rack
-  bonus. At 1x, verify those five letters contribute 250,000, plus 10,000 for
+  bonus. At 1x, verify those five letters contribute 25,000, plus 1,000 for
   each partial E-I-G-H-T letter; repeat at 2x/3x/5x to confirm multiplication.
 - In a four-player game, give Player 1 four completed racks and five B-A-L-L
   letters, then play through Players 2-4. Verify Player 1's next ball restores
@@ -340,7 +391,7 @@ only the left or only the right bank without a coordinated VPX-table change
 - Verify CHAMP completions 2, 4, and 6 produce 2x, 3x, and both specials, and
   that CHAMP no longer changes spinner value.
 - Collect each available special at 1x, 2x, and 3x and verify its additional
-  score is respectively 250,000, 500,000, and 750,000 while the original
+  score is respectively 25,000, 50,000, and 75,000 while the original
   special award and knocker behavior still occur exactly once.
 - Verify drain/new-ball resets collect location, spinner value, saucer
   qualification, CHAMP count, and multiplier while respecting existing

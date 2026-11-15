@@ -9,12 +9,15 @@ PIA1_PORTA_OR_DDRA                           equ $0040
 PIA1_CRA                                     equ $0041
 PIA1_PORTB_OR_DDRB                           equ $0042
 PIA1_CRB                                     equ $0043
-PENDING_SCORE_10S                            equ $0094
-PENDING_SCORE_100S                           equ $0095
-PENDING_SCORE_1000S                          equ $0096
-PENDING_SCORE_10000S                         equ $0097
-PENDING_SCORE_100000S                        equ $0098
-PENDING_SCORE_1000000S                       equ $0099
+; Deluxe applies every queued award at one tenth of the canonical value. The
+; queue addresses are unchanged, but their displayed decimal places shift down
+; one position so the previously unused ones digit becomes meaningful.
+PENDING_SCORE_1S                             equ $0094
+PENDING_SCORE_10S                            equ $0095
+PENDING_SCORE_100S                           equ $0096
+PENDING_SCORE_1000S                          equ $0097
+PENDING_SCORE_10000S                         equ $0098
+PENDING_SCORE_100000S                        equ $0099
 WORK_RAM_U4_6116_START                       equ $1000
 PENDING_SOUND_COMMAND                        equ $1024
 SWITCH_EVENTS_STROBE0                        equ $1026
