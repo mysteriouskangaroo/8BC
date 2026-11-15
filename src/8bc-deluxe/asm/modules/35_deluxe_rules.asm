@@ -21,11 +21,11 @@ DELUXE_PERIODIC_TICK:
         BNE DELUXE_PERIODIC_TICK_DONE
 ; Each active spinner pulse restarts this inactivity timer.  A pulse inside
 ; the window continues the same collect; only about two seconds with no
-; further pulse closes it and advances to right-orbit inactive. Preserve the
-; two saucer-qualification flags while clearing active and selecting right.
+; further pulse closes it and advances to left-orbit inactive. Preserve the
+; two saucer-qualification flags while clearing active and selecting left.
         LDAA DELUXE_COLLECT_STATE
         ANDA #$C0
-        ORAA #DELUXE_COLLECT_RIGHT_ORBIT
+        ORAA #DELUXE_COLLECT_LEFT_ORBIT
         STAA DELUXE_COLLECT_STATE
         CLR $10b1
         CLR $10b2
@@ -40,7 +40,7 @@ DELUXE_INITIALIZE_BALL:
 ; letters are per-player and were restored at C603, so do not clear them here.
 ; C507 clears the original multiplier state; this helper resets only the
 ; additional Deluxe per-ball and bonus-working state.
-        LDAA #DELUXE_COLLECT_LEFT_ORBIT
+        LDAA #DELUXE_COLLECT_RIGHT_ORBIT
         STAA DELUXE_COLLECT_STATE
         CLR DELUXE_SPINNER_IDLE_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
@@ -52,7 +52,7 @@ DELUXE_INITIALIZE_BALL:
         STAA DELUXE_SPINNER_VALUE_MASK
 ; The canonical player restore at C500 has already loaded the retained orbit
 ; value into 1044. Keep its low-nibble value in Deluxe RAM, then set the live
-; low nibble to all-off while the new ball begins at left-orbit inactive.
+; low nibble to all-off while the new ball begins at right-orbit inactive.
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ANDA #$0f
         STAA DELUXE_ORBIT_VALUE_STATE
@@ -60,7 +60,7 @@ DELUXE_INITIALIZE_BALL:
         ORAA #$0f
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
 ; The terminal special may be retained from the player record, but the new
-; ball begins at left-orbit inactive, so its live blinking mask must be hidden.
+; ball begins at right-orbit inactive, so its live blinking mask must be hidden.
         JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
 ; High bits of 1040 are active-low spinner-value lamps. Keep them dark until
 ; the collect reaches the spinner, while preserving the five CHAMP lane bits.
@@ -175,7 +175,7 @@ DELUXE_HANDLE_RIGHT_ORBIT:
         JMP DELUXE_SCORE_UNLIT_ORBIT
 DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT:
 ; Keep right active while the original handler runs its fast upward arrow
-; chase. Advance to left-orbit inactive only after that animation returns.
+; chase. Advance to spinner inactive only after that animation returns.
         JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
 
 DELUXE_HANDLE_LEFT_ORBIT:
@@ -212,8 +212,19 @@ DELUXE_LEFT_ORBIT_FINISH:
         JMP DELUXE_SCORE_ACTIVE_LEFT_ORBIT
 
 DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
-; Finish the original chase before changing location. Then advance to spinner
-; inactive and darken both the shared orbit value and spinner value lamps.
+; Finish the original chase before changing location. Then advance to right-
+; orbit inactive and darken the shared orbit value lamps.
+        BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
+        LDAA DELUXE_COLLECT_STATE
+        ANDA #$c0
+        ORAA #DELUXE_COLLECT_RIGHT_ORBIT
+        STAA DELUXE_COLLECT_STATE
+        BRA DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
+
+DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
+; Finish the original chase before moving the sequence to spinner inactive.
+; Preserve only the two saucer flags, and darken the spinner value lamps until
+; a newly sunk ball activates that location; sunk balls are never queued.
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
         LDAA DELUXE_COLLECT_STATE
         ANDA #$c0
@@ -221,16 +232,6 @@ DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
         STAA DELUXE_COLLECT_STATE
         CLR $10b1
         CLR $10b2
-        BRA DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
-
-DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
-; Finish the original chase before returning the sequence to left inactive.
-; Preserve only the two saucer flags; sunk balls are never queued forward.
-        BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #$c0
-        ORAA #DELUXE_COLLECT_LEFT_ORBIT
-        STAA DELUXE_COLLECT_STATE
         BRA DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
 
 DELUXE_RUN_ORIGINAL_LIT_ORBIT:
@@ -589,7 +590,7 @@ DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
         BEQ DELUXE_FIRST_SINK_ACTIVATE_LEFT
         CMPA #DELUXE_COLLECT_SPINNER
         BEQ DELUXE_FIRST_SINK_ACTIVATE_SPINNER
-        BRA DELUXE_FIRST_SINK_SHOW_ORBIT
+        BRA DELUXE_FIRST_SINK_ACTIVATE_ORBIT
 
 DELUXE_FIRST_SINK_ACTIVATE_LEFT:
 ; Newly lighting the left-orbit collect grants one saucer-100K authorization.
@@ -603,10 +604,12 @@ DELUXE_FIRST_SINK_ACTIVATE_LEFT:
         ANDA #$bf
 DELUXE_LEFT_ACTIVATION_STORE_AUTHORIZATION:
         STAA DELUXE_COLLECT_STATE
+DELUXE_FIRST_SINK_ACTIVATE_ORBIT:
 ; The original all-off orbit state ($xF in the low nibble) scores 5,000.
-; Activating left collect promotes only that baseline to $xE, which the
-; original table displays and scores as 10,000. Preserve any higher orbit
-; value retained by the operator adjustment.
+; Activating either orbit collect promotes only that baseline to $xE, which
+; the original table displays and scores as 10,000. Preserve any higher orbit
+; value retained by the operator adjustment. The right-orbit path enters here
+; directly; the left-orbit path first records its saucer authorization above.
         LDAA DELUXE_ORBIT_VALUE_STATE
         CMPA #$0f
         BNE DELUXE_FIRST_SINK_SHOW_ORBIT

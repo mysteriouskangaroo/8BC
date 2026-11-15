@@ -72,7 +72,7 @@ so. Activating the ones digit does not change Match probability or presentation.
 
 The collect feature has six ordered states:
 
-`left orbit inactive -> left orbit active -> spinner inactive -> spinner active -> right orbit inactive -> right orbit active -> left orbit inactive`
+`right orbit inactive -> right orbit active -> spinner inactive -> spinner active -> left orbit inactive -> left orbit active -> right orbit inactive`
 
 In this section, a **newly sunk pool ball** means the first hit that changes
 that ball's bit in `$10C3` from clear to set and lights its sunk-ball lamp.
@@ -86,9 +86,11 @@ inactive. If the location is already active, the 8-ball has no collect-state
 effect and is not queued for the next location. An ordinary saucer hit that
 does not collect the lit 8-ball is not an activation event.
 
-1. Starting a new ball places the feature at **left orbit inactive**.
+1. Starting a new ball places the feature at **right orbit inactive**.
 2. A newly sunk pool ball changes the current location from inactive to active;
-   it does not change the location.
+   it does not change the location. Activating either orbit promotes the
+   original 5,000 baseline to the printed 10,000 value so the orbit-value
+   arrows visibly indicate the active collect.
 3. Collecting an active location clears its active state and advances to the
    next location's inactive state. The next newly sunk ball is required to
    activate that new location.
@@ -109,18 +111,15 @@ does not collect the lit 8-ball is not an activation event.
   the orbit is inactive or the collect is at the spinner, without losing the
   retained qualification. The original already-collected latch in `$10A0` bit
   `$20` prevents it from being relit after collection during the same ball.
-- When a newly sunk ball first activates the collect feature at the left orbit,
-  the original 5,000 baseline is promoted to the printed 10,000 value, which
-  awards 1,000 Deluxe points. If the
-  operator's retain setting has carried a higher orbit value forward, that
-  higher value is preserved instead of being reduced to 10,000.
+- When a newly sunk ball activates the collect feature at the left orbit, any
+  higher orbit value carried forward by the operator's retain setting is
+  preserved instead of being reduced to 10,000.
 - When the left-orbit collect is active, switch 12 awards the current shared
   orbit value using the original handler and runs the original fast upward
   arrow-chase collect animation. Only after that animation finishes does it
   advance the printed value by 10,000 (1,000 Deluxe points), hide the
-  orbit-value arrows, and move the
-  feature to **spinner inactive**. A later newly sunk pool ball must activate
-  the spinner.
+  orbit-value arrows, and move the feature to **right orbit inactive**. A later
+  newly sunk pool ball must activate the right orbit.
 - Each new activation that lights the left-orbit collect authorizes one future
   saucer 100,000-insert award of 10,000 Deluxe points. Collecting the orbit is not required to create that
   authorization, and the authorization persists after the orbit advances.
@@ -157,16 +156,19 @@ does not collect the lit 8-ball is not an activation event.
   score.
 - Only after approximately two seconds with no further spinner pulse is the
   spinner considered to have stopped. The collect then closes and advances to
-  **right orbit inactive**; a later newly sunk pool ball must activate it.
+  **left orbit inactive**; a later newly sunk pool ball must activate it.
 - Spinner value lamps are shown only while the spinner is the active collect.
 
 ### Right orbit
 
+- Activating the right orbit from the original 5,000 baseline lights the
+  printed 10,000 value, just as activation at the left orbit does. A higher
+  retained orbit value is preserved.
 - When the right-orbit collect is active, switch 13 awards the same shared
   orbit value as the left side and runs the original fast upward arrow-chase
   collect animation. Only after that animation finishes does it advance the
-  printed value by 10,000 (1,000 Deluxe points), hide the orbit-value arrows, and move to **left orbit
-  inactive**.
+  printed value by 10,000 (1,000 Deluxe points), hide the orbit-value arrows,
+  and move to **spinner inactive**.
 - When it is not active, switch 13 awards 500 and does not advance the shared
   orbit value.
 
@@ -317,10 +319,10 @@ only the left or only the right bank without a coordinated VPX-table change
 
 ## Required gameplay verification
 
-- Start a new game and verify it begins at left-orbit inactive and the first
+- Start a new game and verify it begins at right-orbit inactive and the first
   newly sunk ball activates that same location.
-- Verify the complete sequence is left inactive -> left active -> spinner
-  inactive -> spinner active -> right inactive -> right active -> left
+- Verify the complete sequence is right inactive -> right active -> spinner
+  inactive -> spinner active -> left inactive -> left active -> right
   inactive, with a distinct newly sunk ball required for each activation.
 - Verify additional newly sunk balls while a location is already active do not
   move it and are not queued to activate the following location.
@@ -339,7 +341,7 @@ only the left or only the right bank without a coordinated VPX-table change
   inactive, does nothing to an already-active collect state, and is never
   queued for the next location. Verify ordinary saucer hits do not activate it.
 - Verify unlit left/right orbit shots score 500 without advancing their value.
-- Verify the first active left-orbit collect lights the printed 10,000 insert
+- Verify the first active orbit collect lights the printed 10,000 insert
   (or preserves a higher retained value), scores 1,000, and advances the shared
   printed value by 10,000 / Deluxe value by 1,000.
 - Verify collecting left and right hides their active orbit indication while
@@ -363,7 +365,7 @@ only the left or only the right bank without a coordinated VPX-table change
   lamp combinations include both 8K and 9K.
 - Verify every spinner pulse restarts the inactivity window, a pulse inside two
   seconds continues scoring, and roughly two seconds with no pulse closes the
-  collect and advances it to the right orbit.
+  collect and advances it to the left orbit.
 - Verify the saucer displays and collects 2x, then 3x, then 5x without a left-
   orbit activation changing those steps. Verify the 100,000 insert cannot blink until
   both 5x has been collected and the left-orbit collect has been newly lit, in
