@@ -290,6 +290,16 @@ DELUXE_SCORE_UNLIT_ORBIT:
         JSR $c27e
         JMP AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER
 
+DELUXE_AWARD_FIRST_SINK_2500:
+; CE08 calls here for the first sink of each pool ball. Apply Deluxe's global
+; divide-by-ten score scale to the 2,500 playfield value: one multiplier-aware
+; 50-point award plus two multiplier-aware 100-point units produces displayed
+; scores of 250 / 500 / 750 at 1x / 2x / 3x. The later already-sunk path
+; remains at D034 and still drives the physical 5,000 lamp effect independently.
+        JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER
+        LDAB #$02
+        JMP AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER
+
 DELUXE_AFTER_FIRST_SINK:
 ; CE13 jumps here with A equal to the newly updated sunk-ball mask and the
 ; selected target bit saved on top of the stack. Restore that exact stack

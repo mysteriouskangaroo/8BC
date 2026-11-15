@@ -6,7 +6,8 @@
 HANDLE_PAIRED_POOL_BALL_DROP_TARGET:
 ; Paired pool-ball drop-target handler for switches 25 (balls 1/2) and 28
 ; (balls 4/5). Ignore a closure already latched in 10C5. Otherwise latch it,
-; award the scaled 50 points (original 500), and record the first unsunk ball
+; award the scaled 250 points (playfield value 2,500), and record the first
+; unsunk ball
 ; bit in 10C3; only after both bits in the pair are set does a later rearmed
 ; hit take the scaled 500-point branch (original 5,000) at D034.
         LDAB #$24                    ; $CDD8: $C6,$24
@@ -34,10 +35,14 @@ HANDLE_PAIRED_POOL_BALL_DROP_TARGET:
         STAB DROP_TARGET_5000_LAMP_FLASH_MASK ; $CE01: $F7,$10,$BF
         JMP AWARD_LIT_DROP_TARGET_5000 ; $CE04: $7E,$D0,$34
 AWARD_FIRST_SINK_AND_RECORD_POOL_BALL:
-; First-sink path. C9C4 awards 500 points through the active playfield double/triple multiplier, then this code ORs the selected ball bit into SUNK_POOL_BALLS_1_TO_7 at 10C3 and starts its ball/lamp effects.
+; First-sink path. The Deluxe helper awards the scaled 250 points (playfield
+; value 2,500) through the active playfield double/triple multiplier, then this
+; code ORs the selected ball bit into SUNK_POOL_BALLS_1_TO_7 at 10C3 and starts
+; its ball/lamp effects.
         PSHA                         ; $CE07: $36
-        JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $CE08: $BD,$C9,$C4
-; Drop target: award the first-sink base value of 500 points; the shared helper applies playfield double/triple.
+        JSR DELUXE_AWARD_FIRST_SINK_2500 ; $CE08: Deluxe first-sink value
+; Drop target: award the scaled first-sink value of 250 points; the shared
+; helpers apply playfield double/triple.
         PULA                         ; $CE0B: $32
         PSHA                         ; $CE0C: $36
         ORAA SUNK_POOL_BALLS_1_TO_7  ; $CE0D: $BA,$10,$C3
@@ -151,7 +156,8 @@ AWARD_FIRST_SINK_AND_RECORD_POOL_BALL:
 HANDLE_SINGLE_POOL_BALL_DROP_TARGET:
 ; Single pool-ball drop-target handler for switches 27, 30, and 31 (balls 3,
 ; 6, and 7). Ignore a closure already latched in 10C5. Otherwise award the
-; scaled 50 points (original 500) and set its 10C3 sunk bit on the first hit,
+; the scaled 250 points (playfield value 2,500) and set its 10C3 sunk bit on
+; the first hit,
 ; or take the scaled 500-point branch (original 5,000) at D034 when already
 ; sunk.
         LDAB #$24                    ; $D005: $C6,$24

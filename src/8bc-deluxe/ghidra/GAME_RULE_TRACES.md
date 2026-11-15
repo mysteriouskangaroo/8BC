@@ -75,7 +75,7 @@ switches: locate the event bit, resolve its `C011` table entry, follow the
 handler's RAM changes and helper calls, then follow queued score, sound, lamp,
 and solenoid work to their periodic output routines.
 
-## Pool-ball drop targets: first sink and later scaled 500
+## Pool-ball drop targets: scaled 2,500 first sink and later scaled 5,000
 
 The five switch groups numbered 25, 27, 28, 30, and 31 feed two shared rule
 handlers. Their entries in the normal-play table are ordered by the
@@ -100,8 +100,10 @@ The important state bytes have separate jobs:
 On a new physical closure, either handler first sets the corresponding bit in
 `10C5`. If that bit was already set, it returns without scoring again while
 the switch remains closed. For a ball not yet recorded in `10C3`, the path at
-`CE07` calls `C9C4`, which adds **50 Deluxe points** (original 500), applies the current CHAMP
-playfield double/triple multiplier, and records the ball's bit in `10C3`.
+`CE07` calls `DELUXE_AWARD_FIRST_SINK_2500`, which applies Deluxe's global
+divide-by-ten score scale to the 2,500 playfield value and therefore awards
+**250 Deluxe points** through the current CHAMP playfield double/triple
+multiplier before recording the ball's bit in `10C3`.
 
 The paired switches require two first-sink hits. Switch 25 records ball 1 on
 its first eligible hit and ball 2 on its next eligible hit; switch 28 does the
@@ -119,10 +121,12 @@ hit without losing the sunk-ball state. `C6C9-C6F6` pulses reset selectors
 `M0`, `M1`, `M2`, `M3`, and `M4`. After each pulse, `C6F7-C6FC` clears that
 group's bit in `10C5`, rearming the switch for another closure. It deliberately
 does **not** clear `10C3`. Consequently, the reset target comes back up, its
-next closure is accepted, and the preserved sunk-ball bit selects the scaled 500
-instead of the original 500. This is the ROM implementation of the observed
-rule, with the two paired groups becoming worth 500 after both balls in the
-pair have first been sunk.
+next closure is accepted, and the preserved sunk-ball bit selects the scaled
+500 and the physical 5,000 lamp effect instead of the scaled 250 first-sink
+award.
+This is the ROM implementation of the observed rule, with the two paired groups
+entering that later state only after both balls in the pair have first been
+sunk.
 
 ## Playfield Scores Double and Triple
 

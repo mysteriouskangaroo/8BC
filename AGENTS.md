@@ -129,3 +129,11 @@ For scoring changes, distinguish stable gameplay state from blinking output
 shadows. In particular, determine playfield double/triple from the authoritative
 CHAMP completion state at `10C0`, not from a lamp-animation byte. Preserve
 this distinction in both comments and new rules.
+
+For every scoring change in the Deluxe variation, pass requested playfield or
+manual values through the Deluxe divide-by-ten score scale before encoding the
+displayed award. Unless the user explicitly says a value is already a Deluxe
+displayed score, interpret a requested numeric scoring value as the unscaled
+playfield/manual value (for example, a requested 2,500-point value becomes 250
+displayed Deluxe points before applying playfield multipliers). If the intended
+scale is unclear, ask the user before changing the ROM.

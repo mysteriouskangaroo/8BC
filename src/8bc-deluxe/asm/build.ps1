@@ -136,6 +136,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xCCD4; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_WORD_COMPLETION'; Name = 'completed E-I-G-H-T word B-A-L-L counter' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
+    @{ Address = 0xCE08; Opcode = 0xBD; Target = 'DELUXE_AWARD_FIRST_SINK_2500'; Name = 'scaled 2,500-point first-sink award' }
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
     @{ Address = 0xCFAE; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_BALL'; Name = 'collected 8-ball activation handler' }
     @{ Address = 0xD069; Opcode = 0x7E; Target = 'DELUXE_HANDLE_HOLE_STATE'; Name = 'saucer progression handler' }

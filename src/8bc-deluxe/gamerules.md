@@ -58,8 +58,10 @@ so. Activating the ones digit does not change Match probability or presentation.
   completed-rack calculation originally used only the two 120K/240K lamp bits
   in `$1044`, which can encode no more than three completed racks.
 - New pool balls are recorded in `$10C3`; their first-sink path is `$CE07`.
-  They activate the current Deluxe collect location, but they are separate
-  from the E-I-G-H-T targets and do not advance the spinner value.
+  Its 2,500 playfield value follows Deluxe's divide-by-ten score scale, awarding
+  250 displayed points through the current playfield multiplier. It activates
+  the current Deluxe collect location, but it is separate from the E-I-G-H-T
+  targets and does not advance the spinner value.
 - Switches 33-37 are the five dedicated E, I, G, H, and T stand-up targets.
   They share the original handler at `$CC7C`, whose active-low collected-letter
   state is `$1045`. A target hit clears its corresponding bit only if that
@@ -335,8 +337,10 @@ only the left or only the right bank without a coordinated VPX-table change
   9 -> 10, 99 -> 100, and 999 -> 1,000.
 - Verify Match retains the factory tens-digit behavior and approximately 10%
   award probability even when the score's ones digit is nonzero.
-- Verify hitting an already-sunk ball still follows its scaled 500-point
-  path and does not activate, move, restart, or advance the collect feature.
+- Verify a first sink awards 250 at 1x, 500 at 2x, or 750 at 3x.
+  Verify hitting an already-sunk ball still follows its scaled 500-point path,
+  retains the physical 5,000 lamp effect, and does not activate, move, restart,
+  or advance the collect feature.
 - Verify collecting the lit 8-ball activates the current location when it is
   inactive, does nothing to an already-active collect state, and is never
   queued for the next location. Verify ordinary saucer hits do not activate it.
