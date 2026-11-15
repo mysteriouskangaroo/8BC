@@ -391,7 +391,7 @@ SEND_SOUND_COMMAND_TO_BOARD:
         dc.b $FF,$10,$B3                                     ; $C465 unconfirmed: STX $10b3
         dc.b $FE,$10,$B3                                     ; $C468 unconfirmed: LDX $10b3
         dc.b $26,$FB                                         ; $C46B unconfirmed: BNE $c468
-        dc.b $F6,$16,$1F                                     ; $C46D unconfirmed: LDAB $161f
+        JMP DELUXE_PREPEND_STARTUP_SUPER                     ; $C46D: prefix speech after the original startup delay
         dc.b $54                                             ; $C470 unconfirmed: LSRB
         dc.b $54                                             ; $C471 unconfirmed: LSRB
         dc.b $54                                             ; $C472 unconfirmed: LSRB

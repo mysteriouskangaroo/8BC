@@ -9,6 +9,7 @@ and distinguishes confirmed facts from the remaining schematic-tracing work.
 - **ROM:** `../roms/u3_cpu.128` (16 KiB, mapped at `C000-FFFF`). Its SHA-1 is `25D310F169B92CE6B348330816DDC3B5710E57DA`.
 - **Manual:** `../../../docs/Eight_Ball_Champ_OPS.pdf`, especially section 3: control-board layout/designations and cabinet/playfield schematics.
 - **Ghidra program:** `u3_cpu.128`, analyzed as a Motorola 6801/6803-family processor.
+- **Squawk & Talk command responses:** [PinWiki's Eight Ball Champ speech-command table](https://www.pinwiki.com/wiki/index.php/Eight_Ball_Champ), credited there to PinSider "Quench". The ROM confirms the command-byte transport described below; the audible response names remain community-sourced pending independent sound-ROM or hardware verification.
 
 ## Definitions
 
@@ -228,6 +229,44 @@ Note: Page 1-18's solenoid-test numbering conflicts with the numbered locator dr
 
 Note: The schematic also shows `M5`, `M6`, and `M12`, but the Eight Ball Champ driver-location table does not give each one a physical-coil name. They remain unnamed here rather than guessed. They are also absent from the ROM's automatic-test selector sequence.
 
+## Squawk & Talk command transport and response map
+
+The CPU queues an eight-bit sound command at `1024`. The output routine at
+`C26D` writes the command's low nibble to 6803 port 2 (`0002`), pulses bit 4
+of port 3 (`0003`), then shifts the saved command right four places and
+writes the high nibble to port 2. Thus the wire-level order is **low nibble
+first, then high nibble**. The physical connector pins and sound-board net
+names for these port signals remain untraced in the supplied schematic scan.
+
+The response names below are the reported Squawk & Talk results from PinWiki.
+Ranges compress commands whose response follows the command's low nibble;
+for example, `41-4F` selects ball 1 through ball 15 respectively.
+
+| Command | Reported Squawk & Talk response |
+| --- | --- |
+| `1D` | Sound effect used during register 93 sound-test mode |
+| `41-4F` | One of four get/make/sink/shoot prompts for ball 1-15 |
+| `50` | Pool-chalking quip telling the player to stop talking |
+| `51-5F` | Announces ball 1 through ball 15 |
+| `60` | Prompt to rack the balls |
+| `61` | Assigns or announces solids |
+| `62` | Assigns or announces stripes |
+| `63` | Joke about applying too much English |
+| `64` | Chalking prompt |
+| `65` | Scratch callout |
+| `66` | Shot compliment |
+| `67-6B` | Announces the 8 ball followed by ball 1 through ball 5 |
+| `6C` | One of four get/make/sink/shoot prompts for the 8 ball |
+| `6D` + `6E` | Success callout; PinWiki presents the two bytes as one paired entry, but the exact invocation semantics are not independently verified |
+| `6F` | Enthusiastic praise |
+| `70-78` | Chalking prompt |
+| `79` | Invitation to play another game |
+| `7A` | Slow-play warning |
+| `7B` | 2X multiplier announcement |
+| `7C` | 3X multiplier announcement |
+| `7D` | 5X multiplier announcement |
+| `7E-80` | Chalking prompt |
+
 ## Executable starting points
 
 The vector table at `FFF0-FFFF` identifies the first useful control-flow
@@ -266,9 +305,10 @@ lamp / solenoid driver logic -> playfield lamps, kickers, drop targets, etc.
 
 The driver schematic shows a 74LS154 decoding momentary-solenoid data lines
 and three 4514-based lamp-strobe circuits. The ROM behavior above ties those
-circuits to specific PIA registers. The switch matrix, display path, sound
-control lines, the PIA0/PIA1-to-U7/U8 package relationship, and the remaining
-solenoid outputs still require sheets 1–4 or an equivalent independent trace.
+circuits to specific PIA registers. The switch matrix, display path, physical
+connector and net identities of the sound-control lines, the PIA0/PIA1-to-U7/U8
+package relationship, and the remaining solenoid outputs still require sheets
+1–4 or an equivalent independent trace.
 
 ## Annotation policy
 

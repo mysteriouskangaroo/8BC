@@ -19,6 +19,23 @@ a substitute for annotating the actual code. The canonical binary keeps the
 original control flow intact. Functional modularization belongs in the
 reassemblable source of a named variation when rule changes begin.
 
+## Deluxe startup speech prefix
+
+The canonical startup path tests speech-enable bit 6 at `$168D` from
+`$C45B-$C460`. If speech is disabled it branches directly to `$C483`, so the
+Deluxe prefix is skipped with the original announcement. When speech is
+enabled, `$C462-$C46B` preserves the original `$0258`-tick pre-announcement
+delay through countdown word `$10B3`, then the Deluxe hook at `$C46D` enters
+`DELUXE_PREPEND_STARTUP_SUPER`.
+
+The Deluxe helper sends Squawk & Talk command `$6F` through `$C27E`, restores
+the displaced `LDAB $161F` without adding another countdown, and returns to
+`$C470`. The canonical code immediately derives the configured ball-count
+command and sends it at `$C47A`. The final sound-board sequence is therefore
+`$6F` (Super), followed directly by the unchanged 3-ball or 5-ball Eight Ball
+announcement. The sender at `$C28D-$C2B1` writes the low nibble through 6803
+port 2, strobes port 3 bit 4, then writes the high nibble.
+
 ## Switch 07: Rebound
 
 Switch 07 is a useful first complete rule trace because the manual explicitly
@@ -75,7 +92,7 @@ switches: locate the event bit, resolve its `C011` table entry, follow the
 handler's RAM changes and helper calls, then follow queued score, sound, lamp,
 and solenoid work to their periodic output routines.
 
-## Pool-ball drop targets: scaled 2,500 first sink and later scaled 5,000
+## Pool-ball drop targets: Called ball or scaled first-sink award
 
 The five switch groups numbered 25, 27, 28, 30, and 31 feed two shared rule
 handlers. Their entries in the normal-play table are ordered by the
@@ -94,16 +111,29 @@ The important state bytes have separate jobs:
 | RAM | Meaning |
 | --- | --- |
 | `10C3` | Persistent seven-bit record of pool balls 1 through 7 already sunk |
+| `10C4` | Current called-ball speech ID (`51-57` for odd players, `59-5F` for even players) |
 | `10C5` | Physical-closure latch for the five drop-target switch groups |
 | `10BF` | Mask for the five physical 5,000 drop-target lamp effects |
 
 On a new physical closure, either handler first sets the corresponding bit in
 `10C5`. If that bit was already set, it returns without scoring again while
 the switch remains closed. For a ball not yet recorded in `10C3`, the path at
-`CE07` calls `DELUXE_AWARD_SCALED_2500`, which applies Deluxe's global
-divide-by-ten score scale to the 2,500 playfield value and therefore awards
-**250 Deluxe points** through the current CHAMP playfield double/triple
-multiplier before recording the ball's bit in `10C3`.
+`CE07` calls `DELUXE_AWARD_POOL_BALL_FIRST_SINK` before recording the ball's
+bit. The helper reproduces the canonical `CE1A-CE28` conversion from target bit
+to the current player's speech ID and compares it with `10C4`.
+
+When the IDs differ, it applies Deluxe's divide-by-ten score scale to the
+normal 2,500 playfield value and awards **250 Deluxe points** through the
+current CHAMP playfield multiplier. When the IDs match, it instead awards that
+player's Called ball score through the same multiplier. The per-player value
+starts at 10,000 playfield / 1,000 displayed and advances by 20,000 playfield /
+2,000 displayed after each successful call. The collected 8-ball path at
+`CFAE` also awards and advances this value. Active state is at `10FE`; parallel
+player values are at `10FF-1102` and use the existing `C4E6` new-game and
+`C603` player-restore hooks, so drains preserve the value while a new game
+resets every player to 10,000. Restore and award both normalize a zero legacy
+record to the initial value before scoring, allowing existing NVRAM to migrate
+without producing a zero-point first award.
 
 The paired switches require two first-sink hits. Switch 25 records ball 1 on
 its first eligible hit and ball 2 on its next eligible hit; switch 28 does the

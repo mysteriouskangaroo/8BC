@@ -291,15 +291,67 @@ DELUXE_SCORE_UNLIT_ORBIT:
         JMP AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER
 
 DELUXE_AWARD_SCALED_2500:
-; CC85 calls here for every E-I-G-H-T target hit, and CE08 calls here for the
-; first sink of each pool ball. Apply Deluxe's global divide-by-ten score scale
-; to the 2,500 playfield value: one multiplier-aware 50-point award plus two
-; multiplier-aware 100-point units produces displayed scores of 250 / 500 / 750
-; at 1x / 2x / 3x. The later already-sunk pool-ball path remains at D034 and
-; still drives the physical 5,000 lamp effect independently.
+; CC85 calls here for every E-I-G-H-T target hit. Pool-ball first sinks also
+; tail-call here when they do not match the currently spoken ball. Apply
+; Deluxe's global divide-by-ten score scale to the 2,500 playfield value: one
+; multiplier-aware 50-point award plus two multiplier-aware 100-point units
+; produces displayed scores of 250 / 500 / 750 at 1x / 2x / 3x. The later
+; already-sunk pool-ball path remains at D034 and still drives the physical
+; 5,000 lamp effect independently.
         JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER
         LDAB #$02
         JMP AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER
+
+DELUXE_AWARD_POOL_BALL_FIRST_SINK:
+; CE08 enters with A equal to the single target bit for balls 1-7. Reproduce
+; the canonical CE1A-CE28 conversion from target bit to the player-specific
+; spoken sound ID, then compare it with the current call at 10C4. Odd-numbered
+; players use IDs 51-57 and even-numbered players use 59-5F.
+        TAB
+        LDAA #$50
+DELUXE_CALLED_BALL_ID_LOOP:
+        INCA
+        LSRB
+        BNE DELUXE_CALLED_BALL_ID_LOOP
+        LDAB.w $008f
+        LSRB
+        BCS DELUXE_COMPARE_CALLED_BALL_ID
+        ADDA #$08
+DELUXE_COMPARE_CALLED_BALL_ID:
+        CMPA CALLED_POOL_BALL_SOUND_ID
+        BNE DELUXE_AWARD_SCALED_2500
+        BSR DELUXE_AWARD_AND_ADVANCE_CALLED_BALL_SCORE
+        JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
+        RTS
+
+DELUXE_AWARD_AND_ADVANCE_CALLED_BALL_SCORE:
+; The active byte stores displayed thousands: 1, 3, 5... corresponds to the
+; requested 10K, 30K, 50K... playfield values after Deluxe's divide-by-ten
+; score scale. Award the current value through the CHAMP multiplier, then add
+; two displayed thousands (20K playfield). Values above 240 are split across
+; two normalized queue additions so B plus the existing decimal digit cannot
+; overflow; this does not alter the score or multiplier. Treat zero from an
+; older saved game/NVRAM image as the initial value, and saturate at 255.
+        LDAA DELUXE_CALLED_BALL_SCORE_1000S
+        BNE DELUXE_CALLED_BALL_SCORE_READY
+        INCA
+        STAA DELUXE_CALLED_BALL_SCORE_1000S
+DELUXE_CALLED_BALL_SCORE_READY:
+        TAB
+        CMPB #$f1
+        BCS DELUXE_AWARD_CALLED_BALL_SCORE_LOW_CHUNK
+        SUBB #$f0
+        JSR AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER
+        LDAB #$f0
+DELUXE_AWARD_CALLED_BALL_SCORE_LOW_CHUNK:
+        JSR AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER
+        LDAA DELUXE_CALLED_BALL_SCORE_1000S
+        CMPA #$ff
+        BEQ DELUXE_CALLED_BALL_SCORE_ADVANCED
+        ADDA #$02
+        STAA DELUXE_CALLED_BALL_SCORE_1000S
+DELUXE_CALLED_BALL_SCORE_ADVANCED:
+        RTS
 
 DELUXE_AFTER_FIRST_SINK:
 ; CE13 jumps here with A equal to the newly updated sunk-ball mask and the
@@ -317,19 +369,20 @@ DELUXE_AFTER_FIRST_SINK:
 
 DELUXE_AFTER_EIGHT_BALL:
 ; CFAE calls this immediately after the original 8-ball completion sequence
-; clears the balls-1-through-7 rack state. Treat that committed 8-ball collect
-; as one new-ball event for Deluxe, record the completed rack, then execute the
-; displaced rack-reset call. Saturating at 255 prevents a theoretical wrap to
-; zero; 255 completed racks in one ball is far beyond practical play.
+; clears the balls-1-through-7 rack state. Award the active player's current
+; Called ball score and advance it by 20K playfield value, then treat the
+; committed 8-ball collect as one new-ball event for Deluxe and record the
+; completed rack. Saturating at 255 prevents theoretical counter/value wraps.
 ; The activation helper is deliberately a no-op if the current stage is active,
 ; so an 8-ball is never queued for the following stage.
+        JSR DELUXE_AWARD_AND_ADVANCE_CALLED_BALL_SCORE
         LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CMPA #$ff
         BEQ DELUXE_AFTER_EIGHT_BALL_COUNTED
         INCA
         STAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
-        JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
 DELUXE_AFTER_EIGHT_BALL_COUNTED:
+        JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
         JSR DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE
         JMP $c6b8
 
@@ -424,25 +477,30 @@ DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
 ; initializes each original nine-byte player record. Clear the previous game's
 ; collect state first so DELUXE_LOAD_ORBIT_STATE_FOR_SAVE takes its new-game
 ; path and stores the freshly initialized live orbit value instead of stale
-; DELUXE_ORBIT_VALUE_STATE. Then clear the active Deluxe counters and write zero
-; to the matching parallel record before executing the displaced original
-; record initializer at C58C.
+; DELUXE_ORBIT_VALUE_STATE. Then clear the active Deluxe bonus counters, reset
+; Called ball score to 10K playfield value (one displayed thousand), and write
+; all three values to the matching parallel record before executing the
+; displaced original record initializer at C58C.
         CLR DELUXE_COLLECT_STATE
         CLR DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CLR DELUXE_COMPLETED_BALL_LETTERS
+        LDAA #$01
+        STAA DELUXE_CALLED_BALL_SCORE_1000S
         JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
         JMP $c58c
 
 DELUXE_RESTORE_ACTIVE_PLAYER_BONUS_COUNTERS:
 ; C603 runs at the end of the original nine-byte player-record restore. Load
-; the two extended counters for the same 1-based player number in 008F, then
-; execute C603's displaced call. Tail-jumping preserves F197's return state.
+; the extended counters and Called ball score for the same 1-based player
+; number in 008F, then execute C603's displaced call. Tail-jumping preserves
+; F197's return state.
         JSR DELUXE_LOAD_ACTIVE_PLAYER_BONUS_COUNTERS
         JMP $f197
 
 DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS:
-; Write through on every completed rack or B-A-L-L letter. This keeps the
-; parallel player record current independent of later drain/bonus animation.
+; Write through on every completed rack, B-A-L-L letter, or Called ball score
+; advance. This keeps the parallel player record current independent of later
+; drain/bonus animation.
         PSHA
         PSHB
         PSHX
@@ -451,6 +509,8 @@ DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS:
         STAA 0,X
         LDAA DELUXE_COMPLETED_BALL_LETTERS
         STAA 4,X
+        LDAA DELUXE_CALLED_BALL_SCORE_1000S
+        STAA 9,X
         PULX
         PULB
         PULA
@@ -465,6 +525,14 @@ DELUXE_LOAD_ACTIVE_PLAYER_BONUS_COUNTERS:
         STAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
         LDAA 4,X
         STAA DELUXE_COMPLETED_BALL_LETTERS
+        LDAA 9,X
+        BNE DELUXE_LOAD_CALLED_BALL_SCORE
+; A zero record predates Called ball score or is otherwise uninitialized.
+; Migrate it in place so the first award is 10K playfield / 1K displayed.
+        INCA
+        STAA 9,X
+DELUXE_LOAD_CALLED_BALL_SCORE:
+        STAA DELUXE_CALLED_BALL_SCORE_1000S
         PULX
         PULB
         PULA
@@ -472,8 +540,8 @@ DELUXE_LOAD_ACTIVE_PLAYER_BONUS_COUNTERS:
 
 DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER:
 ; $008F is the same 1-based player number used by the canonical record selector
-; at C5C3. The rack array occupies 10F6-10F9; the B-A-L-L array is exactly four
-; bytes later at 10FA-10FD.
+; at C5C3. The rack array occupies 10F6-10F9; the B-A-L-L array is four bytes
+; later at 10FA-10FD, and Called ball score is nine bytes later at 10FF-1102.
         LDX #DELUXE_PLAYER_RACK_COUNTS-1
         LDAB.w $008f
 DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER_LOOP:
@@ -766,6 +834,16 @@ DELUXE_LOAD_ORBIT_STATE_FOR_SAVE:
 DELUXE_LOAD_LIVE_ORBIT_STATE_FOR_SAVE:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         RTS
+
+DELUXE_PREPEND_STARTUP_SUPER:
+; C45B has confirmed that speech is enabled, and C462-C46B has completed the
+; canonical pre-announcement delay. Send "Super", restore C46D's displaced
+; adjustment load immediately, then resume the canonical "Eight Ball, 3 Ball"
+; / "Eight Ball, 5 Ball" selector without an added inter-command pause.
+        LDAA #SQUAWK_TALK_SUPER_COMMAND
+        JSR $c27e
+        LDAB $161f
+        JMP $c470
 
 DELUXE_AWARD_SPECIAL_POINTS:
 ; All original special collectors converge at C1DB. Award an additional

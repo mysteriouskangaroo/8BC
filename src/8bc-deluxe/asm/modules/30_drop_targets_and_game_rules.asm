@@ -35,14 +35,13 @@ HANDLE_PAIRED_POOL_BALL_DROP_TARGET:
         STAB DROP_TARGET_5000_LAMP_FLASH_MASK ; $CE01: $F7,$10,$BF
         JMP AWARD_LIT_DROP_TARGET_5000 ; $CE04: $7E,$D0,$34
 AWARD_FIRST_SINK_AND_RECORD_POOL_BALL:
-; First-sink path. The Deluxe helper awards the scaled 250 points (playfield
-; value 2,500) through the active playfield double/triple multiplier, then this
-; code ORs the selected ball bit into SUNK_POOL_BALLS_1_TO_7 at 10C3 and starts
-; its ball/lamp effects.
+; First-sink path. The Deluxe helper compares this ball with the spoken call.
+; A match replaces the normal scaled 250 points (playfield value 2,500) with
+; the active player's advancing Called ball score; a non-match retains 250.
+; Both awards use the active playfield double/triple multiplier. The original
+; code then records the selected ball bit in 10C3 and starts its effects.
         PSHA                         ; $CE07: $36
-        JSR DELUXE_AWARD_SCALED_2500 ; $CE08: Deluxe first-sink value
-; Drop target: award the scaled first-sink value of 250 points; the shared
-; helpers apply playfield double/triple.
+        JSR DELUXE_AWARD_POOL_BALL_FIRST_SINK ; $CE08: normal or called-ball value
         PULA                         ; $CE0B: $32
         PSHA                         ; $CE0C: $36
         ORAA SUNK_POOL_BALLS_1_TO_7  ; $CE0D: $BA,$10,$C3

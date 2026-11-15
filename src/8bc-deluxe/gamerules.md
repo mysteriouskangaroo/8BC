@@ -15,6 +15,13 @@ Relative values, playfield multipliers, bonus multipliers, score sounds, and
 award timing are unchanged. The seven-digit display can represent the
 equivalent of 99,999,990 original points as a Deluxe score of 9,999,999.
 
+## Startup speech
+
+- When speech is enabled, Deluxe prefixes the original adjustment-driven
+  "Eight Ball, 3 Ball" or "Eight Ball, 5 Ball" boot announcement with
+  "Super". The original pre-announcement delay and 3/5-ball selection are
+  preserved, but no additional delay is inserted between the two commands.
+
 Printed playfield inserts retain their physical legends. In this document,
 phrases such as the **100,000 insert** identify that lamp or feature; an
 explicit score describes the scaled Deluxe award.
@@ -59,9 +66,10 @@ so. Activating the ones digit does not change Match probability or presentation.
   in `$1044`, which can encode no more than three completed racks.
 - New pool balls are recorded in `$10C3`; their first-sink path is `$CE07`.
   Its 2,500 playfield value follows Deluxe's divide-by-ten score scale, awarding
-  250 displayed points through the current playfield multiplier. It activates
-  the current Deluxe collect location, but it is separate from the E-I-G-H-T
-  targets and does not advance the spinner value.
+  250 displayed points through the current playfield multiplier unless it is
+  the currently called ball. It activates the current Deluxe collect location,
+  but it is separate from the E-I-G-H-T targets and does not advance the
+  spinner value.
 - Switches 33-37 are the five dedicated E, I, G, H, and T stand-up targets.
   They share the original handler at `$CC7C`, whose active-low collected-letter
   state is `$1045`. Their 2,500 playfield value follows Deluxe's divide-by-ten
@@ -197,6 +205,29 @@ does not collect the lit 8-ball is not an activation event.
 - Bonus progression, left-orbit authorization, and the waiting qualification
   all reset when a new ball starts.
 
+## Called ball score
+
+- The spoken “Sink the N ball” selection is the authoritative call. Sinking
+  that exact ball for the first time replaces its normal 2,500 playfield-value
+  award with the active player's Called ball score.
+- Called ball score begins at a 10,000 playfield value, displayed as 1,000
+  under Deluxe's divide-by-ten score scale. Every successful called ball
+  advances the next value by 20,000 playfield points: 10,000, 30,000, 50,000,
+  and so on (displayed as 1,000, 3,000, 5,000...).
+- Collecting the lit 8-ball to complete a rack always awards the current Called
+  ball score and then advances its next value by 20,000, even though balls 1-7
+  are the ones selected by the spoken call.
+- Each Called ball award uses the current 1x/2x/3x playfield multiplier.
+  An uncalled first sink retains its normal 2,500 playfield value, displayed as
+  250 before multiplication; an already-sunk ball retains its separate normal
+  5,000 playfield-value path, displayed as 500 before multiplication.
+- Called ball score is stored separately for every player and survives drains
+  and intervening players' turns. Starting a new game resets all four player
+  values to 10,000. The one-byte stored value saturates at a 2,550,000
+  playfield value (255,000 displayed) rather than wrapping to a lower value.
+  A zero/uninitialized value from an older NVRAM or saved game is migrated to
+  the initial 10,000 value before it can be awarded.
+
 ## Pool-ball bonus
 
 - Every successfully collected 8-ball completes one rack and increments that
@@ -276,7 +307,7 @@ does not collect the lit 8-ball is not an activation event.
 ## Deluxe implementation state
 
 The original four-player records occupy `$10C7-$10EA`. Deluxe uses `$10EB`
-through `$10FD` for active state, temporary bonus/display work, and parallel
+through `$1102` for active state, temporary bonus/display work, and parallel
 per-player counters:
 
 | Address | Meaning |
@@ -294,14 +325,16 @@ per-player counters:
 | `$10F5` | Working B-A-L-L countdown, reloaded for each bonus-multiplier pass |
 | `$10F6-$10F9` | Completed-rack counters for players 1-4 |
 | `$10FA-$10FD` | Completed B-A-L-L-letter counters for players 1-4 |
+| `$10FE` | Active player's Called ball score in displayed 1,000-point units (odd values 1, 3, 5...) |
+| `$10FF-$1102` | Called ball scores for players 1-4 |
 
 The canonical new-game loop initializes all four original player records at
 `$C4E6`; Deluxe hooks the same loop to clear the prior collect state before
-capturing the new game's baseline orbit value and to clear all eight parallel
-counters. The canonical player restore ends at `$C603`; Deluxe loads
-`$10F0/$10F4` from the selected player's parallel entries there. Counter
-increments are written back immediately, so drain animations cannot erase
-another player's progress.
+capturing the new game's baseline orbit value, clear all eight bonus counters,
+and set all four Called ball scores to their initial value. The canonical
+player restore ends at `$C603`; Deluxe loads `$10F0/$10F4/$10FE` from the
+selected player's parallel entries there. Counter/value advances are written
+back immediately, so drain animations cannot erase another player's progress.
 
 The original `$10B1` byte remains the live spinner-lamp mask. It is zero when
 the spinner collect is inactive and mirrors `$10EE` only while the spinner is
@@ -323,6 +356,11 @@ only the left or only the right bank without a coordinated VPX-table change
 
 ## Required gameplay verification
 
+- Cold-boot with speech enabled under both the three-ball and five-ball
+  adjustments. Verify the complete announcement is "Super" followed by the
+  correct original "Eight Ball" ball-count phrase in one continuous flow,
+  without a long pause or a cut-off command. Verify disabling speech still
+  suppresses the sequence.
 - Start a new game and verify it begins at right-orbit inactive and the first
   newly sunk ball activates that same location.
 - Verify the complete sequence is right inactive -> right active -> spinner
@@ -339,10 +377,19 @@ only the left or only the right bank without a coordinated VPX-table change
   9 -> 10, 99 -> 100, and 999 -> 1,000.
 - Verify Match retains the factory tens-digit behavior and approximately 10%
   award probability even when the score's ones digit is nonzero.
-- Verify a first sink awards 250 at 1x, 500 at 2x, or 750 at 3x.
+- Verify an uncalled first sink awards 250 at 1x, 500 at 2x, or 750 at 3x.
   Verify hitting an already-sunk ball still follows its scaled 500-point path,
   retains the physical 5,000 lamp effect, and does not activate, move, restart,
   or advance the collect feature.
+- Follow the spoken call and verify the first three successful called balls
+  award 1,000/3,000/5,000 at 1x, 2,000/6,000/10,000 at 2x, or
+  3,000/9,000/15,000 at 3x, replacing rather than adding the normal 250-point
+  first-sink award. Verify an incorrect first sink does not advance the value.
+- Complete a rack with the lit 8-ball and verify it awards the current Called
+  ball value, then advances that player's next value by 20,000 playfield
+  points. Drain and verify the next ball retains the advanced value. In a
+  four-player game, advance each player differently and verify their values
+  restore independently; start a new game and verify all return to 10,000.
 - Verify collecting the lit 8-ball activates the current location when it is
   inactive, does nothing to an already-active collect state, and is never
   queued for the next location. Verify ordinary saucer hits do not activate it.

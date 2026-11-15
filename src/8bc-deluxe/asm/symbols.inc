@@ -46,10 +46,11 @@ DROP_TARGET_5000_LAMP_FLASH_MASK             equ $10BF
 CHAMP_COMPLETION_STATE                       equ $10C0
 ORBIT_SPECIAL_FLASH_MASK                     equ $10C2
 SUNK_POOL_BALLS_1_TO_7                       equ $10C3
+CALLED_POOL_BALL_SOUND_ID                    equ $10C4
 DROP_TARGET_SWITCH_CLOSURE_LATCHES           equ $10C5
 ; Deluxe working state follows the original four 9-byte player records at
-; $10C7-$10EA. $10F6-$10FD provide parallel persistent counters for players
-; 1-4; the other bytes hold active-player, per-ball, and temporary bonus state.
+; $10C7-$10EA. $10F6-$1102 provide parallel persistent values for players 1-4;
+; the other bytes hold active-player, per-ball, and temporary bonus state.
 DELUXE_COLLECT_STATE                         equ $10EB
 DELUXE_SPINNER_IDLE_TIMER                    equ $10EC
 DELUXE_CHAMP_COMPLETION_COUNT                equ $10ED
@@ -63,6 +64,12 @@ DELUXE_COMPLETED_BALL_LETTERS                equ $10F4
 DELUXE_BONUS_BALL_LETTERS_REMAINING          equ $10F5
 DELUXE_PLAYER_RACK_COUNTS                    equ $10F6
 DELUXE_PLAYER_BALL_LETTER_COUNTS             equ $10FA
+DELUXE_CALLED_BALL_SCORE_1000S               equ $10FE
+DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $10FF
+
+; C9A6 accepts B as a count of displayed 1,000-point units and applies the
+; authoritative CHAMP playfield multiplier before normalizing pending score.
+AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER   equ $C9A6
 
 CREDIT_DISPLAY_ONES                          equ $1069
 CREDIT_DISPLAY_TENS                          equ $106A
@@ -89,6 +96,7 @@ DELUXE_SPINNER_INACTIVITY_TICKS              equ $78
 DELUXE_BALL_BONUS_PASS_DELAY                 equ $10
 DELUXE_BALL_BONUS_STEP_DELAY                 equ $08
 DELUXE_EIGHT_BONUS_LETTER_DELAY              equ $09
+SQUAWK_TALK_SUPER_COMMAND                    equ $6F
 ORBIT_SPECIAL_LAMP_BIT                       equ $10
 ORBIT_SPECIAL_ALREADY_COLLECTED_BIT          equ $20
 WORK_RAM_U4_6116_END                         equ $17FF
