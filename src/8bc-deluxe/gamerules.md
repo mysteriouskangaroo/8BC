@@ -63,11 +63,12 @@ does not collect the lit 8-ball is not an activation event.
   100,000/special terminal state. A qualified terminal special remains stored
   and can be collected later when the orbit is active; inactive rollover hits
   do not consume it.
-- Reaching the retained 100,000 terminal state qualifies the original blinking
-  orbit-special indication in `$10C2` bit `$10`. The special continues blinking
-  while the Deluxe collect is elsewhere and remains available until an active
-  orbit collects it. The original already-collected latch in `$10A0` bit `$20`
-  prevents it from being relit after collection during the same ball.
+- Reaching the retained 100,000 terminal state qualifies the original orbit
+  special. Its live blinking indication (`$10C2` bit `$10`) is shown only while
+  the collect feature is active at the left or right orbit. It is hidden while
+  the orbit is inactive or the collect is at the spinner, without losing the
+  retained qualification. The original already-collected latch in `$10A0` bit
+  `$20` prevents it from being relit after collection during the same ball.
 - When a newly sunk ball first activates the collect feature at the left orbit,
   the original 5,000 baseline is promoted to a lit 10,000 value. If the
   operator's retain setting has carried a higher orbit value forward, that
@@ -221,9 +222,10 @@ only the left or only the right bank without a coordinated VPX-table change
   the arrows turn off and the logical state advances.
 - Verify an inactive left rollover still scores only 5,000 at the retained
   100,000/special terminal state and does not consume the special. Verify the
-  special indication begins blinking as soon as 100,000 is reached, continues
-  blinking while the Deluxe collect is elsewhere, and the original
-  100,000/special behavior occurs when the orbit is subsequently active.
+  special indication is hidden whenever neither orbit is active, begins
+  blinking when the collect activates at either orbit, and hides again when
+  that orbit collect advances. Verify the original 100,000/special behavior
+  occurs when the active orbit collects it.
 - Verify spinner values and lamps advance through the weighted binary states,
   active spins receive 2x/3x, and an unlit spin remains 100. Verify the sound
   tiers are 100 -> 100 sound, 1K -> 1K sound, 3K/4K -> 3K sound, and

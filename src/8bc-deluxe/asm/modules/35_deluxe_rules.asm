@@ -55,6 +55,9 @@ DELUXE_INITIALIZE_BALL:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ORAA #$0f
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
+; The terminal special may be retained from the player record, but the new
+; ball begins at left-orbit inactive, so its live blinking mask must be hidden.
+        JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
 ; High bits of 1040 are active-low spinner-value lamps. Keep them dark until
 ; the collect reaches the spinner, while preserving the five CHAMP lane bits.
         LDAA CHAMP_LANE_STATE
@@ -232,23 +235,42 @@ DELUXE_RUN_ORIGINAL_LIT_ORBIT:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ANDA #$0f
         STAA DELUXE_ORBIT_VALUE_STATE
-; The original terminal path normally qualifies the blinking orbit special by
-; setting bit $10 at 10C2. Deluxe immediately hides the live low-nibble orbit
-; display and retains its value at 10EF, so establish that qualification from
-; the authoritative retained terminal state as well. Low nibble $0 is the
-; repeatable 100,000 terminal value. Respect the original 10A0 bit-$20 latch,
-; which prevents a special already collected this ball from being relit.
-        BNE DELUXE_ORBIT_SPECIAL_QUALIFICATION_DONE
+; Reconcile the live blinking mask with the retained terminal qualification
+; while this orbit is still active. The caller will hide it again when the
+; collect moves to its next inactive location.
+        JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
+        RTS
+
+DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY:
+; $10C2 bit $10 is the live XOR mask used by the periodic lamp flasher, not a
+; suitable hidden qualification store. Show it only while either orbit is the
+; active Deluxe collect and the retained value is the terminal 100,000 state.
+        LDAA DELUXE_COLLECT_STATE
+        ANDA #DELUXE_COLLECT_STATE_MASK
+        CMPA #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
+        BEQ DELUXE_SHOW_QUALIFIED_ORBIT_SPECIAL
+        CMPA #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
+        BNE DELUXE_HIDE_ORBIT_SPECIAL
+DELUXE_SHOW_QUALIFIED_ORBIT_SPECIAL:
+        LDAA DELUXE_ORBIT_VALUE_STATE
+        BNE DELUXE_HIDE_ORBIT_SPECIAL
         LDAA $10a0
         BITA #ORBIT_SPECIAL_ALREADY_COLLECTED_BIT
-        BNE DELUXE_ORBIT_SPECIAL_QUALIFICATION_DONE
+        BNE DELUXE_HIDE_ORBIT_SPECIAL
         LDAA ORBIT_SPECIAL_FLASH_MASK
         ORAA #ORBIT_SPECIAL_LAMP_BIT
         STAA ORBIT_SPECIAL_FLASH_MASK
-DELUXE_ORBIT_SPECIAL_QUALIFICATION_DONE:
+        RTS
+DELUXE_HIDE_ORBIT_SPECIAL:
+        LDAA ORBIT_SPECIAL_FLASH_MASK
+        ANDA #$ef
+        STAA ORBIT_SPECIAL_FLASH_MASK
         RTS
 
 DELUXE_HIDE_INACTIVE_ORBIT_LAMPS:
+; The caller has already moved the collect to an inactive non-orbit location.
+; Suppress the live special flash while retaining qualification at 10EF.
+        JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ORAA #$0f
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
@@ -318,6 +340,7 @@ DELUXE_FIRST_SINK_SHOW_ORBIT:
         ANDA #$f0
         ORAA DELUXE_ORBIT_VALUE_STATE
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
+        JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
         BRA DELUXE_COLLECT_ACTIVATION_DONE
 
 DELUXE_FIRST_SINK_ACTIVATE_SPINNER:
