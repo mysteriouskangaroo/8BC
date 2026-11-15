@@ -132,11 +132,12 @@ $deluxeHookChecks = @(
     @{ Address = 0xC7F0; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11, 0xCE, 0x05, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,500-point pool-ball drain bonus' }
     @{ Address = 0xC906; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,000-point E-I-G-H-T drain-bonus unit' }
     @{ Address = 0xCA3B; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPINNER'; Name = 'spinner switch handler' }
+    @{ Address = 0xCC85; Opcode = 0xBD; Target = 'DELUXE_AWARD_SCALED_2500'; Name = 'scaled 2,500-point E-I-G-H-T target award' }
     @{ Address = 0xCC91; Opcode = 0x7E; Target = 'DELUXE_RECORD_NEW_EIGHT_LETTER'; Name = 'new E-I-G-H-T letter spinner advancement' }
     @{ Address = 0xCCD4; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_WORD_COMPLETION'; Name = 'completed E-I-G-H-T word B-A-L-L counter' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
-    @{ Address = 0xCE08; Opcode = 0xBD; Target = 'DELUXE_AWARD_FIRST_SINK_2500'; Name = 'scaled 2,500-point first-sink award' }
+    @{ Address = 0xCE08; Opcode = 0xBD; Target = 'DELUXE_AWARD_SCALED_2500'; Name = 'scaled 2,500-point first-sink award' }
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
     @{ Address = 0xCFAE; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_BALL'; Name = 'collected 8-ball activation handler' }
     @{ Address = 0xD069; Opcode = 0x7E; Target = 'DELUXE_HANDLE_HOLE_STATE'; Name = 'saucer progression handler' }

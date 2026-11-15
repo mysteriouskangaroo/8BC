@@ -100,7 +100,7 @@ The important state bytes have separate jobs:
 On a new physical closure, either handler first sets the corresponding bit in
 `10C5`. If that bit was already set, it returns without scoring again while
 the switch remains closed. For a ball not yet recorded in `10C3`, the path at
-`CE07` calls `DELUXE_AWARD_FIRST_SINK_2500`, which applies Deluxe's global
+`CE07` calls `DELUXE_AWARD_SCALED_2500`, which applies Deluxe's global
 divide-by-ten score scale to the 2,500 playfield value and therefore awards
 **250 Deluxe points** through the current CHAMP playfield double/triple
 multiplier before recording the ball's bit in `10C3`.
@@ -127,6 +127,19 @@ award.
 This is the ROM implementation of the observed rule, with the two paired groups
 entering that later state only after both balls in the pair have first been
 sunk.
+
+## E-I-G-H-T stand-up targets: scaled 2,500 per hit
+
+Switches 33-37 share the handler at `CC7C`. Its score call at `CC85` occurs
+before the active-low letter-state test at `CC8D`, so every switch hit scores
+whether or not that letter was already collected in the current round. Deluxe
+redirects `CC85` to `DELUXE_AWARD_SCALED_2500`: the 2,500 playfield value is
+divided by ten and awarded as **250 displayed points** through the current
+CHAMP playfield multiplier (250 / 500 / 750 at 1x / 2x / 3x).
+
+Only a new letter reaches the hook at `CC91`, clears its bit in `1045`, and
+advances the Deluxe spinner value. An already-lit letter branches around that
+hook, so it still scores 250 through `CC85` but does not advance the spinner.
 
 ## Playfield Scores Double and Triple
 

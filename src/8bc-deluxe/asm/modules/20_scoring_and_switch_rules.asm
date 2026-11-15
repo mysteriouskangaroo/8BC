@@ -227,7 +227,9 @@ STORE_CHAMP_COMPLETION_STATE:
         dc.b $2F,$BD,$CA,$AA,$36,$BD,$C9,$F7,$32,$B5,$10,$C0,$27,$C8,$F6,$10 ; $CC4F data/unclassified
         dc.b $C0,$C4,$3F,$F7,$10,$C0,$F6,$10,$41,$CA,$C0,$F7,$10,$41,$CE,$16 ; $CC5F data/unclassified
         dc.b $D4,$48,$25,$03,$CE,$16,$CD,$BD,$F6,$C9,$7E,$C1,$D6,$C6,$30,$BD ; $CC6F data/unclassified
-        dc.b $CA,$AA,$BD,$CD,$AA,$36,$BD,$C9,$C4,$32,$CE,$10,$45,$36,$A5,$00 ; $CC7F data/unclassified
+        dc.b $CA,$AA,$BD,$CD,$AA,$36                         ; $CC7F original target gate/setup
+        JSR DELUXE_AWARD_SCALED_2500                         ; $CC85: 2,500 playfield value -> 250 displayed
+        dc.b $32,$CE,$10,$45,$36,$A5,$00                     ; $CC88 original letter-state test setup
         dc.b $27,$0B                                               ; $CC8F: already-collected E/I/G/H/T letter skips mutation
         JMP DELUXE_RECORD_NEW_EIGHT_LETTER                          ; $CC91: advance spinner only for a new letter
         dc.b $A7,$00,$A6,$00,$84,$1F,$27,$03,$7E,$CD,$20           ; $CC94: continue original word-completion check

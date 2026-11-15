@@ -40,7 +40,7 @@ AWARD_FIRST_SINK_AND_RECORD_POOL_BALL:
 ; code ORs the selected ball bit into SUNK_POOL_BALLS_1_TO_7 at 10C3 and starts
 ; its ball/lamp effects.
         PSHA                         ; $CE07: $36
-        JSR DELUXE_AWARD_FIRST_SINK_2500 ; $CE08: Deluxe first-sink value
+        JSR DELUXE_AWARD_SCALED_2500 ; $CE08: Deluxe first-sink value
 ; Drop target: award the scaled first-sink value of 250 points; the shared
 ; helpers apply playfield double/triple.
         PULA                         ; $CE0B: $32

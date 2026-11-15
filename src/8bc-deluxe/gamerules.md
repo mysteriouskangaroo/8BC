@@ -64,10 +64,12 @@ so. Activating the ones digit does not change Match probability or presentation.
   targets and does not advance the spinner value.
 - Switches 33-37 are the five dedicated E, I, G, H, and T stand-up targets.
   They share the original handler at `$CC7C`, whose active-low collected-letter
-  state is `$1045`. A target hit clears its corresponding bit only if that
-  letter was not already collected. When all five letters are collected, the
-  original handler awards the next BALL letter and rearms E-I-G-H-T so each
-  target can be collected again in the next round.
+  state is `$1045`. Their 2,500 playfield value follows Deluxe's divide-by-ten
+  score scale, so every target hit awards 250 displayed points through the
+  current playfield multiplier. A target hit clears its corresponding bit only
+  if that letter was not already collected. When all five letters are
+  collected, the original handler awards the next BALL letter and rearms
+  E-I-G-H-T so each target can be collected again in the next round.
 - CHAMP letters use `$1040`. Completing the five letters reaches `$CB07`, which originally advances the playfield score multiplier `$10C0` through double, triple, and special states. All multiplier-aware scoring helpers read `$10C0`.
 
 ## Deluxe collect feature
@@ -363,10 +365,11 @@ only the left or only the right bank without a coordinated VPX-table change
   original-sound tiers are 10 -> 100 sound, 100 -> 1K sound, 300/400 -> 3K
   sound, and 500/600/800/900 -> 5K sound.
 - Verify activating spinner collect or sinking a pool ball does not advance its
-  accumulated value. Verify each dedicated E-I-G-H-T target advances exactly
-  once per letter round, an already-lit letter does not advance it, completing
-  E-I-G-H-T awards a BALL letter and rearms the five letters, and the visible
-  lamp combinations include both 8K and 9K.
+  accumulated value. Verify every dedicated E-I-G-H-T target hit awards 250 at
+  1x, 500 at 2x, or 750 at 3x; each target advances the spinner exactly once
+  per letter round; an already-lit letter still scores but does not advance it;
+  completing E-I-G-H-T awards a BALL letter and rearms the five letters; and
+  the visible lamp combinations include both 8K and 9K.
 - Verify every spinner pulse restarts the inactivity window, a pulse inside two
   seconds continues scoring, and roughly two seconds with no pulse closes the
   collect and advances it to the left orbit.
