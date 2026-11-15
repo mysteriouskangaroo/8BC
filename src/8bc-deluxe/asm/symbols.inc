@@ -50,6 +50,13 @@ DELUXE_SPINNER_IDLE_TIMER                    equ $10EC
 DELUXE_CHAMP_COMPLETION_COUNT                equ $10ED
 DELUXE_SPINNER_VALUE_MASK                    equ $10EE
 DELUXE_ORBIT_VALUE_STATE                     equ $10EF
+DELUXE_COMPLETED_EIGHT_BALL_RACKS            equ $10F0
+DELUXE_BONUS_RACKS_REMAINING                 equ $10F1
+DELUXE_SAVED_CREDIT_DISPLAY_ONES             equ $10F2
+DELUXE_SAVED_CREDIT_DISPLAY_TENS             equ $10F3
+
+CREDIT_DISPLAY_ONES                          equ $1069
+CREDIT_DISPLAY_TENS                          equ $106A
 
 DELUXE_COLLECT_LOCATION_MASK                 equ $03
 DELUXE_COLLECT_ACTIVE                        equ $04

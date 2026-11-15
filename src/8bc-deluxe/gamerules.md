@@ -17,6 +17,10 @@ This document translates `new-games-design-ideas/8 Ball Champ New Rules.pptx` in
   the separate pool-bonus lamps in `$1044` through 120K, 240K, and
   120K+240K; clears the sunk-ball state for a new rack; and then continues
   through the normal saucer scoring/progression code at `$D069`.
+- The original drain-bonus routine at `$C765` awards 15,000 for each sunk pool
+  ball and repeats that award pass for the selected 2x, 3x, or 5x bonus. Its
+  completed-rack calculation originally used only the two 120K/240K lamp bits
+  in `$1044`, which can encode no more than three completed racks.
 - New pool balls are recorded in `$10C3`; their first-sink path is `$CE07`.
   They activate the current Deluxe collect location, but they are separate
   from the E-I-G-H-T targets and do not advance the spinner value.
@@ -139,6 +143,29 @@ does not collect the lit 8-ball is not an activation event.
 - Bonus progression, left-orbit authorization, and the waiting qualification
   all reset when a new ball starts.
 
+## Pool-ball bonus
+
+- Every successfully collected 8-ball completes one rack and increments a
+  per-ball completed-rack counter, including the fourth and all later clears.
+- The 120K and 240K center inserts retain their original visual progression.
+  Because those two lamps can represent only one, two, or three completed
+  racks, both remain lit for any count of three or more; the RAM counter, not
+  the lamps, is authoritative for scoring.
+- At drain, each completed rack is worth `8 * 15,000 = 120,000`, and each ball
+  already sunk in the unfinished current rack adds another 15,000.
+- The existing 1x/2x/3x/5x end-of-ball bonus multiplier applies to the entire
+  result. For example, six completed racks contribute `6 * 120,000` before
+  the multiplier, plus 15,000 for each sunk ball in the current partial rack.
+- The completed-rack counter and its temporary bonus working copy reset at the
+  start of every ball. The one-byte counter saturates at 255 rather than
+  wrapping to zero.
+- During end-of-ball bonus, the two-digit credit display temporarily shows the
+  number of completed racks. The actual credit-display bytes are saved before
+  bonus begins and restored after all multiplier passes finish, so displaying
+  racks does not add, remove, or otherwise change credits. Counts from 0-99
+  display exactly; 100-255 display as 99 while still scoring from the full RAM
+  counter.
+
 ## CHAMP
 
 - First completion: no playfield multiplier change.
@@ -170,7 +197,7 @@ does not collect the lit 8-ball is not an activation event.
 ## Deluxe implementation state
 
 The original four-player records occupy `$10C7-$10EA`. Deluxe uses the next
-five working-RAM bytes for per-ball state:
+nine working-RAM bytes for per-ball state and temporary display preservation:
 
 | Address | Meaning |
 | --- | --- |
@@ -179,6 +206,10 @@ five working-RAM bytes for per-ball state:
 | `$10ED` | CHAMP completion count for the current ball |
 | `$10EE` | Spinner weighted binary value mask (`$20/$40/$80`) |
 | `$10EF` | Retained orbit-value low nibble while inactive orbit lamps are hidden |
+| `$10F0` | Completed 8-ball racks in the current ball (saturates at 255) |
+| `$10F1` | Working completed-rack countdown, reloaded for each bonus-multiplier pass |
+| `$10F2` | Saved credit-display ones byte during end-of-ball bonus |
+| `$10F3` | Saved credit-display tens byte during end-of-ball bonus |
 
 The original `$10B1` byte remains the live spinner-lamp mask. It is zero when
 the spinner collect is inactive and mirrors `$10EE` only while the spinner is
@@ -240,6 +271,14 @@ only the left or only the right bank without a coordinated VPX-table change
   collect and advances it to the right orbit.
 - Verify the saucer cannot light/award 100,000 until both the post-5x step and
   left collect authorization have occurred, in either order.
+- Complete at least four 8-ball racks in one ball and verify the center inserts
+  remain capped at their 120K+240K display while every completed rack is still
+  counted at drain. With six completed racks, verify the completed-rack portion
+  is 720,000 at 1x, 1,440,000 at 2x, 2,160,000 at 3x, or 3,600,000 at 5x,
+  plus 15,000 times the multiplier for each sunk ball in the partial rack.
+- During that drain bonus, verify the credit display shows `06` for six
+  completed racks, remains stable through every multiplier pass, and restores
+  the exact prior credit count when bonus finishes.
 - Verify CHAMP completions 2, 4, and 6 produce 2x, 3x, and both specials, and
   that CHAMP no longer changes spinner value.
 - Collect each available special at 1x, 2x, and 3x and verify its additional

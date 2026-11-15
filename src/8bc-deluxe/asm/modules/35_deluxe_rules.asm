@@ -42,6 +42,8 @@ DELUXE_INITIALIZE_BALL:
         STAA DELUXE_COLLECT_STATE
         CLR DELUXE_SPINNER_IDLE_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
+        CLR DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        CLR DELUXE_BONUS_RACKS_REMAINING
         CLR $10b1
         CLR $10b2
         LDAA #DELUXE_SPINNER_1000_LAMP
@@ -294,16 +296,128 @@ DELUXE_AFTER_FIRST_SINK:
         PSHA
         JSR DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE
         PULA
-        BRA DELUXE_FIRST_SINK_CONTINUE
+        JMP DELUXE_FIRST_SINK_CONTINUE
 
 DELUXE_AFTER_EIGHT_BALL:
 ; CFAE calls this immediately after the original 8-ball completion sequence
 ; clears the balls-1-through-7 rack state. Treat that committed 8-ball collect
-; as one new-ball event for Deluxe, then execute the displaced rack-reset call.
+; as one new-ball event for Deluxe, record the completed rack, then execute the
+; displaced rack-reset call. Saturating at 255 prevents a theoretical wrap to
+; zero; 255 completed racks in one ball is far beyond practical play.
 ; The activation helper is deliberately a no-op if the current stage is active,
 ; so an 8-ball is never queued for the following stage.
+        LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        CMPA #$ff
+        BEQ DELUXE_AFTER_EIGHT_BALL_COUNTED
+        INCA
+        STAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+DELUXE_AFTER_EIGHT_BALL_COUNTED:
         JSR DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE
         JMP $c6b8
+
+DELUXE_BEGIN_BALL_BONUS_DISPLAY:
+; C765 is entered once for the complete end-of-ball bonus, outside the nested
+; multiplier passes. Save the actual credit-display bytes, then temporarily
+; show completed racks in decimal while bonus is counted. The physical credit
+; display has only two digits, so 100-255 racks display as 99 without changing
+; the authoritative score counter at 10F0. Preserve B because the displaced
+; C84B routine does not alter it.
+        PSHB
+        LDAA CREDIT_DISPLAY_ONES
+        STAA DELUXE_SAVED_CREDIT_DISPLAY_ONES
+        LDAA CREDIT_DISPLAY_TENS
+        STAA DELUXE_SAVED_CREDIT_DISPLAY_TENS
+        LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        CMPA #$64
+        BCS DELUXE_RACK_DISPLAY_CONVERT_DECIMAL
+        LDAA #$63
+DELUXE_RACK_DISPLAY_CONVERT_DECIMAL:
+        CLRB
+DELUXE_RACK_DISPLAY_TENS_LOOP:
+        CMPA #$0a
+        BCS DELUXE_RACK_DISPLAY_DIGITS_READY
+        SUBA #$0a
+        INCB
+        BRA DELUXE_RACK_DISPLAY_TENS_LOOP
+DELUXE_RACK_DISPLAY_DIGITS_READY:
+; The interrupt uses the high nibble of each display byte: 1069 is the ones
+; digit and 106A is the tens digit. Shift each binary digit into that nibble.
+        ASLA
+        ASLA
+        ASLA
+        ASLA
+        STAA CREDIT_DISPLAY_ONES
+        TBA
+        ASLA
+        ASLA
+        ASLA
+        ASLA
+        STAA CREDIT_DISPLAY_TENS
+        PULB
+; Execute C765's displaced setup call and let its RTS return to C768.
+        JMP $c84b
+
+DELUXE_END_BALL_BONUS_DISPLAY:
+; C75C runs only after the complete bonus routine returns, including all
+; nested multiplier passes. Restore the untouched credit display, then perform
+; C75C's displaced load so the canonical post-bonus flow is unchanged.
+        LDAA DELUXE_SAVED_CREDIT_DISPLAY_ONES
+        STAA CREDIT_DISPLAY_ONES
+        LDAA DELUXE_SAVED_CREDIT_DISPLAY_TENS
+        STAA CREDIT_DISPLAY_TENS
+        LDAA $10b9
+        RTS
+
+DELUXE_BEGIN_BONUS_PASS:
+; C7A6 begins one complete pass through the end-of-ball bonus. The canonical
+; routine calls it once at 1x, twice at 2x, three times at 3x, or five times at
+; 5x. Preserve its delay selector in 10BB, and give every pass a fresh working
+; copy of the completed-rack count so the original multiplier behavior remains
+; exact.
+        STAA $10bb
+        LDAB DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        STAB DELUXE_BONUS_RACKS_REMAINING
+        RTS
+
+DELUXE_PROCESS_COMPLETED_RACK_BONUS:
+; C809 reaches this after all individually sunk balls in the current partial
+; rack have received their normal 15,000-point bonus unit. Feed one completed
+; rack at a time back through the untouched eight-ball unit loop at C81C. Each
+; rack therefore contributes 8 * 15,000 = 120,000 on every multiplier pass.
+        LDAA DELUXE_BONUS_RACKS_REMAINING
+        BEQ DELUXE_COMPLETED_RACK_BONUS_DONE
+        DECA
+        STAA DELUXE_BONUS_RACKS_REMAINING
+        TAB
+; The two center inserts can display only 120K, 240K, or 120K+240K. During
+; bonus countdown, show the exact remaining count through two racks and cap
+; the display at both inserts for three or more; RAM remains authoritative.
+        LDAA SHARED_ORBIT_VALUE_LAMP_STATE
+        ORAA #$60
+        CMPB #$03
+        BCC DELUXE_BONUS_SHOW_THREE_OR_MORE_RACKS
+        CMPB #$02
+        BEQ DELUXE_BONUS_SHOW_TWO_RACKS
+        CMPB #$01
+        BEQ DELUXE_BONUS_SHOW_ONE_RACK
+        BRA DELUXE_BONUS_STORE_RACK_LAMPS
+DELUXE_BONUS_SHOW_THREE_OR_MORE_RACKS:
+        ANDA #$9f
+        BRA DELUXE_BONUS_STORE_RACK_LAMPS
+DELUXE_BONUS_SHOW_TWO_RACKS:
+        ANDA #$bf
+        BRA DELUXE_BONUS_STORE_RACK_LAMPS
+DELUXE_BONUS_SHOW_ONE_RACK:
+        ANDA #$df
+DELUXE_BONUS_STORE_RACK_LAMPS:
+        STAA SHARED_ORBIT_VALUE_LAMP_STATE
+        LDAA #$ff
+        STAA SUNK_POOL_BALLS_1_TO_7
+        JSR $c83f
+        JMP $c81c
+DELUXE_COMPLETED_RACK_BONUS_DONE:
+; C84A is the canonical return from the current multiplier pass.
+        JMP $c84a
 
 DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
 ; Shared by first sinks of balls 1-7 and by the lit 8-ball saucer collection.

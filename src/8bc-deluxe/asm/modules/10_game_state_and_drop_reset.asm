@@ -276,18 +276,25 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         dc.b $86,$02,$B7,$10,$AF,$CE,$D3,$13,$FF,$10,$AD,$86,$03,$B7,$10,$B0 ; $C71D data/unclassified
         dc.b $BD,$D1,$F8,$C6,$0A,$BD,$C9,$19,$FE,$10,$AD,$BD,$D2,$44,$FE,$10 ; $C72D data/unclassified
         dc.b $AD,$BD,$D2,$4B,$C6,$0A,$BD,$C9,$19,$BD,$D2,$1F,$B6,$10,$A0,$84 ; $C73D data/unclassified
-        dc.b $7F,$B7,$10,$A0,$B6,$10,$43,$84,$70,$B7,$10,$B9,$BD,$C7,$65,$B6 ; $C74D data/unclassified
-        dc.b $10,$B9,$B7,$10,$43,$7E,$C8,$59,$BD,$C8,$4B,$B6,$10,$44,$84,$60 ; $C75D data/unclassified
+        dc.b $7F,$B7,$10,$A0,$B6,$10,$43,$84,$70,$B7,$10,$B9,$BD,$C7,$65 ; $C74D original end-of-ball setup through JSR $C765
+        JSR DELUXE_END_BALL_BONUS_DISPLAY                     ; $C75C: restore credits after every multiplier pass has completed
+        dc.b $B7,$10,$43,$7E,$C8,$59                         ; $C75F original post-bonus continuation
+        JSR DELUXE_BEGIN_BALL_BONUS_DISPLAY                   ; $C765: temporarily show completed racks on the credit display
+        dc.b $B6,$10,$44,$84,$60                             ; $C768 original bonus-state capture continues
         dc.b $B7,$10,$BA,$B6,$10,$C3,$B7,$10,$BC,$B6,$10,$43,$85,$40,$26,$0D ; $C76D data/unclassified
         dc.b $86,$03,$8D,$25,$86,$05,$8D,$21,$86,$DF,$B7,$10,$43,$85,$20,$26 ; $C77D data/unclassified
         dc.b $09,$86,$07,$8D,$14,$86,$EF,$B7,$10,$43,$85,$10,$26,$04,$86,$09 ; $C78D data/unclassified
-        dc.b $8D,$07,$86,$FF,$B7,$10,$43,$86,$0B,$B7,$10,$BB,$B6,$10,$BC,$B7 ; $C79D data/unclassified
+        dc.b $8D,$07,$86,$FF,$B7,$10,$43,$86,$0B             ; $C79D original bonus-pass dispatch tail
+        JSR DELUXE_BEGIN_BONUS_PASS                           ; $C7A6: restore the true completed-rack count for each multiplier pass
+        dc.b $B6,$10,$BC,$B7                                 ; $C7A9 original partial-rack restore continues
         dc.b $10,$C3,$BD,$C8,$3F,$B6,$10,$BA,$B7,$10,$44,$C6,$05,$BD,$C9,$19 ; $C7AD data/unclassified
         dc.b $B6,$10,$C3,$27,$47,$86,$01,$B5,$10,$C3,$26,$05,$48,$26,$F8,$20 ; $C7BD data/unclassified
         dc.b $3B,$43,$B4,$10,$C3,$B7,$10,$C3,$8D,$68,$F6,$10,$3D,$B6,$10,$C3 ; $C7CD data/unclassified
         dc.b $2A,$07,$C4,$7F,$F7,$10,$3D,$20,$05,$CA,$80,$F7,$10,$3D,$BD,$C9 ; $C7DD data/unclassified
         dc.b $45,$26,$5A,$CE,$00,$01,$BD,$F4,$1C,$CE,$50,$00,$BD,$F4,$11,$86 ; $C7ED data/unclassified
-        dc.b $37,$BD,$C2,$7E,$F6,$10,$BB,$BD,$C9,$19,$20,$B4,$B6,$10,$44,$85 ; $C7FD data/unclassified
+        dc.b $37,$BD,$C2,$7E,$F6,$10,$BB,$BD,$C9,$19,$20,$B4 ; $C7FD original per-ball bonus loop tail
+        JMP DELUXE_PROCESS_COMPLETED_RACK_BONUS               ; $C809: use the RAM rack count instead of the three-state lamp encoding
+        dc.b $85                                              ; $C80C superseded original completed-rack test tail
         dc.b $20,$26,$25,$8A,$20,$B7,$10,$44,$86,$FF,$B7,$10,$C3,$8D,$23,$F6 ; $C80D data/unclassified
         dc.b $10,$3D,$B6,$10,$C3,$2A,$07,$C4,$7F,$F7,$10,$3D,$20,$05,$CA,$80 ; $C81D data/unclassified
         dc.b $F7,$10,$3D,$BD,$C9,$17,$20,$88,$85,$40,$26,$11,$8A,$40,$84,$DF ; $C82D data/unclassified

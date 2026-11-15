@@ -116,6 +116,10 @@ $deluxeHookChecks = @(
     @{ Address = 0xC521; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_BALL'; Name = 'new-ball initialization' }
     @{ Address = 0xC529; Bytes = [byte[]](0x20);             Name = 'original spinner preset bypass' }
     @{ Address = 0xC5B5; Opcode = 0xBD; Target = 'DELUXE_LOAD_ORBIT_STATE_FOR_SAVE'; Name = 'retained orbit-value player save' }
+    @{ Address = 0xC75C; Opcode = 0xBD; Target = 'DELUXE_END_BALL_BONUS_DISPLAY'; Name = 'rack-count credit-display restore' }
+    @{ Address = 0xC765; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BALL_BONUS_DISPLAY'; Name = 'rack-count credit-display override' }
+    @{ Address = 0xC7A6; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BONUS_PASS'; Name = 'completed-rack bonus-pass setup' }
+    @{ Address = 0xC809; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_RACK_BONUS'; Name = 'completed-rack bonus loop' }
     @{ Address = 0xCA3B; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPINNER'; Name = 'spinner switch handler' }
     @{ Address = 0xCC91; Opcode = 0x7E; Target = 'DELUXE_RECORD_NEW_EIGHT_LETTER'; Name = 'new E-I-G-H-T letter spinner advancement' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
