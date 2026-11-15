@@ -52,12 +52,16 @@ or otherwise advance the collect feature.
 
 ### Left orbit
 
-- When it is not active, switch 12 normally awards 5,000 and does not advance
-  the shared orbit value. The original 100,000/special terminal state is the
-  exception: once that state is lit, switch 12 continues through the original
-  handler so its 100,000 award and special behavior are preserved regardless
-  of the Deluxe collect's current location. This does not move the Deluxe
-  collect unless it is active at the left orbit.
+- When it is not active, switch 12 awards 5,000 and does not collect or advance
+  the retained orbit value, including when that value has reached the original
+  100,000/special terminal state. A qualified terminal special remains stored
+  and can be collected later when the orbit is active; inactive rollover hits
+  do not consume it.
+- Reaching the retained 100,000 terminal state qualifies the original blinking
+  orbit-special indication in `$10C2` bit `$10`. The special continues blinking
+  while the Deluxe collect is elsewhere and remains available until an active
+  orbit collects it. The original already-collected latch in `$10A0` bit `$20`
+  prevents it from being relit after collection during the same ball.
 - When a newly sunk ball first activates the collect feature at the left orbit,
   the original 5,000 baseline is promoted to a lit 10,000 value. If the
   operator's retain setting has carried a higher orbit value forward, that
@@ -206,9 +210,11 @@ only the left or only the right bank without a coordinated VPX-table change
   retaining the next orbit value, and that a later activation restores it.
   On each collect, verify the original fast upward arrow chase completes before
   the arrows turn off and the logical state advances.
-- Verify the left orbit's original 100,000/special terminal behavior remains
-  collectible while the Deluxe collect is at the spinner or right orbit, and
-  that doing so does not move the Deluxe collect.
+- Verify an inactive left rollover still scores only 5,000 at the retained
+  100,000/special terminal state and does not consume the special. Verify the
+  special indication begins blinking as soon as 100,000 is reached, continues
+  blinking while the Deluxe collect is elsewhere, and the original
+  100,000/special behavior occurs when the orbit is subsequently active.
 - Verify spinner values and lamps advance through the weighted binary states,
   active spins receive 2x/3x, and an unlit spin remains 100. Verify the sound
   tiers are 100 -> 100 sound, 1K -> 1K sound, 3K/4K -> 3K sound, and

@@ -40,6 +40,7 @@ SHARED_ORBIT_VALUE_LAMP_STATE                equ $1044
 EIGHT_LETTER_STATE                           equ $1045
 DROP_TARGET_5000_LAMP_FLASH_MASK             equ $10BF
 CHAMP_COMPLETION_STATE                       equ $10C0
+ORBIT_SPECIAL_FLASH_MASK                     equ $10C2
 SUNK_POOL_BALLS_1_TO_7                       equ $10C3
 DROP_TARGET_SWITCH_CLOSURE_LATCHES           equ $10C5
 ; Deluxe per-ball state follows the original four 9-byte player records at
@@ -64,4 +65,6 @@ DELUXE_SPINNER_3000_LAMP                     equ $40
 DELUXE_SPINNER_5000_LAMP                     equ $80
 DELUXE_SPINNER_ALL_VALUE_LAMPS               equ $E0
 DELUXE_SPINNER_INACTIVITY_TICKS              equ $78
+ORBIT_SPECIAL_LAMP_BIT                       equ $10
+ORBIT_SPECIAL_ALREADY_COLLECTED_BIT          equ $20
 WORK_RAM_U4_6116_END                         equ $17FF

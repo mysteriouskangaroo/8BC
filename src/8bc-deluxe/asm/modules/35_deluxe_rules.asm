@@ -176,21 +176,11 @@ DELUXE_HANDLE_LEFT_ORBIT:
         ANDA #DELUXE_COLLECT_STATE_MASK
         CMPA #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
         BEQ DELUXE_HANDLE_ACTIVE_LEFT_ORBIT
-; Deluxe normally makes an inactive left orbit worth 5,000 without advancing
-; its shared value. The exception is the original terminal 100,000/special
-; state: re-enter CB5C so its special collect remains fully functional even
-; when the Deluxe collect is currently at the spinner or right orbit.
-        LDAA DELUXE_ORBIT_VALUE_STATE
-        BEQ DELUXE_HANDLE_LEFT_ORBIT_TERMINAL
+; An inactive left orbit always scores the unlit 5,000 and cannot collect or
+; advance the retained orbit value. This includes the terminal 100,000/special
+; state: its qualification remains stored until an active orbit collect runs
+; the original lit-orbit routine.
         JMP DELUXE_SCORE_UNLIT_ORBIT
-DELUXE_HANDLE_LEFT_ORBIT_TERMINAL:
-; The terminal value is retained in the Deluxe shadow while an orbit stage is
-; inactive. Restore it before entering the canonical 100,000/special handler.
-        LDAA SHARED_ORBIT_VALUE_LAMP_STATE
-        ANDA #$f0
-        ORAA DELUXE_ORBIT_VALUE_STATE
-        STAA SHARED_ORBIT_VALUE_LAMP_STATE
-        BRA DELUXE_SCORE_LIT_ORBIT
 
 DELUXE_HANDLE_ACTIVE_LEFT_ORBIT:
 ; Authorize the eventual 100,000 saucer award, but leave left active until the
@@ -212,14 +202,6 @@ DELUXE_LEFT_ORBIT_STORE_STATE:
         STAA DELUXE_COLLECT_STATE
 DELUXE_LEFT_ORBIT_FINISH:
         JMP DELUXE_SCORE_ACTIVE_LEFT_ORBIT
-
-DELUXE_SCORE_LIT_ORBIT:
-; Re-enter the original handler after its gate/sound setup. It awards the
-; synchronized lit value, advances it by 10,000, and retains its adjustment
-; behavior and light/sound animation. This entry does not move the Deluxe
-; collect state; it is used for the terminal left-orbit special exception.
-        BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
-        BRA DELUXE_UPDATE_ORBIT_LAMP_VISIBILITY
 
 DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
 ; Finish the original chase before changing location. Then advance to spinner
@@ -250,22 +232,26 @@ DELUXE_RUN_ORIGINAL_LIT_ORBIT:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ANDA #$0f
         STAA DELUXE_ORBIT_VALUE_STATE
+; The original terminal path normally qualifies the blinking orbit special by
+; setting bit $10 at 10C2. Deluxe immediately hides the live low-nibble orbit
+; display and retains its value at 10EF, so establish that qualification from
+; the authoritative retained terminal state as well. Low nibble $0 is the
+; repeatable 100,000 terminal value. Respect the original 10A0 bit-$20 latch,
+; which prevents a special already collected this ball from being relit.
+        BNE DELUXE_ORBIT_SPECIAL_QUALIFICATION_DONE
+        LDAA $10a0
+        BITA #ORBIT_SPECIAL_ALREADY_COLLECTED_BIT
+        BNE DELUXE_ORBIT_SPECIAL_QUALIFICATION_DONE
+        LDAA ORBIT_SPECIAL_FLASH_MASK
+        ORAA #ORBIT_SPECIAL_LAMP_BIT
+        STAA ORBIT_SPECIAL_FLASH_MASK
+DELUXE_ORBIT_SPECIAL_QUALIFICATION_DONE:
         RTS
 
-DELUXE_UPDATE_ORBIT_LAMP_VISIBILITY:
-; A terminal left-orbit special can be collected while another orbit remains
-; active. In that case retain the shared value display for that active stage.
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BEQ DELUXE_SCORE_LIT_ORBIT_DONE
-        CMPA #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BEQ DELUXE_SCORE_LIT_ORBIT_DONE
 DELUXE_HIDE_INACTIVE_ORBIT_LAMPS:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ORAA #$0f
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
-DELUXE_SCORE_LIT_ORBIT_DONE:
         RTS
 
 DELUXE_SCORE_UNLIT_ORBIT:
