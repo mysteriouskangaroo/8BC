@@ -145,8 +145,8 @@ does not collect the lit 8-ball is not an activation event.
 
 ## Pool-ball bonus
 
-- Every successfully collected 8-ball completes one rack and increments a
-  per-ball completed-rack counter, including the fourth and all later clears.
+- Every successfully collected 8-ball completes one rack and increments that
+  player's completed-rack counter, including the fourth and all later clears.
 - The 120K and 240K center inserts retain their original visual progression.
   Because those two lamps can represent only one, two, or three completed
   racks, both remain lit for any count of three or more; the RAM counter, not
@@ -156,15 +156,39 @@ does not collect the lit 8-ball is not an activation event.
 - The existing 1x/2x/3x/5x end-of-ball bonus multiplier applies to the entire
   result. For example, six completed racks contribute `6 * 120,000` before
   the multiplier, plus 15,000 for each sunk ball in the current partial rack.
-- The completed-rack counter and its temporary bonus working copy reset at the
-  start of every ball. The one-byte counter saturates at 255 rather than
-  wrapping to zero.
+- Each player's completed-rack counter carries across that player's balls and
+  is restored after the intervening players' turns. All four counters reset at
+  the start of a new game. Each one-byte counter saturates at 255 rather than
+  wrapping to zero; only its temporary bonus working copy resets each ball.
 - During end-of-ball bonus, the two-digit credit display temporarily shows the
   number of completed racks. The actual credit-display bytes are saved before
   bonus begins and restored after all multiplier passes finish, so displaying
   racks does not add, remove, or otherwise change credits. Counts from 0-99
   display exactly; 100-255 display as 99 while still scoring from the full RAM
   counter.
+
+## B-A-L-L and E-I-G-H-T bonus
+
+- Every completed E-I-G-H-T target set still lights the next physical B-A-L-L
+  letter, and also increments the active player's B-A-L-L counter. Completions
+  beyond the four physical B-A-L-L inserts continue increasing this counter.
+- The four B-A-L-L inserts retain their original visual progression and remain
+  all lit for any count of four or more. The RAM counter is authoritative for
+  end-of-ball scoring.
+- After the completed-rack bonus finishes, the credit display changes from the
+  rack total to the number of B-A-L-L letters collected. It stays on that total
+  throughout the B-A-L-L/E-I-G-H-T bonus phase, then the genuine credit count
+  is restored.
+- At drain, each completed B-A-L-L letter is worth five original 10,000-point
+  E-I-G-H-T units, or 50,000. Each E-I-G-H-T letter collected toward the next
+  B-A-L-L letter adds another 10,000.
+- The 1x/2x/3x/5x end-of-ball bonus multiplier applies to the complete result.
+  Each player's counter carries across their later balls, saturates at 255,
+  and resets only with a new game. The two-digit display caps at 99 without
+  changing the scored count.
+- The B-A-L-L/E-I-G-H-T bonus animation uses approximately 20% shorter pass,
+  completed-letter, and individual-target delays than the original routine.
+  Scoring, sounds, lamp order, and multiplier passes are otherwise unchanged.
 
 ## CHAMP
 
@@ -196,8 +220,9 @@ does not collect the lit 8-ball is not an activation event.
 
 ## Deluxe implementation state
 
-The original four-player records occupy `$10C7-$10EA`. Deluxe uses the next
-nine working-RAM bytes for per-ball state and temporary display preservation:
+The original four-player records occupy `$10C7-$10EA`. Deluxe uses `$10EB`
+through `$10FD` for active state, temporary bonus/display work, and parallel
+per-player counters:
 
 | Address | Meaning |
 | --- | --- |
@@ -206,10 +231,20 @@ nine working-RAM bytes for per-ball state and temporary display preservation:
 | `$10ED` | CHAMP completion count for the current ball |
 | `$10EE` | Spinner weighted binary value mask (`$20/$40/$80`) |
 | `$10EF` | Retained orbit-value low nibble while inactive orbit lamps are hidden |
-| `$10F0` | Completed 8-ball racks in the current ball (saturates at 255) |
+| `$10F0` | Active player's completed 8-ball racks (saturates at 255) |
 | `$10F1` | Working completed-rack countdown, reloaded for each bonus-multiplier pass |
 | `$10F2` | Saved credit-display ones byte during end-of-ball bonus |
 | `$10F3` | Saved credit-display tens byte during end-of-ball bonus |
+| `$10F4` | Active player's completed B-A-L-L letters (saturates at 255) |
+| `$10F5` | Working B-A-L-L countdown, reloaded for each bonus-multiplier pass |
+| `$10F6-$10F9` | Completed-rack counters for players 1-4 |
+| `$10FA-$10FD` | Completed B-A-L-L-letter counters for players 1-4 |
+
+The canonical new-game loop initializes all four original player records at
+`$C4E6`; Deluxe hooks the same loop to clear all eight parallel counters. The
+canonical player restore ends at `$C603`; Deluxe loads `$10F0/$10F4` from the
+selected player's parallel entries there. Counter increments are written back
+immediately, so drain animations cannot erase another player's progress.
 
 The original `$10B1` byte remains the live spinner-lamp mask. It is zero when
 the spinner collect is inactive and mirrors `$10EE` only while the spinner is
@@ -278,7 +313,17 @@ only the left or only the right bank without a coordinated VPX-table change
   plus 15,000 times the multiplier for each sunk ball in the partial rack.
 - During that drain bonus, verify the credit display shows `06` for six
   completed racks, remains stable through every multiplier pass, and restores
-  the exact prior credit count when bonus finishes.
+  the exact prior credit count after the following B-A-L-L bonus finishes.
+- Complete E-I-G-H-T at least five times in one ball. Verify all four physical
+  B-A-L-L inserts remain lit after the fourth completion, the fifth completion
+  is retained in RAM, and the credit display changes to `05` after the rack
+  bonus. At 1x, verify those five letters contribute 250,000, plus 10,000 for
+  each partial E-I-G-H-T letter; repeat at 2x/3x/5x to confirm multiplication.
+- In a four-player game, give Player 1 four completed racks and five B-A-L-L
+  letters, then play through Players 2-4. Verify Player 1's next ball restores
+  `04` racks and `05` B-A-L-L letters for display and bonus while every other
+  player retains only their own totals. Start a new game and verify all eight
+  per-player totals return to zero.
 - Verify CHAMP completions 2, 4, and 6 produce 2x, 3x, and both specials, and
   that CHAMP no longer changes spinner value.
 - Collect each available special at 1x, 2x, and 3x and verify its additional

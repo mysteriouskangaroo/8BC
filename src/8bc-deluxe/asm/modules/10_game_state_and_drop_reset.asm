@@ -36,7 +36,7 @@ START_GAME_AND_INITIALIZE_FIRST_BALL:
         STAB $10c1                   ; $C4DD: $F7,$10,$C1
         LDAA $c072                   ; $C4E0: $B6,$C0,$72
         STAA.w $008f                 ; $C4E3: $B7,$00,$8F
-        JSR $c58c                    ; $C4E6: $BD,$C5,$8C
+        JSR DELUXE_INITIALIZE_PLAYER_BONUS_RECORD ; $C4E6: clear the parallel Deluxe record for each of four players
         DEC.w $008f                  ; $C4E9: $7A,$00,$8F
         BNE $c4e6                    ; $C4EC: $26,$F8
         LDAA #$64                    ; $C4EE: $86,$64
@@ -161,7 +161,7 @@ START_BALL_STATE:
         dc.b $B7,$10,$44                                     ; $C5FB unconfirmed: STAA $1044
         dc.b $A6,$08                                         ; $C5FE unconfirmed: LDAA $8,X
         dc.b $B7,$10,$45                                     ; $C600 unconfirmed: STAA $1045
-        dc.b $BD,$F1,$97                                     ; $C603 unconfirmed: JSR $f197
+        JSR DELUXE_RESTORE_ACTIVE_PLAYER_BONUS_COUNTERS      ; $C603: restore parallel Deluxe counters, then execute displaced JSR $F197
         dc.b $39                                             ; $C606 unconfirmed: RTS
         dc.b $B6,$10,$A0,$84,$7F,$B7,$10,$A0,$BD,$D0,$E3,$7E,$C5,$8C,$B6,$00 ; $C607 data/unclassified
         dc.b $9A,$85,$80,$27,$1E,$BD,$F4,$DF,$26,$19,$B6,$16,$8D,$85,$40,$27 ; $C617 data/unclassified
@@ -277,8 +277,9 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         dc.b $BD,$D1,$F8,$C6,$0A,$BD,$C9,$19,$FE,$10,$AD,$BD,$D2,$44,$FE,$10 ; $C72D data/unclassified
         dc.b $AD,$BD,$D2,$4B,$C6,$0A,$BD,$C9,$19,$BD,$D2,$1F,$B6,$10,$A0,$84 ; $C73D data/unclassified
         dc.b $7F,$B7,$10,$A0,$B6,$10,$43,$84,$70,$B7,$10,$B9,$BD,$C7,$65 ; $C74D original end-of-ball setup through JSR $C765
-        JSR DELUXE_END_BALL_BONUS_DISPLAY                     ; $C75C: restore credits after every multiplier pass has completed
-        dc.b $B7,$10,$43,$7E,$C8,$59                         ; $C75F original post-bonus continuation
+        JSR DELUXE_SHOW_BALL_COUNT_AFTER_RACK_BONUS           ; $C75C: show B-A-L-L count after the rack phase
+        dc.b $B7,$10,$43                                     ; $C75F original post-rack state restore
+        JMP DELUXE_RUN_BALL_BONUS_AND_RESTORE_CREDITS         ; $C762: run the B-A-L-L phase, then restore actual credits
         JSR DELUXE_BEGIN_BALL_BONUS_DISPLAY                   ; $C765: temporarily show completed racks on the credit display
         dc.b $B6,$10,$44,$84,$60                             ; $C768 original bonus-state capture continues
         dc.b $B7,$10,$BA,$B6,$10,$C3,$B7,$10,$BC,$B6,$10,$43,$85,$40,$26,$0D ; $C76D data/unclassified
@@ -315,13 +316,20 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         dc.b $B6,$10,$45,$8A,$E0,$B7,$10,$BA,$B6,$10,$41,$8A,$F0,$B7,$10,$BC ; $C859 data/unclassified
         dc.b $B6,$10,$43,$85,$40,$26,$0B,$BD,$C8,$93,$BD,$C8,$93,$86,$DF,$B7 ; $C869 data/unclassified
         dc.b $10,$43,$85,$20,$26,$08,$BD,$C8,$93,$86,$EF,$B7,$10,$43,$85,$10 ; $C879 data/unclassified
-        dc.b $26,$08,$BD,$C8,$93,$86,$FF,$B7,$10,$43,$B6,$10,$BA,$B7,$10,$45 ; $C889 data/unclassified
-        dc.b $B6,$10,$BC,$B7,$10,$41,$C6,$14,$BD,$C9,$19,$8D,$17,$B6,$10,$41 ; $C899 data/unclassified
+        dc.b $26,$08,$BD,$C8,$93,$86,$FF,$B7,$10,$43         ; $C889 original multiplier dispatch tail
+        JSR DELUXE_BEGIN_BALL_LETTER_BONUS_PASS               ; $C893: reload the true B-A-L-L count for this multiplier pass
+        dc.b $B7,$10,$45                                     ; $C896 original E-I-G-H-T restore continues
+        dc.b $B6,$10,$BC,$B7,$10,$41                         ; $C899 original B-A-L-L lamp-state restore
+        LDAB #DELUXE_BALL_BONUS_PASS_DELAY                   ; $C89F: slightly faster than original $14 pass delay
+        dc.b $BD,$C9,$19,$8D,$17                             ; $C8A1 original delay call and partial-letter pass
+        JMP DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS        ; $C8A6: use RAM count instead of four lamp bits
         dc.b $8A,$F0,$81,$FF,$27,$67,$0D,$46,$B7,$10,$41,$86,$E0,$B7,$10,$45 ; $C8A9 data/unclassified
         dc.b $C6,$0A,$20,$E4,$B6,$10,$45,$85,$01,$26,$07,$8A,$01,$B7,$10,$45 ; $C8B9 data/unclassified
         dc.b $8D,$36,$B6,$10,$45,$85,$02,$26,$07,$8A,$02,$B7,$10,$45,$8D,$28 ; $C8C9 data/unclassified
         dc.b $B6,$10,$45,$85,$04,$26,$07,$8A,$04,$B7,$10,$45,$8D,$1A,$B6,$10 ; $C8D9 data/unclassified
         dc.b $45,$85,$08,$26,$07,$8A,$08,$B7,$10,$45,$8D,$0C,$B6,$10,$45,$85 ; $C8E9 data/unclassified
         dc.b $10,$26,$1A,$8A,$10,$B7,$10,$45,$BD,$C9,$45,$26,$10,$CE,$00,$01 ; $C8F9 data/unclassified
-        dc.b $BD,$F4,$1C,$86,$38,$BD,$C2,$7E,$C6,$0B,$BD,$C9,$19,$39 ; $C909 data/unclassified
+        dc.b $BD,$F4,$1C,$86,$38,$BD,$C2,$7E                 ; $C909 original 10,000-point award and sound
+        LDAB #DELUXE_EIGHT_BONUS_LETTER_DELAY                ; $C911: slightly faster than original $0B letter delay
+        dc.b $BD,$C9,$19,$39                                 ; $C913 original delay call and return
         dc.b $C6,$0A                                         ; $C917 unconfirmed: LDAB #$a

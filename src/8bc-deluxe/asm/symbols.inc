@@ -43,8 +43,9 @@ CHAMP_COMPLETION_STATE                       equ $10C0
 ORBIT_SPECIAL_FLASH_MASK                     equ $10C2
 SUNK_POOL_BALLS_1_TO_7                       equ $10C3
 DROP_TARGET_SWITCH_CLOSURE_LATCHES           equ $10C5
-; Deluxe per-ball state follows the original four 9-byte player records at
-; $10C7-$10EA. These bytes are reset/captured by DELUXE_INITIALIZE_BALL.
+; Deluxe working state follows the original four 9-byte player records at
+; $10C7-$10EA. $10F6-$10FD provide parallel persistent counters for players
+; 1-4; the other bytes hold active-player, per-ball, and temporary bonus state.
 DELUXE_COLLECT_STATE                         equ $10EB
 DELUXE_SPINNER_IDLE_TIMER                    equ $10EC
 DELUXE_CHAMP_COMPLETION_COUNT                equ $10ED
@@ -54,6 +55,10 @@ DELUXE_COMPLETED_EIGHT_BALL_RACKS            equ $10F0
 DELUXE_BONUS_RACKS_REMAINING                 equ $10F1
 DELUXE_SAVED_CREDIT_DISPLAY_ONES             equ $10F2
 DELUXE_SAVED_CREDIT_DISPLAY_TENS             equ $10F3
+DELUXE_COMPLETED_BALL_LETTERS                equ $10F4
+DELUXE_BONUS_BALL_LETTERS_REMAINING          equ $10F5
+DELUXE_PLAYER_RACK_COUNTS                    equ $10F6
+DELUXE_PLAYER_BALL_LETTER_COUNTS             equ $10FA
 
 CREDIT_DISPLAY_ONES                          equ $1069
 CREDIT_DISPLAY_TENS                          equ $106A
@@ -72,6 +77,9 @@ DELUXE_SPINNER_3000_LAMP                     equ $40
 DELUXE_SPINNER_5000_LAMP                     equ $80
 DELUXE_SPINNER_ALL_VALUE_LAMPS               equ $E0
 DELUXE_SPINNER_INACTIVITY_TICKS              equ $78
+DELUXE_BALL_BONUS_PASS_DELAY                 equ $10
+DELUXE_BALL_BONUS_STEP_DELAY                 equ $08
+DELUXE_EIGHT_BONUS_LETTER_DELAY              equ $09
 ORBIT_SPECIAL_LAMP_BIT                       equ $10
 ORBIT_SPECIAL_ALREADY_COLLECTED_BIT          equ $20
 WORK_RAM_U4_6116_END                         equ $17FF

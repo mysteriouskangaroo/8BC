@@ -36,14 +36,16 @@ DELUXE_PERIODIC_TICK_DONE:
 
 DELUXE_INITIALIZE_BALL:
 ; The collect feature, spinner value, saucer authorization, CHAMP milestone
-; count, and playfield multiplier are all per-ball. C507 clears the original
-; multiplier state; this helper resets the additional deluxe state.
+; count, and playfield multiplier are per-ball. Completed racks and B-A-L-L
+; letters are per-player and were restored at C603, so do not clear them here.
+; C507 clears the original multiplier state; this helper resets only the
+; additional Deluxe per-ball and bonus-working state.
         LDAA #DELUXE_COLLECT_LEFT_ORBIT
         STAA DELUXE_COLLECT_STATE
         CLR DELUXE_SPINNER_IDLE_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
-        CLR DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CLR DELUXE_BONUS_RACKS_REMAINING
+        CLR DELUXE_BONUS_BALL_LETTERS_REMAINING
         CLR $10b1
         CLR $10b2
         LDAA #DELUXE_SPINNER_1000_LAMP
@@ -311,6 +313,7 @@ DELUXE_AFTER_EIGHT_BALL:
         BEQ DELUXE_AFTER_EIGHT_BALL_COUNTED
         INCA
         STAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
 DELUXE_AFTER_EIGHT_BALL_COUNTED:
         JSR DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE
         JMP $c6b8
@@ -328,18 +331,27 @@ DELUXE_BEGIN_BALL_BONUS_DISPLAY:
         LDAA CREDIT_DISPLAY_TENS
         STAA DELUXE_SAVED_CREDIT_DISPLAY_TENS
         LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        JSR DELUXE_SHOW_COUNT_ON_CREDIT_DISPLAY
+        PULB
+; Execute C765's displaced setup call and let its RTS return to C768.
+        JMP $c84b
+
+DELUXE_SHOW_COUNT_ON_CREDIT_DISPLAY:
+; Render the unsigned count in A on the two credit digits. Preserve B for all
+; callers. The display caps at 99, while its source counter remains unchanged.
+        PSHB
         CMPA #$64
-        BCS DELUXE_RACK_DISPLAY_CONVERT_DECIMAL
+        BCS DELUXE_COUNT_DISPLAY_CONVERT_DECIMAL
         LDAA #$63
-DELUXE_RACK_DISPLAY_CONVERT_DECIMAL:
+DELUXE_COUNT_DISPLAY_CONVERT_DECIMAL:
         CLRB
-DELUXE_RACK_DISPLAY_TENS_LOOP:
+DELUXE_COUNT_DISPLAY_TENS_LOOP:
         CMPA #$0a
-        BCS DELUXE_RACK_DISPLAY_DIGITS_READY
+        BCS DELUXE_COUNT_DISPLAY_DIGITS_READY
         SUBA #$0a
         INCB
-        BRA DELUXE_RACK_DISPLAY_TENS_LOOP
-DELUXE_RACK_DISPLAY_DIGITS_READY:
+        BRA DELUXE_COUNT_DISPLAY_TENS_LOOP
+DELUXE_COUNT_DISPLAY_DIGITS_READY:
 ; The interrupt uses the high nibble of each display byte: 1069 is the ones
 ; digit and 106A is the tens digit. Shift each binary digit into that nibble.
         ASLA
@@ -354,19 +366,155 @@ DELUXE_RACK_DISPLAY_DIGITS_READY:
         ASLA
         STAA CREDIT_DISPLAY_TENS
         PULB
-; Execute C765's displaced setup call and let its RTS return to C768.
-        JMP $c84b
+        RTS
 
-DELUXE_END_BALL_BONUS_DISPLAY:
-; C75C runs only after the complete bonus routine returns, including all
-; nested multiplier passes. Restore the untouched credit display, then perform
-; C75C's displaced load so the canonical post-bonus flow is unchanged.
+DELUXE_SHOW_BALL_COUNT_AFTER_RACK_BONUS:
+; C75C runs after every pool-rack multiplier pass has completed. Replace the
+; rack total with the number of B-A-L-L letters earned, then perform C75C's
+; displaced load for the canonical transition into the second bonus phase.
+        LDAA DELUXE_COMPLETED_BALL_LETTERS
+        JSR DELUXE_SHOW_COUNT_ON_CREDIT_DISPLAY
+        LDAA $10b9
+        RTS
+
+DELUXE_RUN_BALL_BONUS_AND_RESTORE_CREDITS:
+; C762 originally tail-jumped directly to C859. Call that complete B-A-L-L /
+; partial E-I-G-H-T bonus phase, restore the untouched credit count only after
+; all of its multiplier passes return, then return to the original caller.
+        JSR $c859
         LDAA DELUXE_SAVED_CREDIT_DISPLAY_ONES
         STAA CREDIT_DISPLAY_ONES
         LDAA DELUXE_SAVED_CREDIT_DISPLAY_TENS
         STAA CREDIT_DISPLAY_TENS
-        LDAA $10b9
         RTS
+
+DELUXE_AFTER_EIGHT_WORD_COMPLETION:
+; CCD4 is reached exactly once after all five E-I-G-H-T targets have completed
+; and the original animation is about to award the next B-A-L-L lamp. Count
+; every such completion even after the four physical lamps are saturated.
+        JSR $d21f
+        PSHA
+        LDAA DELUXE_COMPLETED_BALL_LETTERS
+        CMPA #$ff
+        BEQ DELUXE_AFTER_EIGHT_WORD_COUNTED
+        INCA
+        STAA DELUXE_COMPLETED_BALL_LETTERS
+DELUXE_AFTER_EIGHT_WORD_COUNTED:
+        JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
+        PULA
+        RTS
+
+DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
+; The canonical new-game loop at C4E6 visits player numbers 4, 3, 2, and 1 and
+; initializes each original nine-byte player record. Clear the active Deluxe
+; counters and write zero to the matching parallel record before executing the
+; displaced original record initializer at C58C.
+        CLR DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        CLR DELUXE_COMPLETED_BALL_LETTERS
+        JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
+        JMP $c58c
+
+DELUXE_RESTORE_ACTIVE_PLAYER_BONUS_COUNTERS:
+; C603 runs at the end of the original nine-byte player-record restore. Load
+; the two extended counters for the same 1-based player number in 008F, then
+; execute C603's displaced call. Tail-jumping preserves F197's return state.
+        JSR DELUXE_LOAD_ACTIVE_PLAYER_BONUS_COUNTERS
+        JMP $f197
+
+DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS:
+; Write through on every completed rack or B-A-L-L letter. This keeps the
+; parallel player record current independent of later drain/bonus animation.
+        PSHA
+        PSHB
+        PSHX
+        BSR DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER
+        LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        STAA 0,X
+        LDAA DELUXE_COMPLETED_BALL_LETTERS
+        STAA 4,X
+        PULX
+        PULB
+        PULA
+        RTS
+
+DELUXE_LOAD_ACTIVE_PLAYER_BONUS_COUNTERS:
+        PSHA
+        PSHB
+        PSHX
+        BSR DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER
+        LDAA 0,X
+        STAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        LDAA 4,X
+        STAA DELUXE_COMPLETED_BALL_LETTERS
+        PULX
+        PULB
+        PULA
+        RTS
+
+DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER:
+; $008F is the same 1-based player number used by the canonical record selector
+; at C5C3. The rack array occupies 10F6-10F9; the B-A-L-L array is exactly four
+; bytes later at 10FA-10FD.
+        LDX #DELUXE_PLAYER_RACK_COUNTS-1
+        LDAB.w $008f
+DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER_LOOP:
+        INX
+        DECB
+        BNE DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER_LOOP
+        RTS
+
+DELUXE_BEGIN_BALL_LETTER_BONUS_PASS:
+; C893 begins each complete 1x/2x/3x/5x pass through the B-A-L-L bonus. Reload
+; a working copy so every multiplier pass scores all completed letters, then
+; execute C893's displaced load of the partial E-I-G-H-T state.
+        LDAB DELUXE_COMPLETED_BALL_LETTERS
+        STAB DELUXE_BONUS_BALL_LETTERS_REMAINING
+        LDAA $10ba
+        RTS
+
+DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS:
+; C8A6 is reached after the current partial E-I-G-H-T letters have been worth
+; 10,000 each. Feed one completed B-A-L-L letter back through the untouched
+; five-letter loop at C8A1, producing 5 * 10,000 = 50,000 per B-A-L-L letter
+; on every bonus-multiplier pass.
+        LDAA DELUXE_BONUS_BALL_LETTERS_REMAINING
+        BEQ DELUXE_BALL_LETTER_BONUS_DONE
+        DECA
+        STAA DELUXE_BONUS_BALL_LETTERS_REMAINING
+        TAB
+; Four active-low lamp bits can show only zero through four letters. Keep all
+; four lit for counts of four or more, then count them down normally below four.
+        LDAA CHAMP_MULTIPLIER_LAMP_SHADOW
+        ORAA #$0f
+        CMPB #$04
+        BCC DELUXE_BONUS_SHOW_FOUR_OR_MORE_BALL_LETTERS
+        CMPB #$03
+        BEQ DELUXE_BONUS_SHOW_THREE_BALL_LETTERS
+        CMPB #$02
+        BEQ DELUXE_BONUS_SHOW_TWO_BALL_LETTERS
+        CMPB #$01
+        BEQ DELUXE_BONUS_SHOW_ONE_BALL_LETTER
+        BRA DELUXE_BONUS_STORE_BALL_LETTERS
+DELUXE_BONUS_SHOW_FOUR_OR_MORE_BALL_LETTERS:
+        ANDA #$f0
+        BRA DELUXE_BONUS_STORE_BALL_LETTERS
+DELUXE_BONUS_SHOW_THREE_BALL_LETTERS:
+        ANDA #$f8
+        BRA DELUXE_BONUS_STORE_BALL_LETTERS
+DELUXE_BONUS_SHOW_TWO_BALL_LETTERS:
+        ANDA #$fc
+        BRA DELUXE_BONUS_STORE_BALL_LETTERS
+DELUXE_BONUS_SHOW_ONE_BALL_LETTER:
+        ANDA #$fe
+DELUXE_BONUS_STORE_BALL_LETTERS:
+        STAA CHAMP_MULTIPLIER_LAMP_SHADOW
+        LDAA #$e0
+        STAA EIGHT_LETTER_STATE
+        LDAB #DELUXE_BALL_BONUS_STEP_DELAY
+        JMP $c8a1
+DELUXE_BALL_LETTER_BONUS_DONE:
+; C916 is the canonical return from the current B-A-L-L multiplier pass.
+        JMP $c916
 
 DELUXE_BEGIN_BONUS_PASS:
 ; C7A6 begins one complete pass through the end-of-ball bonus. The canonical

@@ -113,15 +113,23 @@ function Get-DasmSymbolAddress([string]$Name) {
 $deluxeHookChecks = @(
     @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
     @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic inactivity timer' }
+    @{ Address = 0xC4E6; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_PLAYER_BONUS_RECORD'; Name = 'four-player Deluxe bonus-record initialization' }
     @{ Address = 0xC521; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_BALL'; Name = 'new-ball initialization' }
     @{ Address = 0xC529; Bytes = [byte[]](0x20);             Name = 'original spinner preset bypass' }
     @{ Address = 0xC5B5; Opcode = 0xBD; Target = 'DELUXE_LOAD_ORBIT_STATE_FOR_SAVE'; Name = 'retained orbit-value player save' }
-    @{ Address = 0xC75C; Opcode = 0xBD; Target = 'DELUXE_END_BALL_BONUS_DISPLAY'; Name = 'rack-count credit-display restore' }
+    @{ Address = 0xC603; Opcode = 0xBD; Target = 'DELUXE_RESTORE_ACTIVE_PLAYER_BONUS_COUNTERS'; Name = 'active-player Deluxe bonus-record restore' }
+    @{ Address = 0xC75C; Opcode = 0xBD; Target = 'DELUXE_SHOW_BALL_COUNT_AFTER_RACK_BONUS'; Name = 'B-A-L-L-count credit-display transition' }
+    @{ Address = 0xC762; Opcode = 0x7E; Target = 'DELUXE_RUN_BALL_BONUS_AND_RESTORE_CREDITS'; Name = 'B-A-L-L bonus and credit-display restore' }
     @{ Address = 0xC765; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BALL_BONUS_DISPLAY'; Name = 'rack-count credit-display override' }
     @{ Address = 0xC7A6; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BONUS_PASS'; Name = 'completed-rack bonus-pass setup' }
     @{ Address = 0xC809; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_RACK_BONUS'; Name = 'completed-rack bonus loop' }
+    @{ Address = 0xC893; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BALL_LETTER_BONUS_PASS'; Name = 'completed B-A-L-L bonus-pass setup' }
+    @{ Address = 0xC8A0; Bytes = [byte[]](0x10);             Name = 'faster B-A-L-L bonus-pass delay' }
+    @{ Address = 0xC8A6; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS'; Name = 'completed B-A-L-L bonus loop' }
+    @{ Address = 0xC912; Bytes = [byte[]](0x09);             Name = 'faster E-I-G-H-T bonus-letter delay' }
     @{ Address = 0xCA3B; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPINNER'; Name = 'spinner switch handler' }
     @{ Address = 0xCC91; Opcode = 0x7E; Target = 'DELUXE_RECORD_NEW_EIGHT_LETTER'; Name = 'new E-I-G-H-T letter spinner advancement' }
+    @{ Address = 0xCCD4; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_WORD_COMPLETION'; Name = 'completed E-I-G-H-T word B-A-L-L counter' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
