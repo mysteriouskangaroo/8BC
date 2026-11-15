@@ -270,9 +270,25 @@ DELUXE_AFTER_FIRST_SINK:
         PULB
         PSHB
         PSHA
+        JSR DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE
+        PULA
+        BRA DELUXE_FIRST_SINK_CONTINUE
+
+DELUXE_AFTER_EIGHT_BALL:
+; CFAE calls this immediately after the original 8-ball completion sequence
+; clears the balls-1-through-7 rack state. Treat that committed 8-ball collect
+; as one new-ball event for Deluxe, then execute the displaced rack-reset call.
+; The activation helper is deliberately a no-op if the current stage is active,
+; so an 8-ball is never queued for the following stage.
+        JSR DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE
+        JMP $c6b8
+
+DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
+; Shared by first sinks of balls 1-7 and by the lit 8-ball saucer collection.
+; Activate the current location only; never change or queue its location here.
         LDAA DELUXE_COLLECT_STATE
         BITA #DELUXE_COLLECT_ACTIVE
-        BNE DELUXE_FIRST_SINK_COLLECT_ALREADY_ACTIVE
+        BNE DELUXE_COLLECT_ACTIVATION_DONE
 ; A newly sunk ball activates exactly the current waiting location. If already
 ; active, later sunk balls are not queued and do not change this state.
         ORAA #DELUXE_COLLECT_ACTIVE
@@ -302,7 +318,7 @@ DELUXE_FIRST_SINK_SHOW_ORBIT:
         ANDA #$f0
         ORAA DELUXE_ORBIT_VALUE_STATE
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
-        BRA DELUXE_FIRST_SINK_COLLECT_ALREADY_ACTIVE
+        BRA DELUXE_COLLECT_ACTIVATION_DONE
 
 DELUXE_FIRST_SINK_ACTIVATE_SPINNER:
 ; Activating spinner collect only reveals the value already accumulated in
@@ -310,8 +326,8 @@ DELUXE_FIRST_SINK_ACTIVATE_SPINNER:
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
         CLR $10b2
-DELUXE_FIRST_SINK_COLLECT_ALREADY_ACTIVE:
-        PULA
+DELUXE_COLLECT_ACTIVATION_DONE:
+        RTS
 
 DELUXE_FIRST_SINK_CONTINUE:
         LDAA PENDING_SOUND_COMMAND

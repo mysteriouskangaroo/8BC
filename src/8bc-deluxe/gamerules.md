@@ -40,6 +40,12 @@ Hitting a ball that is already sunk (its lamp is already on) follows the
 existing 5,000-point path at `$D034`; it does **not** activate, move, restart,
 or otherwise advance the collect feature.
 
+Collecting the lit 8-ball at the saucer is also one new-ball activation event.
+Like balls 1-7, it activates the current location only when that location is
+inactive. If the location is already active, the 8-ball has no collect-state
+effect and is not queued for the next location. An ordinary saucer hit that
+does not collect the lit 8-ball is not an activation event.
+
 1. Starting a new ball places the feature at **left orbit inactive**.
 2. A newly sunk pool ball changes the current location from inactive to active;
    it does not change the location.
@@ -202,6 +208,9 @@ only the left or only the right bank without a coordinated VPX-table change
   move it and are not queued to activate the following location.
 - Verify hitting an already-sunk ball still follows its existing 5,000-point
   path and does not activate, move, restart, or advance the collect feature.
+- Verify collecting the lit 8-ball activates the current location when it is
+  inactive, does nothing to an already-active collect state, and is never
+  queued for the next location. Verify ordinary saucer hits do not activate it.
 - Verify unlit left/right orbit shots score 5,000 without advancing their value.
 - Verify the first active left-orbit collect lights at 10,000 (or preserves a
   higher retained value), scores that amount, and advances the shared value by

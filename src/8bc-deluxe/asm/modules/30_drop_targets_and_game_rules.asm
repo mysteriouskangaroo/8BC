@@ -135,7 +135,9 @@ AWARD_FIRST_SINK_AND_RECORD_POOL_BALL:
         dc.b $86,$71,$BD,$F5,$6B,$86,$73,$BD,$F5,$91,$86,$33,$BD,$C2,$7E,$33 ; $CF7C data/unclassified
         dc.b $37,$58,$BD,$C9,$19,$86,$71,$BD,$F5,$91,$86,$73,$BD,$F5,$6B,$33 ; $CF8C data/unclassified
         dc.b $37,$58,$BD,$C9,$19,$33,$5A,$26,$D6,$86,$73,$BD,$F5,$91,$4F,$B7 ; $CF9C data/unclassified
-        dc.b $10,$C3,$BD,$C6,$B8,$BD,$C6,$A7,$B6,$10,$44,$2B,$20,$F6,$16,$8C ; $CFAC data/unclassified
+        dc.b $10,$C3                                               ; $CFAC: complete CLR/STAA of sunk balls 1-7
+        JSR DELUXE_AFTER_EIGHT_BALL                                ; $CFAE: the collected 8-ball can activate an inactive stage
+        dc.b $BD,$C6,$A7,$B6,$10,$44,$2B,$20,$F6,$16,$8C           ; $CFB1: continue original 8-ball completion
         dc.b $C5,$20,$26,$10,$B6,$10,$44,$8A,$80,$B7,$10,$44,$B6,$10,$A0,$8A ; $CFBC data/unclassified
         dc.b $10,$B7,$10,$A0,$CE,$16,$B8,$BD,$F6,$C9,$BD,$C1,$DB,$B6,$10,$44 ; $CFCC data/unclassified
         dc.b $85,$40,$26,$04,$84,$DF,$20,$0C,$85,$20,$26,$06,$8A,$20,$84,$BF ; $CFDC data/unclassified
