@@ -115,6 +115,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
     @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic inactivity timer' }
     @{ Address = 0xC1AC; Opcode = 0xBD; Target = 'DELUXE_FLASH_DROP_TARGET_LAMPS'; Name = 'canonical-cadence called drop-target lamp flash' }
+    @{ Address = 0xE63A; Opcode = 0xBD; Target = 'DELUXE_PREPARE_PLAYFIELD_SWITCH_HANDLER_TABLE'; Name = 'first scoring switch starts called-ball selection' }
     @{ Address = 0xC1BC; Opcode = 0xBD; Target = 'DELUXE_APPLY_HOLE_FLASH_MASK'; Name = 'authorized saucer 100K flash gate' }
     @{ Address = 0xC46D; Opcode = 0x7E; Target = 'DELUXE_PREPEND_STARTUP_SUPER'; Name = 'startup Super speech prefix' }
     @{ Address = 0xC4E6; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_PLAYER_BONUS_RECORD'; Name = 'four-player Deluxe bonus-record initialization' }

@@ -50,6 +50,7 @@ ORBIT_SPECIAL_FLASH_MASK                     equ $10C2
 SUNK_POOL_BALLS_1_TO_7                       equ $10C3
 CALLED_POOL_BALL_SOUND_ID                    equ $10C4
 DROP_TARGET_SWITCH_CLOSURE_LATCHES           equ $10C5
+CALLED_BALL_SPEECH_DELAY_TIMER                equ $10B3
 ; Deluxe working state follows the original four 9-byte player records at
 ; $10C7-$10EA. $10F6-$1102 provide parallel persistent values for players 1-4;
 ; the other bytes hold active-player, per-ball, and temporary bonus state.

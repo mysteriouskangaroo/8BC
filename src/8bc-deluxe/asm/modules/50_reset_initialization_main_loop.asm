@@ -392,7 +392,7 @@ PROCESS_SWITCH_EVENTS:
         dc.b $43                                             ; $E635 unconfirmed: COMA
         dc.b $A4,$00                                         ; $E636 unconfirmed: ANDA $0,X
         dc.b $A7,$00                                         ; $E638 unconfirmed: STAA $0,X
-        dc.b $CE,$C0,$11                                     ; $E63A unconfirmed: LDX #PLAYFIELD_SWITCH_HANDLER_TABLE
+        JSR DELUXE_PREPARE_PLAYFIELD_SWITCH_HANDLER_TABLE    ; $E63A: expire the initial call delay on the first scoring switch
         dc.b $3A                                             ; $E63D unconfirmed: ABX
         dc.b $32                                             ; $E63E unconfirmed: PULA
         dc.b $F6,$00,$9A                                     ; $E63F unconfirmed: LDAB.w $009a

@@ -377,6 +377,18 @@ DELUXE_AFTER_EIGHT_BALL:
 ; The activation helper is deliberately a no-op if the current stage is active,
 ; so an 8-ball is never queued for the following stage.
         JSR DELUXE_AWARD_AND_ADVANCE_CALLED_BALL_SCORE
+; The canonical 8-ball speech reminder leaves both its pseudo call ID and its
+; 16-bit reminder delay live after 10C3 starts the next rack. Restore any lamp
+; XOR still applied for the old call before discarding that ID, then expire the
+; delay so the normal selector immediately calls the first ball of the new rack.
+        LDAA DELUXE_CALLED_BALL_FLASH_APPLIED_ID
+        BEQ DELUXE_AFTER_EIGHT_BALL_FLASH_RESTORED
+        JSR DELUXE_XOR_CALLED_BALL_LAMP_FOR_ID
+        CLR DELUXE_CALLED_BALL_FLASH_APPLIED_ID
+DELUXE_AFTER_EIGHT_BALL_FLASH_RESTORED:
+        LDX #$0000
+        STX CALLED_BALL_SPEECH_DELAY_TIMER
+        CLR CALLED_POOL_BALL_SOUND_ID
         LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CMPA #$ff
         BEQ DELUXE_AFTER_EIGHT_BALL_COUNTED
@@ -834,6 +846,42 @@ DELUXE_LOAD_ORBIT_STATE_FOR_SAVE:
         RTS
 DELUXE_LOAD_LIVE_ORBIT_STATE_FOR_SAVE:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
+        RTS
+
+DELUXE_PREPARE_PLAYFIELD_SWITCH_HANDLER_TABLE:
+; E63A enters after the normal-play dispatcher has accepted and cleared one
+; switch event. B is the even byte offset into C011's handler-pointer table.
+; While no called ball has yet been selected, expire the ball-start speech
+; delay on the first genuine scoring/playfield closure. Deliberately exclude
+; Outhole (offset 00), Credit (04), coin/tilt/slam/unused cabinet positions
+; (10-14, 1A-1E), Lane Change cabinet (3C), and unused switches 38-40 (40-44).
+; The accepted switch still reaches its original handler after this returns.
+; Once 10C4 is nonzero, all later reminder timing remains canonical.
+        LDAA CALLED_POOL_BALL_SOUND_ID
+        BNE DELUXE_FIRST_SWITCH_CALL_DELAY_DONE
+        CMPB #$02
+        BEQ DELUXE_EXPIRE_INITIAL_CALLED_BALL_DELAY
+        CMPB #$06
+        BCS DELUXE_FIRST_SWITCH_CALL_DELAY_DONE
+        CMPB #$10
+        BCS DELUXE_EXPIRE_INITIAL_CALLED_BALL_DELAY
+        CMPB #$16
+        BCS DELUXE_FIRST_SWITCH_CALL_DELAY_DONE
+        CMPB #$1A
+        BCS DELUXE_EXPIRE_INITIAL_CALLED_BALL_DELAY
+        CMPB #$20
+        BCS DELUXE_FIRST_SWITCH_CALL_DELAY_DONE
+        CMPB #$3C
+        BCS DELUXE_EXPIRE_INITIAL_CALLED_BALL_DELAY
+        CMPB #$3E
+        BEQ DELUXE_EXPIRE_INITIAL_CALLED_BALL_DELAY
+        CMPB #$46
+        BCS DELUXE_FIRST_SWITCH_CALL_DELAY_DONE
+DELUXE_EXPIRE_INITIAL_CALLED_BALL_DELAY:
+        LDX #$0000
+        STX CALLED_BALL_SPEECH_DELAY_TIMER
+DELUXE_FIRST_SWITCH_CALL_DELAY_DONE:
+        LDX #PLAYFIELD_SWITCH_HANDLER_TABLE
         RTS
 
 DELUXE_FLASH_DROP_TARGET_LAMPS:

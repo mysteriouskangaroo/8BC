@@ -115,6 +115,16 @@ The important state bytes have separate jobs:
 | `10C5` | Physical-closure latch for the five drop-target switch groups |
 | `10BF` | Mask for the five physical 5,000 drop-target lamp effects |
 
+The original ball-start speech path loads `10B3` with `03C0`, and the call
+selector at `C37F-C382` refuses to choose a target until that countdown reaches
+zero. Deluxe hooks the accepted normal-play switch event at `E63A`, where B is
+the even handler-table offset, and clears `10B3` on the first genuine scoring
+or playfield closure while `10C4` is still zero. The offset filter excludes
+outhole, credit/coin, tilt/slam, unused positions, and the cabinet Lane Change
+button. The dispatcher then resolves and calls the original switch handler as
+before. Because the hook is disabled as soon as `10C4` contains the selected
+speech ID, later reminders retain the original timer behavior.
+
 On a new physical closure, either handler first sets the corresponding bit in
 `10C5`. If that bit was already set, it returns without scoring again while
 the switch remains closed. For a ball not yet recorded in `10C3`, the path at
@@ -128,7 +138,11 @@ current CHAMP playfield multiplier. When the IDs match, it instead awards that
 player's Called ball score through the same multiplier. The per-player value
 starts at 10,000 playfield / 1,000 displayed and advances by 10,000 playfield /
 1,000 displayed after each successful call. The collected 8-ball path at
-`CFAE` also awards and advances this value. Active state is at `10FE`; parallel
+`CFAE` also awards and advances this value. After restoring any reversible
+called-lamp overlay, that hook clears both the stale call ID at `10C4` and the
+16-bit reminder delay at `10B3-10B4`; the canonical selector can therefore
+choose the new rack's first solid or stripe immediately instead of interpreting
+the 8-ball reminder as a numbered target. Active state is at `10FE`; parallel
 player values are at `10FF-1102` and use the existing `C4E6` new-game and
 `C603` player-restore hooks, so drains preserve the value while a new game
 resets every player to 10,000. Restore and award both normalize a zero legacy

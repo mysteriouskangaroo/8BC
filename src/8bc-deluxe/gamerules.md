@@ -210,6 +210,12 @@ does not collect the lit 8-ball is not an activation event.
 - The spoken “Sink the N ball” selection is the authoritative call. Sinking
   that exact ball for the first time replaces its normal 2,500 playfield-value
   award with the active player's Called ball score.
+- At the beginning of a ball, the first accepted scoring/playfield switch
+  closure expires the original initial speech-delay timer so the game selects
+  and speaks its first called ball immediately afterward. Outhole, credit,
+  coin, tilt/slam, unused, and cabinet Lane Change events do not trigger it.
+  The triggering switch still runs its normal rule and score, and subsequent
+  called-ball reminder timing remains unchanged.
 - While the call is active and that ball remains unsunk, the lamp on its
   individually numbered physical drop target flashes at the game's normal
   lamp-flash cadence. Balls 1-7 use the seven solid-ball target lamps and balls
@@ -224,7 +230,10 @@ does not collect the lit 8-ball is not an activation event.
   and so on (displayed as 1,000, 2,000, 3,000...).
 - Collecting the lit 8-ball to complete a rack always awards the current Called
   ball score and then advances its next value by 10,000, even though balls 1-7
-  are the ones selected by the spoken call.
+  are the ones selected by the spoken call. It also restores any old called-
+  target flash overlay, clears the old 8-ball reminder ID and delay, and lets
+  the normal selector immediately call and flash the first target of the new
+  rack (ball 1 for solids or ball 9 for stripes).
 - Each Called ball award uses the current 1x/2x/3x playfield multiplier.
   An uncalled first sink retains its normal 2,500 playfield value, displayed as
   250 before multiplication; an already-sunk ball retains its separate normal
@@ -401,7 +410,10 @@ only the left or only the right bank without a coordinated VPX-table change
   dictated by the next spoken call.
 - Complete a rack with the lit 8-ball and verify it awards the current Called
   ball value, then advances that player's next value by 10,000 playfield
-  points. Drain and verify the next ball retains the advanced value. In a
+  points. Verify the old called lamp is restored and the new rack immediately
+  calls and flashes ball 1 for solids or ball 9 for stripes, with no stale
+  reminder delay or wrong target flash. Drain and verify the next ball retains
+  the advanced value. In a
   four-player game, advance each player differently and verify their values
   restore independently; start a new game and verify all return to 10,000.
 - Verify collecting the lit 8-ball activates the current location when it is
