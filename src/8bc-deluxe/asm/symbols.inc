@@ -70,6 +70,7 @@ DELUXE_PLAYER_BALL_LETTER_COUNTS             equ $10FA
 DELUXE_CALLED_BALL_SCORE_1000S               equ $10FE
 DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $10FF
 DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1103
+DELUXE_SPINNER_PREVIEW_TIMER                 equ $1104
 
 ; C9A6 accepts B as a count of displayed 1,000-point units and applies the
 ; authoritative CHAMP playfield multiplier before normalizing pending score.
@@ -97,6 +98,9 @@ DELUXE_SPINNER_3000_LAMP                     equ $40
 DELUXE_SPINNER_5000_LAMP                     equ $80
 DELUXE_SPINNER_ALL_VALUE_LAMPS               equ $E0
 DELUXE_SPINNER_INACTIVITY_TICKS              equ $78
+; $BF is about 3.2 seconds at this tick rate and begins bit 4 at the start of
+; a complete visible blink phase instead of entering halfway through one.
+DELUXE_SPINNER_PREVIEW_TICKS                 equ $BF
 DELUXE_BALL_BONUS_PASS_DELAY                 equ $10
 DELUXE_BALL_BONUS_STEP_DELAY                 equ $08
 DELUXE_EIGHT_BONUS_LETTER_DELAY              equ $09

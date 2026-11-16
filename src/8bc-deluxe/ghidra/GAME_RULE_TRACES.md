@@ -203,6 +203,14 @@ CHAMP playfield multiplier (250 / 500 / 750 at 1x / 2x / 3x).
 Only a new letter reaches the hook at `CC91`, clears its bit in `1045`, and
 advances the Deluxe spinner value. An already-lit letter branches around that
 hook, so it still scores 250 through `CC85` but does not advance the spinner.
+When the collect state at `10EB` is not spinner-active, the hook also loads the
+temporary preview timer at `1104`. `DELUXE_PERIODIC_TICK` alternates the live
+lamp mask at `10B1` between the accumulated value in `10EE` and zero for about
+three seconds, then leaves it hidden. The `$BF` reload also aligns bit 4 so the
+preview begins with a complete visible phase. This is output state only: the switch-32
+handler continues to authorize the accumulated award solely from `10EB`, so a
+spinner pulse during the preview follows the unlit 10-point path. Activating
+spinner clears `1104` before displaying `10EE` steadily.
 
 ## Playfield Scores Double and Triple
 

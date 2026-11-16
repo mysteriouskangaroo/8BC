@@ -149,6 +149,12 @@ does not collect the lit 8-ball is not an activation event.
 - Each dedicated E-I-G-H-T target advances the spinner only when its letter was
   not already collected in the current E-I-G-H-T round. Repeated hits on an
   already-lit letter do not advance it.
+- When a new E-I-G-H-T letter advances the value while spinner collect is
+  inactive, the new value lamps blink for approximately three seconds as a
+  visual preview. This does not activate spinner collect: spinner pulses during
+  the preview retain the ordinary unlit 10-point award, do not use the
+  playfield multiplier, and do not restart the preview timer. A later pool-
+  ball activation cancels the preview and shows the active value steadily.
 - Completing E-I-G-H-T lights the next BALL letter through the original rules
   and resets the five-letter round, after which newly recollected E-I-G-H-T
   letters can advance the spinner again.
@@ -169,7 +175,8 @@ does not collect the lit 8-ball is not an activation event.
 - Only after approximately two seconds with no further spinner pulse is the
   spinner considered to have stopped. The collect then closes and advances to
   **left orbit inactive**; a later newly sunk pool ball must activate it.
-- Spinner value lamps are shown only while the spinner is the active collect.
+- Spinner value lamps are otherwise shown only while spinner is the active
+  collect; the temporary E-I-G-H-T preview is the sole inactive exception.
 
 ### Right orbit
 
@@ -324,7 +331,7 @@ does not collect the lit 8-ball is not an activation event.
 ## Deluxe implementation state
 
 The original four-player records occupy `$10C7-$10EA`. Deluxe uses `$10EB`
-through `$1103` for active state, temporary bonus/display work, and parallel
+through `$1104` for active state, temporary bonus/display work, and parallel
 per-player counters:
 
 | Address | Meaning |
@@ -345,6 +352,7 @@ per-player counters:
 | `$10FE` | Active player's Called ball score in displayed 1,000-point units (values 1, 2, 3...) |
 | `$10FF-$1102` | Called ball scores for players 1-4 |
 | `$1103` | Called-ball lamp ID whose reversible flash overlay is currently applied |
+| `$1104` | Temporary spinner-value preview countdown |
 
 The canonical new-game loop initializes all four original player records at
 `$C4E6`; Deluxe hooks the same loop to clear the prior collect state before
@@ -443,6 +451,14 @@ only the left or only the right bank without a coordinated VPX-table change
   per letter round; an already-lit letter still scores but does not advance it;
   completing E-I-G-H-T awards a BALL letter and rearms the five letters; and
   the visible lamp combinations include both 8K and 9K.
+- With spinner collect inactive, verify each value advance blinks the new lamp
+  combination for about three seconds and then hides it. Verify its first
+  visible pulse is a complete blink phase rather than a brief flicker. During
+  that preview, verify spinner pulses still score only the ordinary unlit 10
+  points, do not use the playfield multiplier, and do not activate or restart
+  the preview.
+  Activate spinner during a preview and verify the timer is cancelled and the
+  current value becomes steady immediately.
 - Verify every spinner pulse restarts the inactivity window, a pulse inside two
   seconds continues scoring, and roughly two seconds with no pulse closes the
   collect and advances it to the left orbit.

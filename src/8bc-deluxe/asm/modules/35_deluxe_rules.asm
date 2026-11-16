@@ -7,18 +7,18 @@
 
 DELUXE_PERIODIC_TICK:
 ; C14E calls this in place of its original LDX $10B3. Preserve A, process the
-; spinner inactivity timer, then execute that displaced load last so C151 sees
-; the same X value and condition codes as the canonical routine.
+; spinner inactivity and value-preview timers, then execute that displaced
+; load last so C151 sees the same X value and condition codes as canonical.
         PSHA
         LDAA DELUXE_SPINNER_IDLE_TIMER
-        BEQ DELUXE_PERIODIC_TICK_DONE
+        BEQ DELUXE_SPINNER_PREVIEW_TICK
         DECA
         STAA DELUXE_SPINNER_IDLE_TIMER
-        BNE DELUXE_PERIODIC_TICK_DONE
+        BNE DELUXE_SPINNER_PREVIEW_TICK
         LDAA DELUXE_COLLECT_STATE
         ANDA #DELUXE_COLLECT_STATE_MASK
         CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
-        BNE DELUXE_PERIODIC_TICK_DONE
+        BNE DELUXE_SPINNER_PREVIEW_TICK
 ; Each active spinner pulse restarts this inactivity timer.  A pulse inside
 ; the window continues the same collect; only about two seconds with no
 ; further pulse closes it and advances to left-orbit inactive. Preserve the
@@ -29,6 +29,27 @@ DELUXE_PERIODIC_TICK:
         STAA DELUXE_COLLECT_STATE
         CLR $10b1
         CLR $10b2
+DELUXE_SPINNER_PREVIEW_TICK:
+; A newly collected E-I-G-H-T letter starts this roughly 3.2-second lamp-only
+; preview while the spinner collect is inactive. Bit 4 supplies a roughly
+; half-second blink cycle, and the BF reload begins with a complete visible
+; phase. Only 10B1 changes; DELUXE_COLLECT_STATE remains authoritative for
+; scoring, so spinner pulses during the preview still take the unlit path.
+        LDAA DELUXE_SPINNER_PREVIEW_TIMER
+        BEQ DELUXE_PERIODIC_TICK_DONE
+        DECA
+        STAA DELUXE_SPINNER_PREVIEW_TIMER
+        BEQ DELUXE_SPINNER_PREVIEW_FINISHED
+        BITA #$10
+        BEQ DELUXE_SPINNER_PREVIEW_HIDE
+        LDAA DELUXE_SPINNER_VALUE_MASK
+        STAA $10b1
+        BRA DELUXE_PERIODIC_TICK_DONE
+DELUXE_SPINNER_PREVIEW_HIDE:
+        CLR $10b1
+        BRA DELUXE_PERIODIC_TICK_DONE
+DELUXE_SPINNER_PREVIEW_FINISHED:
+        CLR $10b1
 DELUXE_PERIODIC_TICK_DONE:
         PULA
         LDX $10b3
@@ -43,6 +64,7 @@ DELUXE_INITIALIZE_BALL:
         LDAA #DELUXE_COLLECT_RIGHT_ORBIT
         STAA DELUXE_COLLECT_STATE
         CLR DELUXE_SPINNER_IDLE_TIMER
+        CLR DELUXE_SPINNER_PREVIEW_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
         CLR DELUXE_BONUS_RACKS_REMAINING
         CLR DELUXE_BONUS_BALL_LETTERS_REMAINING
@@ -721,6 +743,7 @@ DELUXE_FIRST_SINK_SHOW_ORBIT:
 DELUXE_FIRST_SINK_ACTIVATE_SPINNER:
 ; Activating spinner collect only reveals the value already accumulated in
 ; DELUXE_SPINNER_VALUE_MASK. It does not advance that value by itself.
+        CLR DELUXE_SPINNER_PREVIEW_TIMER
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
         CLR $10b2
@@ -751,12 +774,20 @@ DELUXE_RECORD_NEW_EIGHT_LETTER:
 ; 1K -> 3K -> 4K -> 5K -> 6K -> 8K -> 9K.
         ADDA #DELUXE_SPINNER_1000_LAMP
         STAA DELUXE_SPINNER_VALUE_MASK
-; Update the live lamp state only while spinner collect is active. Otherwise
-; the accumulated value remains hidden in 10EE until a pool ball activates it.
+; While spinner is inactive, preview the new value by blinking its lamps for
+; about three seconds. This changes only the lamp mask; scoring continues to use
+; DELUXE_COLLECT_STATE and therefore cannot collect the previewed value.
         LDAA DELUXE_COLLECT_STATE
         ANDA #DELUXE_COLLECT_STATE_MASK
         CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
-        BNE DELUXE_NEW_EIGHT_LETTER_DONE
+        BEQ DELUXE_NEW_EIGHT_LETTER_SHOW_ACTIVE_VALUE
+        LDAA #DELUXE_SPINNER_PREVIEW_TICKS
+        STAA DELUXE_SPINNER_PREVIEW_TIMER
+        LDAA DELUXE_SPINNER_VALUE_MASK
+        STAA $10b1
+        BRA DELUXE_NEW_EIGHT_LETTER_DONE
+DELUXE_NEW_EIGHT_LETTER_SHOW_ACTIVE_VALUE:
+        CLR DELUXE_SPINNER_PREVIEW_TIMER
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
 DELUXE_NEW_EIGHT_LETTER_DONE:
