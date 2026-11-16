@@ -9,12 +9,14 @@
       <stop offset="0.48" stop-color="#371b0d"/>
       <stop offset="1" stop-color="#1d110a"/>
     </linearGradient>
-    <linearGradient id="felt" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#176d31"/>
-      <stop offset="1" stop-color="#073d1d"/>
-    </linearGradient>
     <pattern id="woodLines" width="150" height="80" patternUnits="userSpaceOnUse">
       <path d="M0,18 C35,2 78,34 150,12 M0,61 C48,40 95,78 150,49" fill="none" stroke="#a25a20" stroke-width="4" opacity="0.14"/>
+    </pattern>
+    <pattern id="feltExtension" width="18" height="18" patternUnits="userSpaceOnUse">
+      <rect width="18" height="18" fill="#087c35"/>
+      <circle cx="3" cy="5" r="1.1" fill="#54a968" opacity="0.22"/>
+      <circle cx="13" cy="12" r="0.9" fill="#034f25" opacity="0.28"/>
+      <path d="M0,15 L18,9 M-4,5 L9,0" stroke="#2d9954" stroke-width="0.8" opacity="0.12"/>
     </pattern>
     <filter id="shadow" x="-12%" y="-18%" width="130%" height="145%">
       <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000000" flood-opacity="0.78"/>
@@ -23,7 +25,7 @@
       <feDropShadow dx="5" dy="6" stdDeviation="2" flood-color="#000000" flood-opacity="0.9"/>
     </filter>
     <clipPath id="playerClip">
-      <rect x="40" y="590" width="1720" height="346" rx="10"/>
+      <rect x="40" y="590" width="1720" height="328" rx="10"/>
     </clipPath>
     <style>
       .rule-title { font-family: "Arial Black", Arial, sans-serif; font-size: 29px; font-weight: 900; letter-spacing: 1.1px; fill: #ffbd31; }
@@ -146,8 +148,8 @@
 
   <!-- Pool-table field and backglass-style player -->
   <g clip-path="url(#playerClip)">
-    <path d="M40,654 Q430,568 885,620 Q1325,668 1760,574 V950 H40 Z" fill="url(#felt)" stroke="#f0a01e" stroke-width="8"/>
-    <path d="M39,710 Q538,616 967,666 Q1356,713 1760,623" fill="none" stroke="#07100a" stroke-width="18" opacity="0.8"/>
+    <!-- Continue the illustration's felt to the right trim; the player art overlaps and hides the seam. -->
+    <path d="M1360,850 H1746 V918 H1360 Z" fill="url(#feltExtension)"/>
     <image href="scorecard-pool-player.png" x="170" y="520" width="1250" height="417" preserveAspectRatio="xMidYMid meet"/>
   </g>
 
