@@ -260,6 +260,23 @@ restores the exact collected-letter pattern; actual CHAMP state never changes.
   A zero/uninitialized value from an older NVRAM or saved game is migrated to
   the initial 10,000 value before it can be awarded.
 
+## Sunk-ball award display
+
+- Every newly sunk pool ball temporarily shows the exact Deluxe points awarded
+  after the current 1x/2x/3x playfield multiplier. An ordinary uncalled ball
+  therefore shows 250, 500, or 750; a successful called ball and the collected
+  8-ball show the current Called ball score after that same multiplier.
+- For approximately three seconds, the award blinks on all three score displays
+  other than the scoring player's display. For example, player 2 keeps their
+  live score while the award blinks on the player 1, 3, and 4 displays.
+- The active player's score remains visible and continues updating normally.
+  The three displaced scores are backed up and restored exactly when the timer
+  ends, when end-of-ball bonus begins, or before the next ball starts; the
+  overlay never awards points or changes another player's logical score.
+- If another new pool ball is sunk during the three-second window, the newest
+  award replaces the previous value and restarts the complete timer. Hitting an
+  already-sunk pool-ball target or an E-I-G-H-T stand-up does not start it.
+
 ## Pool-ball bonus
 
 - Every successfully collected 8-ball completes one rack and increments that
@@ -339,7 +356,7 @@ restores the exact collected-letter pattern; actual CHAMP state never changes.
 ## Deluxe implementation state
 
 The original four-player records occupy `$10C7-$10EA`. Deluxe uses `$10EB`
-through `$110E` for active state, temporary bonus/display work, and parallel
+through `$1136` for active state, temporary bonus/display work, and parallel
 per-player counters:
 
 | Address | Meaning |
@@ -365,6 +382,12 @@ per-player counters:
 | `$1107` | Directional orbit-roll step: none, blackout, or roll step 1-6 |
 | `$1108` | Current directional sweep-phase countdown |
 | `$1109-$110E` | Six-byte temporary Phase-B lamp-output copy used only during a sweep |
+| `$110F-$1115` | Seven-digit sunk-ball award overlay in canonical ones-first display format |
+| `$1116` | Sunk-ball award display countdown |
+| `$1117` | Player number whose live display is excluded from the overlay |
+| `$1118` | Active marker for the reversible score-display overlay |
+| `$1119-$111A` | Binary formatting work value for multiplied Called ball awards |
+| `$111B-$1136` | Backup of the four seven-digit player score displays |
 
 The canonical new-game loop initializes all four original player records at
 `$C4E6`; Deluxe hooks the same loop to clear the prior collect state before
@@ -428,6 +451,13 @@ never changes the authoritative CHAMP bits in `$1040`.
   Verify hitting an already-sunk ball still follows its scaled 500-point path,
   retains the physical 5,000 lamp effect, and does not activate, move, restart,
   or advance the collect feature.
+- With each player active in turn, verify those 250/500/750 first-sink awards
+  blink for about three seconds on the other three player displays while the
+  active player's live score remains visible. Verify successful called balls
+  and the collected 8-ball show their exact multiplied Called ball award.
+  Sink two new balls in quick succession and verify the second value replaces
+  the first and restarts the timer. Drain during the blink and verify every
+  displaced score is restored before the next player/ball begins.
 - Follow the spoken call and verify the first three successful called balls
   award 1,000/2,000/3,000 at 1x, 2,000/4,000/6,000 at 2x, or
   3,000/6,000/9,000 at 3x, replacing rather than adding the normal 250-point

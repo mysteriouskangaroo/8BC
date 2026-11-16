@@ -76,6 +76,20 @@ DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW            equ $1106
 DELUXE_ORBIT_SWEEP_PHASE                     equ $1107
 DELUXE_ORBIT_SWEEP_PHASE_TIMER               equ $1108
 DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1109
+; Temporary sunk-ball award display. The seven digit bytes use the canonical
+; player-score layout (ones first, digit in the high nibble). While active,
+; the four live score buffers at 1046-1061 are backed up at 111B-1136; only
+; the three displays that do not belong to the scoring player are overlaid.
+; Start after the directional sweep's six-byte 1109-110E output buffer.
+DELUXE_SUNK_BALL_SCORE_DIGITS                 equ $110F
+DELUXE_SUNK_BALL_SCORE_TIMER                  equ $1116
+DELUXE_SUNK_BALL_SCORE_ACTIVE_PLAYER          equ $1117
+DELUXE_SUNK_BALL_SCORE_OVERLAY_MARKER         equ $1118
+DELUXE_SUNK_BALL_SCORE_BINARY_WORK            equ $1119
+DELUXE_SUNK_BALL_SCORE_DISPLAY_BACKUP         equ $111B
+
+PLAYER_SCORE_DISPLAY_START                    equ $1046
+PLAYER_SCORE_DISPLAY_END                      equ $1062
 
 ; C9A6 accepts B as a count of displayed 1,000-point units and applies the
 ; authoritative CHAMP playfield multiplier before normalizing pending score.
@@ -119,6 +133,13 @@ DELUXE_CHAMP_ROLL_LAMP_MASK                  equ $0E
 DELUXE_H_ROLLOVER_LAMP_BIT                   equ $02
 DELUXE_A_ROLLOVER_LAMP_BIT                   equ $04
 DELUXE_M_ROLLOVER_LAMP_BIT                   equ $08
+; The gameplay periodic hook runs at about 60 Hz. $B4 is roughly three
+; seconds; bit 4 supplies a clearly visible roughly half-second blink cycle.
+DELUXE_SUNK_BALL_SCORE_DISPLAY_TICKS          equ $B4
+DELUXE_SUNK_BALL_SCORE_BLINK_BIT              equ $10
+DELUXE_SUNK_BALL_SCORE_OVERLAY_ACTIVE         equ $A5
+DELUXE_SCORE_DISPLAY_BLANK_DIGIT              equ $F0
+DELUXE_SCORE_DISPLAY_BACKUP_OFFSET            equ DELUXE_SUNK_BALL_SCORE_DISPLAY_BACKUP-PLAYER_SCORE_DISPLAY_START
 DELUXE_BALL_BONUS_PASS_DELAY                 equ $10
 DELUXE_BALL_BONUS_STEP_DELAY                 equ $08
 DELUXE_EIGHT_BONUS_LETTER_DELAY              equ $09

@@ -149,6 +149,27 @@ resets every player to 10,000. Restore and award both normalize a zero legacy
 record to the initial value before scoring, allowing existing NVRAM to migrate
 without producing a zero-point first award.
 
+Both first-sink outcomes also start the reversible sunk-ball award display.
+The uncalled branch formats 250/500/750 directly from authoritative multiplier
+state `10C0`. The called-ball helper multiplies the pre-advance value at `10FE`
+by the same 1x/2x/3x state, converts the resulting 1-765 displayed-thousands
+value to the canonical seven digit-byte format at `110F-1115`, and then queues
+the real score normally. Thus the visual value is the exact award for that hit,
+including the collected 8-ball path, rather than the later incremented Called
+ball value.
+
+On the first popup, `DELUXE_BEGIN_SUNK_BALL_SCORE_DISPLAY` copies the four
+seven-byte score buffers at `1046-1061` to `111B-1136` and records the scoring
+player at `1117`. The periodic `C14E` hook alternates the formatted award and
+blank digits on only the other three buffers for roughly three seconds. The
+scoring player's buffer is never replaced, so pending-score transfer continues
+to update and display it. Expiry, the `C765` end-of-ball bonus entry, or
+`DELUXE_INITIALIZE_BALL` restores only the three displaced buffers. Restoring at
+`C765` also guarantees later bonus, replay, and high-score logic cannot inspect
+temporary display values. A second sink while active retains the original
+backup, replaces the formatted value, and reloads the full timer, preventing an
+overlay from being saved as another player's real score.
+
 The visual call indication uses the same authoritative `10C4` ID and hooks the
 original lamp-flash block at `C1AC`, after its established divider and gameplay
 gates. This is important: toggling from the earlier `C14E` periodic entry can
