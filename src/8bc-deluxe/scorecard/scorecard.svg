@@ -23,7 +23,7 @@
       <feDropShadow dx="5" dy="6" stdDeviation="2" flood-color="#000000" flood-opacity="0.9"/>
     </filter>
     <clipPath id="playerClip">
-      <rect x="40" y="690" width="1720" height="246" rx="10"/>
+      <rect x="40" y="590" width="1720" height="346" rx="10"/>
     </clipPath>
     <style>
       .rule-title { font-family: "Arial Black", Arial, sans-serif; font-size: 29px; font-weight: 900; letter-spacing: 1.1px; fill: #ffbd31; }
@@ -44,10 +44,17 @@
   <rect x="41" y="41" width="1718" height="893" rx="8" fill="none" stroke="#f8c33a" stroke-width="5"/>
   <rect x="51" y="51" width="1698" height="873" fill="url(#woodLines)" stroke="#e54b18" stroke-width="5"/>
 
-  <!-- Transparent title lettering only: no plaque or rectangular backglass crop. -->
-  <image href="scorecard-title.png" x="225" y="28" width="1350" height="280" preserveAspectRatio="xMidYMid meet"/>
+  <!-- Compact left-aligned masthead leaves the full lower third available for the player art. -->
+  <image href="scorecard-title.png" x="90" y="5" width="1050" height="225" preserveAspectRatio="xMinYMid meet"/>
 
-  <!-- Six roomier rules panels -->
+  <!-- Bally Midway fills the otherwise unused upper-right corner. -->
+  <g transform="translate(1260 105)" filter="url(#logoShadow)">
+    <text x="0" y="62" font-family="Brush Script MT, Segoe Script, cursive" font-size="76" font-style="italic" fill="#fff2c2">Bally</text>
+    <text x="163" y="60" font-family="Arial Black, Arial, sans-serif" font-size="34" font-style="italic" letter-spacing="1" fill="#fff2c2">MIDWAY</text>
+  </g>
+
+  <!-- Six roomier rules panels, raised to enlarge the artwork window below. -->
+  <g transform="translate(0 -100)">
   <g filter="url(#shadow)">
     <rect x="65" y="340" width="530" height="165" rx="16" fill="#083e20" fill-opacity="0.97" stroke="#e8921d" stroke-width="5"/>
     <rect x="635" y="340" width="530" height="165" rx="16" fill="#083e20" fill-opacity="0.97" stroke="#e8921d" stroke-width="5"/>
@@ -135,18 +142,13 @@
     <tspan x="1230" dy="23" class="gold">50K / B-A-L-L • ALL × BONUS X</tspan>
     <tspan x="1230" dy="23">COUNTS PAST 360K / SECOND L</tspan>
   </text>
+  </g>
 
   <!-- Pool-table field and backglass-style player -->
   <g clip-path="url(#playerClip)">
-    <path d="M40,754 Q430,668 885,720 Q1325,768 1760,674 V950 H40 Z" fill="url(#felt)" stroke="#f0a01e" stroke-width="8"/>
-    <path d="M39,810 Q538,716 967,766 Q1356,813 1760,723" fill="none" stroke="#07100a" stroke-width="18" opacity="0.8"/>
+    <path d="M40,654 Q430,568 885,620 Q1325,668 1760,574 V950 H40 Z" fill="url(#felt)" stroke="#f0a01e" stroke-width="8"/>
+    <path d="M39,710 Q538,616 967,666 Q1356,713 1760,623" fill="none" stroke="#07100a" stroke-width="18" opacity="0.8"/>
     <image href="scorecard-pool-player.png" x="170" y="520" width="1250" height="417" preserveAspectRatio="xMidYMid meet"/>
-  </g>
-
-  <!-- Larger Bally Midway mark on the lower-right green field -->
-  <g transform="translate(1422 820)" filter="url(#logoShadow)">
-    <text x="0" y="62" font-family="Brush Script MT, Segoe Script, cursive" font-size="76" font-style="italic" fill="#fff2c2">Bally</text>
-    <text x="163" y="60" font-family="Arial Black, Arial, sans-serif" font-size="34" font-style="italic" letter-spacing="1" fill="#fff2c2">MIDWAY</text>
   </g>
 
   <path d="M63,868 H525 L553,899 525,930 H63 L92,899 Z" fill="#26140c" fill-opacity="0.9" stroke="#e99920" stroke-width="5"/>
