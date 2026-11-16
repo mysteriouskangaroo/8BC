@@ -197,7 +197,7 @@ AWARD_LIT_DROP_TARGET_5000:
         RTS                          ; $D049: $39
         dc.b $BD,$F4,$DF,$26,$65,$86,$32,$BD,$C2,$7E,$B6,$10,$BD,$85,$80,$27 ; $D04A data/unclassified
         dc.b $0E,$7F,$10,$BD,$B6,$10,$3B,$8A,$80,$B7,$10,$3B,$BD,$CE,$DC ; $D05A-D068 canonical setup
-        JMP DELUXE_HANDLE_HOLE_STATE ; $D069: gate 100,000 on left collect
+        JMP DELUXE_HANDLE_HOLE_STATE ; $D069: gate 100,000 on a collect active-to-inactive transition
         dc.b $85,$08,$27,$0A,$BD,$C9,$6C,$86,$36,$BD,$C2,$7E,$20,$3A ; $D06C canonical score dispatch
         dc.b $36,$BD,$C9,$C4,$32,$16,$C4,$80,$F7,$10,$C1,$48,$BA,$10,$C1,$B7 ; $D07A data/unclassified
         dc.b $10,$C1,$C6,$FF,$F7,$10,$43,$48,$48,$48,$43,$B7,$10,$43,$F6,$10 ; $D08A data/unclassified

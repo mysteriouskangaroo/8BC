@@ -140,10 +140,6 @@ restores the exact collected-letter pattern; actual CHAMP state never changes.
   advance the printed value by 10,000 (1,000 Deluxe points), hide the
   orbit-value arrows, and move the feature to **right orbit inactive**. A later
   newly sunk pool ball must activate the right orbit.
-- Each new activation that lights the left-orbit collect authorizes one future
-  saucer 100,000-insert award of 10,000 Deluxe points. Collecting the orbit is not required to create that
-  authorization, and the authorization persists after the orbit advances.
-
 ### Spinner
 
 - An unlit spinner scores 10 points per spin and does not use the playfield
@@ -203,21 +199,23 @@ restores the exact collected-letter pattern; actual CHAMP state never changes.
 
 - The existing bonus progression remains 2x -> 3x -> 5x -> the 100,000 insert,
   whose Deluxe award is 10,000.
-- The left-orbit collect activation and the saucer progression are independent
-  gates. Newly lighting the left-orbit collect can arm one printed 100,000
-  insert award (10,000 Deluxe points), but
-  it never advances 2x, 3x, or 5x and cannot cause the saucer to skip 5x.
-- The player must actually collect the lit 5x saucer step before 100,000 can
-  blink. If 5x is collected first, the progression waits there until the next
-  left-orbit activation. If the left orbit was activated first, 100,000 begins
-  blinking immediately after the later 5x collection.
-- Collecting the lit 100,000 consumes that left-orbit authorization and turns
+- Collecting the lit 5x saucer step immediately advances to and lights the first
+  100,000 award, irrespective of the collect feature's location or transition
+  state. It also preserves the 5x end-of-ball bonus.
+- After that 100,000 has been collected and turned off, completing any of the
+  three active collect stages relights it:
+  right orbit active -> spinner inactive, spinner active -> left orbit inactive,
+  or left orbit active -> right orbit inactive. A completion before the first
+  100,000 is available cannot advance or skip the 2x, 3x, or 5x saucer steps.
+- If 100,000 is already lit, later active-to-inactive transitions do nothing.
+- Collecting the lit 100,000 consumes that transition authorization and turns
   off 100,000. The bonus multiplier remains at 5x; only the live 100,000 flash
-  and award are disabled. A later new left-orbit activation can arm and light
-  one more scaled 10,000 award without replaying the multiplier progression.
+  and award are disabled. The next active-to-inactive transition at any collect
+  stage relights one more scaled 10,000 award without replaying the bonus-
+  multiplier progression.
 - Once qualified, the scaled 10,000 award retains its original playfield-multiplier
   behavior.
-- Bonus progression, left-orbit authorization, and the waiting qualification
+- Bonus progression, collect-deactivation authorization, and the waiting state
   all reset when a new ball starts.
 
 ## Called ball score
@@ -361,7 +359,7 @@ per-player counters:
 
 | Address | Meaning |
 | --- | --- |
-| `$10EB` | Collect location in bits 0-1; active flag in bit 2; hole-waiting flag in bit 6; left-collect authorization in bit 7 |
+| `$10EB` | Collect location in bits 0-1; active flag in bit 2; post-5x waiting flag in bit 6; collect-deactivation authorization in bit 7 |
 | `$10EC` | Spinner inactivity countdown |
 | `$10ED` | CHAMP completion count for the current ball |
 | `$10EE` | Spinner weighted binary value mask (`$20/$40/$80`) |
@@ -521,12 +519,14 @@ never changes the authoritative CHAMP bits in `$1040`.
 - Verify every spinner pulse restarts the inactivity window, a pulse inside two
   seconds continues scoring, and roughly two seconds with no pulse closes the
   collect and advances it to the left orbit.
-- Verify the saucer displays and collects 2x, then 3x, then 5x without a left-
-  orbit activation changing those steps. Verify the 100,000 insert cannot blink until
-  both 5x has been collected and the left-orbit collect has been newly lit, in
-  either order. After collecting it, verify it awards 10,000 at 1x, turns off, and cannot be
-  awarded again until a later new left-orbit activation rearms it, while end-
-  of-ball bonus and the 5x indication remain at 5x throughout.
+- Verify the saucer displays and collects 2x, then 3x, then 5x without any
+  collect transition changing or skipping those steps. Verify collecting 5x
+  immediately lights the first 100,000 regardless of the current collect state.
+  While it is already lit, complete another active collect and verify nothing
+  changes. Collect 100,000, verify it awards 10,000 at 1x and turns off, then
+  verify right active -> spinner inactive, spinner active -> left inactive, and
+  left active -> right inactive can each relight it while end-of-ball bonus and
+  the 5x state remain unchanged.
 - Complete at least four 8-ball racks in one ball and verify the center inserts
   remain capped at their 120K+240K display while every completed rack is still
   counted at drain. With six completed racks, verify the completed-rack portion

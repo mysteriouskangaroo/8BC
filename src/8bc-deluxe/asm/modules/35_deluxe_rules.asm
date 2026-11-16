@@ -27,6 +27,7 @@ DELUXE_PERIODIC_TICK:
         ANDA #$C0
         ORAA #DELUXE_COLLECT_LEFT_ORBIT
         STAA DELUXE_COLLECT_STATE
+        JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
         CLR $10b1
         CLR $10b2
 DELUXE_SPINNER_PREVIEW_TICK:
@@ -366,25 +367,8 @@ DELUXE_HANDLE_LEFT_ORBIT:
         JMP DELUXE_SCORE_UNLIT_ORBIT
 
 DELUXE_HANDLE_ACTIVE_LEFT_ORBIT:
-; Activation normally granted the saucer authorization when this collect lit.
-; Retain this write as a defensive fallback, then leave left active until the
-; original fast arrow chase has completed. The state transition follows it.
-        LDAA DELUXE_COLLECT_STATE
-        ORAA #DELUXE_LEFT_COLLECT_AUTHORIZED
-        BITA #DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT
-        BEQ DELUXE_LEFT_ORBIT_STORE_STATE
-; The hole already reached the post-5x step. Clear the waiting flag and light
-; the terminal 100,000 state immediately now that both conditions are true.
-        ANDA #$bf
-        STAA DELUXE_COLLECT_STATE
-        LDAA $10c1
-        ANDA #$80
-        ORAA #HOLE_100000_STATE
-        STAA $10c1
-        BRA DELUXE_LEFT_ORBIT_FINISH
-DELUXE_LEFT_ORBIT_STORE_STATE:
-        STAA DELUXE_COLLECT_STATE
-DELUXE_LEFT_ORBIT_FINISH:
+; The active-to-inactive transition and 100,000 relight occur only after the
+; original lit-orbit scoring and arrow chase complete.
         JMP DELUXE_SCORE_ACTIVE_LEFT_ORBIT
 
 DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
@@ -395,6 +379,7 @@ DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
         ANDA #$c0
         ORAA #DELUXE_COLLECT_RIGHT_ORBIT
         STAA DELUXE_COLLECT_STATE
+        JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
         BRA DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
 
 DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
@@ -406,6 +391,7 @@ DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
         ANDA #$c0
         ORAA #DELUXE_COLLECT_SPINNER
         STAA DELUXE_COLLECT_STATE
+        JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
         CLR $10b1
         CLR $10b2
         BRA DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
@@ -1160,30 +1146,32 @@ DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
         ORAA #DELUXE_COLLECT_ACTIVE
         STAA DELUXE_COLLECT_STATE
         ANDA #DELUXE_COLLECT_LOCATION_MASK
-        CMPA #DELUXE_COLLECT_LEFT_ORBIT
-        BEQ DELUXE_FIRST_SINK_ACTIVATE_LEFT
         CMPA #DELUXE_COLLECT_SPINNER
         BEQ DELUXE_FIRST_SINK_ACTIVATE_SPINNER
         BRA DELUXE_FIRST_SINK_ACTIVATE_ORBIT
 
-DELUXE_FIRST_SINK_ACTIVATE_LEFT:
-; Newly lighting the left-orbit collect grants one saucer-100K authorization.
-; If 5x was already collected, clear the post-5x waiting flag so the flash
-; hook reveals 100K now. If progression is still at 2x/3x/5x, authorization
-; remains stored but cannot alter or skip those saucer steps.
+DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION:
+; Called only after right orbit, spinner, or left orbit has changed from active
+; to the following inactive location. Relight 100,000 only after 5x has already
+; been collected. The post-5x waiting bit is set while 100,000 is dark; if it is
+; clear, the award is already lit and this transition deliberately does nothing.
+        LDAA $10c1
+        BITA #HOLE_100000_STATE
+        BEQ DELUXE_COLLECT_DEACTIVATION_100000_DONE
         LDAA DELUXE_COLLECT_STATE
-        ORAA #DELUXE_LEFT_COLLECT_AUTHORIZED
-        BITA #DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT
-        BEQ DELUXE_LEFT_ACTIVATION_STORE_AUTHORIZATION
+        BITA #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
+        BEQ DELUXE_COLLECT_DEACTIVATION_100000_DONE
         ANDA #$bf
-DELUXE_LEFT_ACTIVATION_STORE_AUTHORIZATION:
+        ORAA #DELUXE_COLLECT_DEACTIVATION_AUTHORIZED
         STAA DELUXE_COLLECT_STATE
+DELUXE_COLLECT_DEACTIVATION_100000_DONE:
+        RTS
+
 DELUXE_FIRST_SINK_ACTIVATE_ORBIT:
 ; The original all-off orbit state ($xF in the low nibble) scores 5,000.
 ; Activating either orbit collect promotes only that baseline to $xE, which
 ; the original table displays and scores as 10,000. Preserve any higher orbit
-; value retained by the operator adjustment. The right-orbit path enters here
-; directly; the left-orbit path first records its saucer authorization above.
+; value retained by the operator adjustment.
         LDAA DELUXE_ORBIT_VALUE_STATE
         CMPA #$0f
         BNE DELUXE_FIRST_SINK_SHOW_ORBIT
@@ -1259,47 +1247,46 @@ DELUXE_NEW_EIGHT_LETTER_DONE:
 DELUXE_HANDLE_HOLE_STATE:
 ; D069 jumps here after canonical sound/effect setup. The low nibble progresses
 ; independently through 2x ($01), 3x ($02), and 5x ($04). A hit while 5x is
-; showing is what collects 5x and reaches the post-5x stage. Only then may a
-; previously collected left orbit expose the terminal 100,000 state ($08).
+; showing collects 5x, reaches terminal 100,000 ($08), and lights its first
+; award immediately. Only later relights require active-to-inactive transitions.
         LDAA $10c1
         BITA #HOLE_100000_STATE
         BNE DELUXE_HOLE_TERMINAL_STATE
         BITA #HOLE_BONUS_5X_STATE
         BEQ DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH
+; Let the original state dispatch advance 5x to 100,000. Clear any stale
+; waiting state and authorize this initial 100,000 independently of the collect
+; feature; transitions are required only after this award has been collected.
         LDAB DELUXE_COLLECT_STATE
-        BITB #DELUXE_LEFT_COLLECT_AUTHORIZED
-        BNE DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH
-; Collect 5x through the original state shift to $08, but mark terminal 100K
-; unarmed. The flash hook hides only 100K; keeping $08 is essential because it
-; is also the authoritative indication that end-of-ball bonus remains at 5x.
-        ORAB #DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT
+        ANDB #$bf
+        ORAB #DELUXE_COLLECT_DEACTIVATION_AUTHORIZED
         STAB DELUXE_COLLECT_STATE
         BRA DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH
 
 DELUXE_HOLE_TERMINAL_STATE:
         LDAB DELUXE_COLLECT_STATE
-        BITB #DELUXE_LEFT_COLLECT_AUTHORIZED
+        BITB #DELUXE_COLLECT_DEACTIVATION_AUTHORIZED
         BNE DELUXE_HOLE_AWARD_ARMED_100000
 ; At the post-5x state without authorization, retain $08 so the bonus remains
 ; 5x, keep 100K hidden, and award only the ordinary saucer value.
         LDAA DELUXE_COLLECT_STATE
-        ORAA #DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT
+        ORAA #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
         STAA DELUXE_COLLECT_STATE
         JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER
         LDAA $10c1
         JMP $d08c
 
 DELUXE_HOLE_AWARD_ARMED_100000:
-; Reproduce the canonical D070-D078 terminal award, then consume this left-
-; orbit authorization. Keep $10C1 at $08 so the bonus remains 5x, store the
+; Reproduce the canonical D070-D078 terminal award, then consume this collect-
+; deactivation authorization. Keep $10C1 at $08 so the bonus remains 5x, store the
 ; unarmed condition in the separate waiting flag, and force the 100K flash
-; phase off. A later left-orbit collect can reveal one more 100K award.
+; phase off. A later active-to-inactive collect transition can reveal one more.
         JSR $c96c
         LDAA #$36
         JSR $c27e
         LDAA DELUXE_COLLECT_STATE
         ANDA #$7f
-        ORAA #DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT
+        ORAA #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
         STAA DELUXE_COLLECT_STATE
         LDAA HOLE_BONUS_LAMP_SHADOW
         ORAA #HOLE_100000_STATE
@@ -1313,11 +1300,11 @@ DELUXE_APPLY_HOLE_FLASH_MASK:
 ; C1BC originally XORed $10C1 directly into the hole lamp shadow. State $08
 ; must remain set after 5x is collected because drain bonus reads that state,
 ; but its low bit also flashes 100K. Suppress only that XOR while the post-5x
-; award is waiting for another left-orbit collect. Preserve B for the periodic
+; award is waiting for another collect deactivation. Preserve B for the periodic
 ; lamp-refresh caller.
         PSHB
         LDAB DELUXE_COLLECT_STATE
-        BITB #DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT
+        BITB #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
         BNE DELUXE_HOLE_FLASH_DONE
         EORA $10c1
 DELUXE_HOLE_FLASH_DONE:

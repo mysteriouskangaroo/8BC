@@ -104,8 +104,8 @@ DELUXE_COLLECT_STATE_MASK                    equ $07
 DELUXE_COLLECT_LEFT_ORBIT                    equ $01
 DELUXE_COLLECT_SPINNER                       equ $02
 DELUXE_COLLECT_RIGHT_ORBIT                   equ $03
-DELUXE_HOLE_WAITING_FOR_LEFT_COLLECT         equ $40
-DELUXE_LEFT_COLLECT_AUTHORIZED               equ $80
+DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION equ $40
+DELUXE_COLLECT_DEACTIVATION_AUTHORIZED       equ $80
 
 HOLE_BONUS_2X_STATE                          equ $01
 HOLE_BONUS_3X_STATE                          equ $02

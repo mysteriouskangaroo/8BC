@@ -235,6 +235,31 @@ This is the ROM implementation of the observed rule, with the two paired groups
 entering that later state only after both balls in the pair have first been
 sunk.
 
+## Saucer 100,000 relight qualification
+
+The saucer state in `10C1` still progresses through 2x (`01`), 3x (`02`), 5x
+(`04`), and the post-5x/100,000 state (`08`). When the player collects 5x,
+`DELUXE_HANDLE_HOLE_STATE` clears any stale waiting flag and sets the
+authorization before the original dispatch advances `10C1` to `08`. The first
+100,000 therefore lights immediately, independent of the collect feature, while
+the same `08` state keeps the end-of-ball bonus at 5x.
+
+The three paths that end an active collect call
+`DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION` only after storing the next
+inactive state: the right-orbit chase advances to spinner inactive, spinner
+inactivity advances to left-orbit inactive, and the left-orbit chase advances
+to right-orbit inactive. The helper requires both `10C1` bit `08` and the
+waiting flag, then clears waiting and sets the generic collect-deactivation
+authorization. Consequently, every active collect can relight 100,000 after its
+previous award has been collected, while a completion during the initial lit
+award is a no-op. The inactive-to-active pool-ball helper has no 100,000 side
+effect.
+
+Collecting 100,000 awards the existing scaled 10,000 through its original
+multiplier-aware path, clears the authorization, and restores the waiting flag.
+The next active-to-inactive transition at any collect stage can therefore
+relight exactly one more award.
+
 ## E-I-G-H-T stand-up targets: scaled 2,500 per hit
 
 Switches 33-37 share the handler at `CC7C`. Its score call at `CC85` occurs
