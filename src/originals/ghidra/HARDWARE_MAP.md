@@ -112,6 +112,25 @@ The timer output-compare service at `E022` jumps to the periodic I/O refresh
 routine at `E28C`, which repeatedly updates `0020` and strobes the associated
 control line. That behavior agrees with a multiplexed lamp matrix.
 
+### B-A-L-L inserts and the paired AC lamp phases
+
+The manual lamp chart and the actual-machine lamp behavior establish that the
+four B-A-L-L inserts share drivers with drop targets 1-4 on the opposite AC
+phase. The Phase-A serializer uses `103B` bits 0-3 for the four target lamps;
+the corresponding Phase-B serializer byte is six bytes later at `1041`, so the
+B-A-L-L inserts are `1041` bits 0-3. The upper nibble is not part of B-A-L-L.
+
+| Driver | Connector | Phase-A lamp | Phase-B lamp | ROM Phase-B shadow |
+| --- | --- | --- | --- | --- |
+| Q57 | J10-18 | Drop Target 1 | B-A-L-L `B` | `1041` bit 0 |
+| Q26 | J10-4 | Drop Target 2 | B-A-L-L `A` | `1041` bit 1 |
+| Q43 | J10-11 | Drop Target 3 | B-A-L-L first `L` | `1041` bit 2 |
+| Q58 | J10-19 | Drop Target 4 | B-A-L-L second `L` | `1041` bit 3 |
+
+Consequently, an all-B-A-L-L output mask is `0F`. Mask `F0` instead reaches
+unrelated Phase-B outputs, including playfield-multiplier/special indications,
+and must not be used for a B-A-L-L animation.
+
 ## Confirmed switch matrix: PIA0 at `0020` / `0022`
 
 The same PIA0 port A is time-multiplexed for switch scanning. The ROM entry at

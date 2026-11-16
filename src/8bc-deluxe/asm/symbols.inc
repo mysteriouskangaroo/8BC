@@ -87,6 +87,9 @@ DELUXE_SUNK_BALL_SCORE_ACTIVE_PLAYER          equ $1117
 DELUXE_SUNK_BALL_SCORE_OVERLAY_MARKER         equ $1118
 DELUXE_SUNK_BALL_SCORE_BINARY_WORK            equ $1119
 DELUXE_SUNK_BALL_SCORE_DISPLAY_BACKUP         equ $111B
+; Output-only phase used by the "more" indicators. The score-display backup
+; occupies $111B-$1136, so this byte begins immediately after it.
+DELUXE_MORE_LAMPS_FLASH_PHASE                 equ $1137
 
 PLAYER_SCORE_DISPLAY_START                    equ $1046
 PLAYER_SCORE_DISPLAY_END                      equ $1062
@@ -143,6 +146,12 @@ DELUXE_SCORE_DISPLAY_BACKUP_OFFSET            equ DELUXE_SUNK_BALL_SCORE_DISPLAY
 DELUXE_BALL_BONUS_PASS_DELAY                 equ $10
 DELUXE_BALL_BONUS_STEP_DELAY                 equ $08
 DELUXE_EIGHT_BONUS_LETTER_DELAY              equ $09
+DELUXE_RACK_MORE_THRESHOLD                   equ $04
+DELUXE_BALL_MORE_THRESHOLD                   equ $05
+DELUXE_RACK_MORE_LAMP_MASK                    equ $60
+; Phase-B $1041 bits 0-3 are B-A-L-L. Bits 4-7 are unrelated
+; multiplier/special outputs and must never be included in this overlay.
+DELUXE_BALL_MORE_LAMP_MASK                    equ $0F
 SQUAWK_TALK_SUPER_COMMAND                    equ $6F
 ORBIT_SPECIAL_LAMP_BIT                       equ $10
 ORBIT_SPECIAL_ALREADY_COLLECTED_BIT          equ $20

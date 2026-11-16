@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eight Ball Champ Deluxe Scorecard</title>
+  <style>
+    @page {
+      size: 6in 3.25in;
+      margin: 0;
+    }
+
+    html,
+    body {
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #0a2731;
+      box-sizing: border-box;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    object {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      border: 0;
+    }
+
+    @media print {
+      html,
+      body,
+      object {
+        width: 6in;
+        height: 3.25in;
+      }
+    }
+  </style>
+</head>
+<body>
+  <object data="scorecard.svg" type="image/svg+xml" aria-label="Eight Ball Champ Deluxe player rules scorecard"></object>
+</body>
+</html>

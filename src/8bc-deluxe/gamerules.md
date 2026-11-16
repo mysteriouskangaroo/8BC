@@ -279,10 +279,11 @@ restores the exact collected-letter pattern; actual CHAMP state never changes.
 
 - Every successfully collected 8-ball completes one rack and increments that
   player's completed-rack counter, including the fourth and all later clears.
-- The 120K and 240K center inserts retain their original visual progression.
-  Because those two lamps can represent only one, two, or three completed
-  racks, both remain lit for any count of three or more; the RAM counter, not
-  the lamps, is authoritative for scoring.
+- The 120K and 240K center inserts retain their original visual progression
+  through three completed racks. Beginning with that player's fourth rack,
+  both inserts blink together to signify that the stored total contains more
+  racks than the two physical lamps can show. The RAM counter, not the blinking
+  lamp output, remains authoritative for scoring.
 - At drain, each completed rack is worth `8 * 1,500 = 12,000`, and each ball
   already sunk in the unfinished current rack adds another 1,500 Deluxe points.
 - The existing 1x/2x/3x/5x end-of-ball bonus multiplier applies to the entire
@@ -304,9 +305,13 @@ restores the exact collected-letter pattern; actual CHAMP state never changes.
 - Every completed E-I-G-H-T target set still lights the next physical B-A-L-L
   letter, and also increments the active player's B-A-L-L counter. Completions
   beyond the four physical B-A-L-L inserts continue increasing this counter.
-- The four B-A-L-L inserts retain their original visual progression and remain
-  all lit for any count of four or more. The RAM counter is authoritative for
-  end-of-ball scoring.
+- The four B-A-L-L inserts retain their original visual progression through
+  four completions. Beginning with that player's fifth completed letter, all
+  four inserts blink together to signify that the stored total contains more
+  letters than the physical inserts can show. The output overlay changes only
+  `$1041` bits 0-3 (`$0F`); bits 4-7 belong to unrelated playfield-multiplier
+  and special indications and remain untouched. The RAM counter is
+  authoritative for end-of-ball scoring.
 - After the completed-rack bonus finishes, the credit display changes from the
   rack total to the number of B-A-L-L letters collected. It stays on that total
   throughout the B-A-L-L/E-I-G-H-T bonus phase, then the genuine credit count
@@ -354,7 +359,7 @@ restores the exact collected-letter pattern; actual CHAMP state never changes.
 ## Deluxe implementation state
 
 The original four-player records occupy `$10C7-$10EA`. Deluxe uses `$10EB`
-through `$1136` for active state, temporary bonus/display work, and parallel
+through `$1137` for active state, temporary bonus/display work, and parallel
 per-player counters:
 
 | Address | Meaning |
@@ -379,13 +384,14 @@ per-player counters:
 | `$1105-$1106` | Directional orbit-sweep wait countdown |
 | `$1107` | Directional orbit-roll step: none, blackout, or roll step 1-6 |
 | `$1108` | Current directional sweep-phase countdown |
-| `$1109-$110E` | Six-byte temporary Phase-B lamp-output copy used only during a sweep |
+| `$1109-$110E` | Six-byte temporary Phase-B lamp-output copy used during a directional sweep or player-specific "more" blink |
 | `$110F-$1115` | Seven-digit sunk-ball award overlay in canonical ones-first display format |
 | `$1116` | Sunk-ball award display countdown |
 | `$1117` | Player number whose live display is excluded from the overlay |
 | `$1118` | Active marker for the reversible score-display overlay |
 | `$1119-$111A` | Binary formatting work value for multiplied Called ball awards |
 | `$111B-$1136` | Backup of the four seven-digit player score displays |
+| `$1137` | Output-only blink phase for the rack and B-A-L-L "more" indications |
 
 The canonical new-game loop initializes all four original player records at
 `$C4E6`; Deluxe hooks the same loop to clear the prior collect state before
@@ -415,12 +421,14 @@ only the left or only the right bank without a coordinated VPX-table change
 
 To identify the active side without changing that wiring, the lamp-refresh
 path at `$E111` normally uses the original `$1040-$1045` Phase-B shadows
-directly. During one of the brief directional sweep phases, it instead copies
-those six bytes to `$1109-$110E`, constructs the appropriate H/A/M pattern in
-that output copy, and serializes the copy. These Phase-B outputs are
-active-low: the first phase sets all three bits to turn them off; each later
-phase starts with all three off and clears exactly one bit to light it. It
-never changes the authoritative CHAMP bits in `$1040`.
+directly. During a directional sweep or either player-specific "more" blink,
+it instead copies those six bytes to `$1109-$110E`, applies the temporary lamp
+pattern, and serializes the copy. The Phase-B outputs are active-low: the first
+sweep phase sets all three H/A/M bits to turn them off; each later phase starts
+with all three off and clears exactly one bit to light it. The rack and B-A-L-L
+blinks likewise alter only their output-copy bits. This path never changes the
+authoritative CHAMP bits in `$1040`, the live rack/letter shadows, or the
+per-player counters.
 
 ## Required gameplay verification
 
@@ -527,24 +535,27 @@ never changes the authoritative CHAMP bits in `$1040`.
   verify right active -> spinner inactive, spinner active -> left inactive, and
   left active -> right inactive can each relight it while end-of-ball bonus and
   the 5x state remain unchanged.
-- Complete at least four 8-ball racks in one ball and verify the center inserts
-  remain capped at their 120K+240K display while every completed rack is still
-  counted at drain. With six completed racks, verify the completed-rack portion
-  is 72,000 at 1x, 144,000 at 2x, 216,000 at 3x, or 360,000 at 5x,
-  plus 1,500 times the multiplier for each sunk ball in the partial rack.
+- Complete at least four 8-ball racks in one ball and verify both 120K and 240K
+  inserts blink together beginning with the fourth rack while every completed
+  rack is still counted at drain. With six completed racks, verify the
+  completed-rack portion is 72,000 at 1x, 144,000 at 2x, 216,000 at 3x, or
+  360,000 at 5x, plus 1,500 times the multiplier for each sunk ball in the
+  partial rack.
 - During that drain bonus, verify the credit display shows `06` for six
   completed racks, remains stable through every multiplier pass, and restores
   the exact prior credit count after the following B-A-L-L bonus finishes.
 - Complete E-I-G-H-T at least five times in one ball. Verify all four physical
-  B-A-L-L inserts remain lit after the fourth completion, the fifth completion
-  is retained in RAM, and the credit display changes to `05` after the rack
+  B-A-L-L inserts are lit after the fourth completion, begin blinking together
+  with the fifth completion, the fifth completion is retained in RAM, and the
+  credit display changes to `05` after the rack
   bonus. At 1x, verify those five letters contribute 25,000, plus 1,000 for
   each partial E-I-G-H-T letter; repeat at 2x/3x/5x to confirm multiplication.
 - In a four-player game, give Player 1 four completed racks and five B-A-L-L
   letters, then play through Players 2-4. Verify Player 1's next ball restores
-  `04` racks and `05` B-A-L-L letters for display and bonus while every other
-  player retains only their own totals. Start a new game and verify all eight
-  per-player totals return to zero.
+  `04` racks and `05` B-A-L-L letters for display and bonus, resumes both blink
+  indications only on Player 1's turn, and leaves every other player's lamps
+  steady according to only their own totals. Start a new game and verify all
+  eight per-player totals return to zero.
 - Verify CHAMP completions 2, 4, and 6 produce 2x, 3x, and both specials, and
   that CHAMP no longer changes spinner value.
 - Collect each available special at 1x, 2x, and 3x and verify its additional

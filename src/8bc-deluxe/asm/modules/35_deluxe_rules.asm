@@ -128,18 +128,28 @@ DELUXE_START_ORBIT_SWEEP:
 
 DELUXE_SELECT_PHASE_B_LAMP_OUTPUT:
 ; E111 calls this from the timing-sensitive lamp-refresh interrupt instead of
-; loading X with 1040 directly. Outside a sweep, retain the original fast path.
-; During a roll, copy the six Phase-B shadow bytes, clear H/A/M in the copy,
-; and then set at most one of them. Gameplay continues to read and write the
-; authoritative CHAMP state at 1040.
+; loading X with 1040 directly. Outside a directional sweep or an active
+; "more" indication, retain the original fast path. Otherwise copy the six
+; Phase-B shadow bytes and change only that output buffer. This is important:
+; the per-player counters remain authoritative, and neither blink phase can be
+; mistaken for saved rack/B-A-L-L progress by gameplay or player switching.
         LDAA DELUXE_ORBIT_SWEEP_PHASE
-        BEQ DELUXE_USE_LIVE_PHASE_B_LAMPS
+        BEQ DELUXE_PHASE_B_CHECK_MORE_INDICATORS
         LDAB DELUXE_COLLECT_STATE
         ANDB #DELUXE_COLLECT_STATE_MASK
         CMPB #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
         BEQ DELUXE_COPY_PHASE_B_LAMPS
         CMPB #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BNE DELUXE_USE_LIVE_PHASE_B_LAMPS
+        BEQ DELUXE_COPY_PHASE_B_LAMPS
+
+DELUXE_PHASE_B_CHECK_MORE_INDICATORS:
+        LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        CMPA #DELUXE_RACK_MORE_THRESHOLD
+        BCC DELUXE_COPY_PHASE_B_LAMPS
+        LDAA DELUXE_COMPLETED_BALL_LETTERS
+        CMPA #DELUXE_BALL_MORE_THRESHOLD
+        BCC DELUXE_COPY_PHASE_B_LAMPS
+        JMP DELUXE_USE_LIVE_PHASE_B_LAMPS
 
 DELUXE_COPY_PHASE_B_LAMPS:
         LDX #DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER
@@ -155,6 +165,19 @@ DELUXE_COPY_PHASE_B_LAMPS:
         STAA $04,X
         LDAA $1045
         STAA $05,X
+; A stale sweep phase is harmless if the collect has already changed. Apply a
+; directional roll only while its matching orbit remains active; the output
+; copy may still be needed for either player-specific "more" indication.
+        LDAA DELUXE_ORBIT_SWEEP_PHASE
+        BEQ DELUXE_APPLY_MORE_LAMP_OUTPUT
+        LDAB DELUXE_COLLECT_STATE
+        ANDB #DELUXE_COLLECT_STATE_MASK
+        CMPB #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
+        BEQ DELUXE_APPLY_ORBIT_SWEEP_OUTPUT
+        CMPB #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
+        BNE DELUXE_APPLY_MORE_LAMP_OUTPUT
+
+DELUXE_APPLY_ORBIT_SWEEP_OUTPUT:
 ; The Phase-B CHAMP lamps are active-low at the serializer. Set all three bits
 ; for the opening all-off pause; later phases begin from this same black base.
         LDAA $00,X
@@ -196,6 +219,29 @@ DELUXE_SWEEP_M_LAMP:
 DELUXE_STORE_SWEEP_CHAMP_LAMP:
         STAA $00,X
 DELUXE_PHASE_B_OUTPUT_READY:
+DELUXE_APPLY_MORE_LAMP_OUTPUT:
+; The canonical lamp-effect edge toggles this phase between $00 and $FF. Once
+; the active player owns at least four racks, blink both active-low 120K/240K
+; bits together. Once that player owns at least five completed B-A-L-L letters,
+; blink active-low $1041 bits 0-3 together. Bits 4-7 drive unrelated playfield
+; multiplier/special indications and remain untouched. Only this temporary
+; serializer buffer changes; the live shadows and persistent counters do not.
+        LDAA DELUXE_MORE_LAMPS_FLASH_PHASE
+        BEQ DELUXE_PHASE_B_OUTPUT_READY_WITH_MORE
+        LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
+        CMPA #DELUXE_RACK_MORE_THRESHOLD
+        BCS DELUXE_APPLY_BALL_MORE_LAMP_OUTPUT
+        LDAA $04,X
+        EORA #DELUXE_RACK_MORE_LAMP_MASK
+        STAA $04,X
+DELUXE_APPLY_BALL_MORE_LAMP_OUTPUT:
+        LDAA DELUXE_COMPLETED_BALL_LETTERS
+        CMPA #DELUXE_BALL_MORE_THRESHOLD
+        BCS DELUXE_PHASE_B_OUTPUT_READY_WITH_MORE
+        LDAA $01,X
+        EORA #DELUXE_BALL_MORE_LAMP_MASK
+        STAA $01,X
+DELUXE_PHASE_B_OUTPUT_READY_WITH_MORE:
         RTS
 
 DELUXE_USE_LIVE_PHASE_B_LAMPS:
@@ -962,6 +1008,7 @@ DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
 ; overlay marker/timer without restoring an old game's backup bytes.
         CLR DELUXE_SUNK_BALL_SCORE_TIMER
         CLR DELUXE_SUNK_BALL_SCORE_OVERLAY_MARKER
+        CLR DELUXE_MORE_LAMPS_FLASH_PHASE
         CLR DELUXE_COLLECT_STATE
         CLR DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CLR DELUXE_COMPLETED_BALL_LETTERS
@@ -1366,13 +1413,15 @@ DELUXE_FIRST_SWITCH_CALL_DELAY_DONE:
 DELUXE_FLASH_DROP_TARGET_LAMPS:
 ; C1AC calls this only when the canonical lamp-flash divider reaches its edge.
 ; First reproduce the displaced 103F/10BF operation for the five shared 5,000
-; lamps. Then maintain a reversible overlay on exactly one individually
+; lamps and advance the output-only "more" blink phase. Then maintain a
+; reversible overlay on exactly one individually
 ; numbered called-ball lamp. Recording the ID whose XOR is currently applied
 ; lets the next edge restore the original shadow state before changing calls or
 ; ending the flash. Entry X is 103A; preserve X and B for C1B3 onward.
         LDAA $05,X
         EORA DROP_TARGET_5000_LAMP_FLASH_MASK
         STAA $05,X
+        COM DELUXE_MORE_LAMPS_FLASH_PHASE
         PSHB
         PSHX
         LDAA DELUXE_CALLED_BALL_FLASH_APPLIED_ID
