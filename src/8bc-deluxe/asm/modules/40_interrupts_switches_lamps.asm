@@ -132,7 +132,7 @@ MOMENTARY_SOLENOID_PULSE_END:
         dc.b $B6,$00,$9B                                     ; $E10A unconfirmed: LDAA.w $009b
         dc.b $85,$20                                         ; $E10D unconfirmed: BITA #$20
         dc.b $26,$03                                         ; $E10F unconfirmed: BNE $e114
-        dc.b $CE,$10,$40                                     ; $E111 unconfirmed: LDX #$1040
+        JSR DELUXE_SELECT_PHASE_B_LAMP_OUTPUT                ; $E111: use an output-only buffer during a directional orbit sweep
         dc.b $C6,$F0                                         ; $E114 unconfirmed: LDAB #$f0
         dc.b $96,$23                                         ; $E116 unconfirmed: LDAA PIA0_CRB
 ; I/O: PIA0 control register B. Its CB2 output is CB02, the common lamp-strobe signal.

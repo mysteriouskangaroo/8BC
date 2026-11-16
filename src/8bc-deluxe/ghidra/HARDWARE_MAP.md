@@ -144,6 +144,28 @@ Those shared lamps occupy `103F` bits 0-4 and correspond to target groups 1/2,
 3, 4/5, 6, and 7. Keeping the two sets separate is essential when implementing
 an indication for one specifically called pool ball.
 
+### CHAMP lamps used for the directional orbit roll
+
+The stock orbit-value and Special inserts on the left and right sides are
+parallel physical lamps on one driver per printed value; the ROM cannot select
+one orbit bank independently. Deluxe therefore rolls the middle H/A/M CHAMP
+lamps in opposite directions to identify the active orbit. These rows are
+cross-checked against the same manual/PinWiki chart and against the Phase-A
+partners already located in the ROM serializer.
+
+| Driver | Connector | Lamp description | Wire code/color | ROM shadow |
+| --- | --- | --- | --- | --- |
+| Q23 | J10-1 | C Return Lane | 91 Gry-Red | `1040` bit 0 |
+| Q70 | J10-7 | H Top Lane | 56 Wht-Brn | `1040` bit 1 |
+| Q55 | J10-16 | A Top Lane | 71 Orn-Red | `1040` bit 2 |
+| Q24 | J10-2 | M Top Lane | 45 Grn-Wht | `1040` bit 3 |
+| Q41 | J10-8 | P Return Lane | 62 Brn-Blu | `1040` bit 4 |
+
+All five bits in `1040` are also authoritative CHAMP progress. At the Phase-B
+serializer output used by the roll, set H/A/M bits are off and cleared bits are
+on. The Deluxe roll must consequently alter only a temporary lamp-output copy,
+never this live state byte.
+
 ## Confirmed switch matrix: PIA0 at `0020` / `0022`
 
 The same PIA0 port A is time-multiplexed for switch scanning. The ROM entry at

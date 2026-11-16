@@ -168,6 +168,29 @@ already set in `10C3` is omitted, so a sunk ball cannot continue carrying the
 called indication. The complete physical and emulator mapping is recorded in
 [HARDWARE_MAP.md](HARDWARE_MAP.md).
 
+## Deluxe directional orbit sweep
+
+The shared orbit-value/Special drivers cannot identify which physical orbit is
+active. When a pool ball activates an orbit collect, the Deluxe activation
+path starts a six-step directional roll immediately. The periodic hook at
+`C14E` first holds H/A/M all off, then advances H -> A -> M twice for a
+right-orbit collect, or M -> A -> H twice for a left-orbit collect. It then
+waits so roll starts recur approximately every five seconds while that orbit
+remains active. The inactive and spinner states clear all sweep timing.
+
+The H/A/M lamps share `1040` with authoritative CHAMP progress, so the animation
+does not XOR that byte in place. At `E111`, only while a sweep phase is active,
+the Phase-B lamp serializer calls `DELUXE_SELECT_PHASE_B_LAMP_OUTPUT`. That
+helper copies `1040-1045` to `1109-110E`, constructs the selected lamp pattern
+in the copy, and returns the temporary buffer to the unchanged serializer. H,
+A, and M are `1040` bits 1, 2, and 3. At this serializer boundary those outputs
+are active-low: the helper sets all three bits for the roughly 250 ms opening
+blackout, then starts from that all-off pattern and clears one selected bit for
+every roll step.
+When phase returns to zero, `E111` resumes serializing live `1040-1045`, so the
+exact original collected-letter pattern returns without authoritative CHAMP
+state ever changing.
+
 The paired switches require two first-sink hits. Switch 25 records ball 1 on
 its first eligible hit and ball 2 on its next eligible hit; switch 28 does the
 same for balls 4 and 5. Only after both bits belonging to the pair are set is

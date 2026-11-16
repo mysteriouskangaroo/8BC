@@ -110,6 +110,14 @@ does not collect the lit 8-ball is not an activation event.
    active has no collect-state effect. They are not queued for later stages.
 5. Hitting an inactive collect location does not advance the sequence.
 
+While either orbit is active, a short directional lamp sweep starts
+immediately and repeats approximately every five seconds. The right-orbit
+animation rolls H -> A -> M twice; the left-orbit animation rolls M -> A -> H
+twice. It first forces H/A/M all off for about 0.25 seconds, then displays
+exactly one roll lamp for each of the six 0.2-second steps, followed by the
+delay to the next roll. At the end it removes the temporary output copy and
+restores the exact collected-letter pattern; actual CHAMP state never changes.
+
 ### Left orbit
 
 - When it is not active, switch 12 awards 500 and does not collect or advance
@@ -331,7 +339,7 @@ does not collect the lit 8-ball is not an activation event.
 ## Deluxe implementation state
 
 The original four-player records occupy `$10C7-$10EA`. Deluxe uses `$10EB`
-through `$1104` for active state, temporary bonus/display work, and parallel
+through `$110E` for active state, temporary bonus/display work, and parallel
 per-player counters:
 
 | Address | Meaning |
@@ -353,6 +361,10 @@ per-player counters:
 | `$10FF-$1102` | Called ball scores for players 1-4 |
 | `$1103` | Called-ball lamp ID whose reversible flash overlay is currently applied |
 | `$1104` | Temporary spinner-value preview countdown |
+| `$1105-$1106` | Directional orbit-sweep wait countdown |
+| `$1107` | Directional orbit-roll step: none, blackout, or roll step 1-6 |
+| `$1108` | Current directional sweep-phase countdown |
+| `$1109-$110E` | Six-byte temporary Phase-B lamp-output copy used only during a sweep |
 
 The canonical new-game loop initializes all four original player records at
 `$C4E6`; Deluxe hooks the same loop to clear the prior collect state before
@@ -379,6 +391,15 @@ each of its five orbit lamp numbers to a pair of table light objects. Therefore
 the ROM can show or hide the orbit arrows as a group, but it cannot illuminate
 only the left or only the right bank without a coordinated VPX-table change
 (or physical lamp-driver rewiring on a real machine).
+
+To identify the active side without changing that wiring, the lamp-refresh
+path at `$E111` normally uses the original `$1040-$1045` Phase-B shadows
+directly. During one of the brief directional sweep phases, it instead copies
+those six bytes to `$1109-$110E`, constructs the appropriate H/A/M pattern in
+that output copy, and serializes the copy. These Phase-B outputs are
+active-low: the first phase sets all three bits to turn them off; each later
+phase starts with all three off and clears exactly one bit to light it. It
+never changes the authoritative CHAMP bits in `$1040`.
 
 ## Required gameplay verification
 
@@ -435,6 +456,14 @@ only the left or only the right bank without a coordinated VPX-table change
   retaining the next orbit value, and that a later activation restores it.
   On each collect, verify the original fast upward arrow chase completes before
   the arrows turn off and the logical state advances.
+- On each newly activated orbit, verify the correct side sweep starts
+  immediately and repeats about every five seconds: H -> A -> M twice for the
+  right orbit, and M -> A -> H twice for the left orbit. Verify H/A/M first go
+  completely off, exactly one roll lamp is on at a time, and the original
+  pattern returns after the second roll. Verify there is no sweep during
+  inactive or spinner stages. Test with H/A/M in several collected patterns
+  and verify CHAMP scoring, completion, and multiplier progression are
+  unchanged.
 - Verify an inactive left rollover still scores only 500 at the retained
   100,000/special terminal state and does not consume the special. Verify the
   special indication is hidden whenever neither orbit is active, begins

@@ -71,6 +71,11 @@ DELUXE_CALLED_BALL_SCORE_1000S               equ $10FE
 DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $10FF
 DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1103
 DELUXE_SPINNER_PREVIEW_TIMER                 equ $1104
+DELUXE_ORBIT_SWEEP_WAIT_TIMER_HIGH           equ $1105
+DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW            equ $1106
+DELUXE_ORBIT_SWEEP_PHASE                     equ $1107
+DELUXE_ORBIT_SWEEP_PHASE_TIMER               equ $1108
+DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1109
 
 ; C9A6 accepts B as a count of displayed 1,000-point units and applies the
 ; authoritative CHAMP playfield multiplier before normalizing pending score.
@@ -101,6 +106,19 @@ DELUXE_SPINNER_INACTIVITY_TICKS              equ $78
 ; $BF is about 3.2 seconds at this tick rate and begins bit 4 at the start of
 ; a complete visible blink phase instead of entering halfway through one.
 DELUXE_SPINNER_PREVIEW_TICKS                 equ $BF
+; One 15-tick all-off pause (about 250 ms) plus six 12-tick H/A/M lamp steps
+; lasts about 1.45 seconds. Waiting 213 ticks after that produces a roughly
+; five-second start-to-start roll cadence at the periodic gameplay tick rate.
+DELUXE_ORBIT_SWEEP_PHASE_TICKS               equ $0C
+DELUXE_ORBIT_SWEEP_BLACKOUT_TICKS            equ $0F
+DELUXE_ORBIT_SWEEP_WAIT_TICKS_HIGH           equ $00
+DELUXE_ORBIT_SWEEP_WAIT_TICKS_LOW            equ $D5
+DELUXE_ORBIT_SWEEP_PHASE_COUNT               equ $07
+DELUXE_ORBIT_SWEEP_BLACKOUT_PHASE            equ $01
+DELUXE_CHAMP_ROLL_LAMP_MASK                  equ $0E
+DELUXE_H_ROLLOVER_LAMP_BIT                   equ $02
+DELUXE_A_ROLLOVER_LAMP_BIT                   equ $04
+DELUXE_M_ROLLOVER_LAMP_BIT                   equ $08
 DELUXE_BALL_BONUS_PASS_DELAY                 equ $10
 DELUXE_BALL_BONUS_STEP_DELAY                 equ $08
 DELUXE_EIGHT_BONUS_LETTER_DELAY              equ $09
