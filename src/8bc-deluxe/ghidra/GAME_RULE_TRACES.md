@@ -227,6 +227,44 @@ This is the ROM implementation of the observed rule, with the two paired groups
 entering that later state only after both balls in the pair have first been
 sunk.
 
+## Left/right orbit value advancement
+
+Switch 13 (right rollover) enters at `CB4F` with sound selector `2A`; switch 12
+(left rollover) enters at `CB53` with selector `29`. Both reach the Deluxe hook
+at `CB55`. The common score gate stores that selector in `1024`, so
+`DELUXE_HANDLE_ORBIT` uses the stored command to recover the side after the gate
+has overwritten B. Inactive orbit hits still take the unlit 500-point path and
+do not change the retained value. Before sending sound through `C27E`, that
+inactive path substitutes command `31`, the command loaded by switch 29's
+500-point center-rollover handler at `CAA3`. Active orbit hits keep their
+original side-specific `29`/`2A` commands.
+
+An active hit on either side calls the canonical lit-orbit routine at `CB5C`,
+which awards the current value and runs the fast upward arrow chase. The right
+path first sends its existing command `2A` directly through `C27E`, reloads B
+with `2A` because the sender clobbers it, and enters the common helper that
+sends `2A` again immediately before `CB5C`. It then accepts the routine's next
+low-nibble value from `1044` and copies it to the retained Deluxe state at
+`10FF`, advancing the printed value by 10,000 playfield points. The left path
+snapshots `10FF` on the CPU stack before the call and restores it afterward.
+Its score, single side-specific sound, chase, and collect-location transition
+therefore still occur, but its arrow value does not advance.
+
+The left path then moves to right-orbit inactive and hides the shared physical
+arrow lamps by setting the low nibble of `1044`. The right path moves to
+spinner inactive and loads timer `1115` with `BF`. `DELUXE_PERIODIC_TICK` uses
+timer bit 4 to alternate `1044`'s low nibble between the retained value at
+`10FF` and all-off for roughly 3.2 seconds, matching the E-I-G-H-T spinner
+preview cadence. The preview changes only lamp output; scoring and collect
+location continue to use the retained value and `10FB`. Activating either an
+orbit or the spinner cancels the preview before showing that collect's lamps.
+
+At the terminal 100,000 state, the orbit Special remains hidden while the
+numeric arrow value is previewed because the collect has already moved to the
+spinner. The canonical `10A0` already-collected latch is deliberately not
+restored, so a left-side collection cannot repeat the original Special during
+the same ball even though the arrow value itself remains at the terminal state.
+
 ## Saucer 100,000 relight qualification
 
 The saucer state in `10C1` still progresses through 2x (`01`), 3x (`02`), 5x

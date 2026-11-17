@@ -115,7 +115,8 @@ parallel arrays; active-player mirrors and temporary work remain shared.
 | `110F-1112` | Persistent per-player array | Called ball scores for Players 1-4 |
 | `1113` | Lamp-overlay state | Called-ball lamp ID whose reversible flash overlay is applied |
 | `1114` | Timer | Temporary spinner-value preview countdown |
-| `1115-1118` | Unassigned | No Deluxe symbol; do not claim without a fresh original-ROM trace |
+| `1115` | Timer | Temporary orbit-value preview countdown after a right-orbit collect |
+| `1116-1118` | Unassigned | No Deluxe symbol; do not claim without a fresh original-ROM trace |
 | `1119-111E` | Lamp-output scratch | Six-byte Phase-B copy for player-specific rack/B-A-L-L "more" blinks |
 | `111F-1125` | Display-overlay scratch | Seven-digit sunk-ball award in canonical ones-first display format |
 | `1126` | Timer | Sunk-ball award display countdown |

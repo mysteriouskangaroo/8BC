@@ -73,6 +73,7 @@ DELUXE_CALLED_BALL_SCORE_1000S               equ $110E
 DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $110F
 DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1113
 DELUXE_SPINNER_PREVIEW_TIMER                 equ $1114
+DELUXE_ORBIT_PREVIEW_TIMER                   equ $1115
 DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1119
 ; Temporary sunk-ball award display. The seven digit bytes use the canonical
 ; player-score layout (ones first, digit in the high nibble). While active,
@@ -127,6 +128,7 @@ DELUXE_SPINNER_INACTIVITY_TICKS              equ $78
 ; $BF is about 3.2 seconds at this tick rate and begins bit 4 at the start of
 ; a complete visible blink phase instead of entering halfway through one.
 DELUXE_SPINNER_PREVIEW_TICKS                 equ $BF
+DELUXE_ORBIT_PREVIEW_TICKS                   equ DELUXE_SPINNER_PREVIEW_TICKS
 ; The gameplay periodic hook runs at about 60 Hz. $B4 is roughly three
 ; seconds; bit 4 supplies a clearly visible roughly half-second blink cycle.
 DELUXE_SUNK_BALL_SCORE_DISPLAY_TICKS          equ $B4
@@ -144,6 +146,8 @@ DELUXE_RACK_MORE_LAMP_MASK                    equ $60
 ; multiplier/special outputs and must never be included in this overlay.
 DELUXE_BALL_MORE_LAMP_MASK                    equ $0F
 SQUAWK_TALK_SUPER_COMMAND                    equ $6F
+CENTER_ROLLOVER_500_SOUND_COMMAND            equ $31
+RIGHT_ORBIT_ACTIVE_SOUND_COMMAND             equ $2A
 ORBIT_SPECIAL_LAMP_BIT                       equ $10
 ORBIT_SPECIAL_ALREADY_COLLECTED_BIT          equ $20
 WORK_RAM_U4_6116_END                         equ $17FF

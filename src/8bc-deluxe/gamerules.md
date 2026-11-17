@@ -121,7 +121,8 @@ completion milestones, or the C/P anti-shatz latch.
   the retained orbit value, including when that value has reached the original
   100,000/special terminal state. A qualified terminal special remains stored
   and can be collected later when the orbit is active; inactive rollover hits
-  do not consume it.
+  do not consume it. The inactive shot uses sound command `$31`, matching the
+  playfield's 500-point center rollover instead of the active left-orbit sound.
 - Reaching the retained 100,000 terminal state qualifies the original orbit
   special. Its live blinking indication (`$10C2` bit `$10`) is shown only while
   the collect feature is active at the left or right orbit. It is hidden while
@@ -134,9 +135,10 @@ completion milestones, or the C/P anti-shatz latch.
 - When the left-orbit collect is active, switch 12 awards the current shared
   orbit value using the original handler and runs the original fast upward
   arrow-chase collect animation. Only after that animation finishes does it
-  advance the printed value by 10,000 (1,000 Deluxe points), hide the
-  orbit-value arrows, and move the feature to **right orbit inactive**. A later
-  newly sunk pool ball must activate the right orbit.
+  hide the orbit-value arrows and move the feature to **right orbit inactive**.
+  It retains the collected arrow value; only an active right-orbit collect
+  advances that value by 10,000 (1,000 Deluxe points). A later newly sunk pool
+  ball must activate the right orbit.
 ### Spinner
 
 - An unlit spinner scores 10 points per spin and does not use the playfield
@@ -186,11 +188,16 @@ completion milestones, or the C/P anti-shatz latch.
   retained orbit value is preserved.
 - When the right-orbit collect is active, switch 13 awards the same shared
   orbit value as the left side and runs the original fast upward arrow-chase
-  collect animation. Only after that animation finishes does it advance the
-  printed value by 10,000 (1,000 Deluxe points), hide the orbit-value arrows,
-  and move to **spinner inactive**.
+  collect animation. Its existing sound command `$2A` is sent twice
+  back-to-back before scoring and the chase, distinguishing the active right
+  collect from an ordinary right-orbit hit. Only after that animation finishes
+  does it advance the printed value by 10,000 (1,000 Deluxe points) and move to
+  **spinner inactive**. The newly advanced arrow value then blinks for
+  approximately three seconds before the orbit-value arrows turn off. This is
+  a lamp-only preview and does not reactivate either orbit collect.
 - When it is not active, switch 13 awards 500 and does not advance the shared
-  orbit value.
+  orbit value. It uses the same `$31` center-rollover sound as an inactive left
+  orbit, instead of the active right-orbit sound.
 
 ## Hole / saucer
 
@@ -467,14 +474,25 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
 - Verify collecting the lit 8-ball activates the current location when it is
   inactive, does nothing to an already-active collect state, and is never
   queued for the next location. Verify ordinary saucer hits do not activate it.
-- Verify unlit left/right orbit shots score 500 without advancing their value.
-- Verify the first active orbit collect lights the printed 10,000 insert
-  (or preserves a higher retained value), scores 1,000, and advances the shared
-  printed value by 10,000 / Deluxe value by 1,000.
-- Verify collecting left and right hides their active orbit indication while
-  retaining the next orbit value, and that a later activation restores it.
-  On each collect, verify the original fast upward arrow chase completes before
-  the arrows turn off and the logical state advances.
+- Verify unlit left/right orbit shots score 500 without advancing their value
+  and use the same sound as the playfield's 500-point center rollover. Verify
+  the active left collect retains its original side-specific sound and the
+  active right collect sends its original `$2A` sound twice back-to-back.
+- Verify the first active orbit collect lights the printed 10,000 insert (or
+  preserves a higher retained value) and scores 1,000. Verify a right collect
+  advances the shared printed value by 10,000 / Deluxe value by 1,000, while a
+  left collect retains the value it just awarded.
+- Verify collecting left and right hides their active orbit indication and
+  that a later activation restores the retained value. On each collect, verify
+  the original fast upward arrow chase completes before the collect location
+  advances. After a right collect, verify the newly advanced arrow value blinks
+  for approximately three seconds and then turns off; after a left collect,
+  verify the arrows turn off without a value preview.
+- During the right-orbit value preview, activate the spinner with a newly sunk
+  pool ball and verify the orbit preview is canceled immediately while the
+  spinner's accumulated value is shown. Also trigger an E-I-G-H-T spinner
+  preview during the orbit preview and verify the two independent lamp previews
+  do not corrupt either retained value or collect state.
 - Activate and collect both orbits with several C-H-A-M-P patterns. Verify all
   five letter lamps continuously retain the normal collected-letter display
   with no H/A/M blackout or roll, while CHAMP scoring, completion, multiplier

@@ -37,7 +37,7 @@ DELUXE_SPINNER_PREVIEW_TICK:
 ; phase. Only 10B1 changes; DELUXE_COLLECT_STATE remains authoritative for
 ; scoring, so spinner pulses during the preview still take the unlit path.
         LDAA DELUXE_SPINNER_PREVIEW_TIMER
-        BEQ DELUXE_PERIODIC_AWARD_DISPLAY_TICK
+        BEQ DELUXE_ORBIT_PREVIEW_TICK
         DECA
         STAA DELUXE_SPINNER_PREVIEW_TIMER
         BEQ DELUXE_SPINNER_PREVIEW_FINISHED
@@ -45,12 +45,31 @@ DELUXE_SPINNER_PREVIEW_TICK:
         BEQ DELUXE_SPINNER_PREVIEW_HIDE
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
-        BRA DELUXE_PERIODIC_AWARD_DISPLAY_TICK
+        BRA DELUXE_ORBIT_PREVIEW_TICK
 DELUXE_SPINNER_PREVIEW_HIDE:
         CLR $10b1
-        BRA DELUXE_PERIODIC_AWARD_DISPLAY_TICK
+        BRA DELUXE_ORBIT_PREVIEW_TICK
 DELUXE_SPINNER_PREVIEW_FINISHED:
         CLR $10b1
+DELUXE_ORBIT_PREVIEW_TICK:
+; A completed active right-orbit collect starts an independent preview of the
+; newly advanced arrow value. Use the same duration and blink phase as the
+; E-I-G-H-T spinner preview, but touch only 1044's orbit-value low nibble.
+; The retained state at 10FF remains authoritative throughout the preview.
+        LDAA DELUXE_ORBIT_PREVIEW_TIMER
+        BEQ DELUXE_PERIODIC_AWARD_DISPLAY_TICK
+        DECA
+        STAA DELUXE_ORBIT_PREVIEW_TIMER
+        BEQ DELUXE_ORBIT_PREVIEW_FINISHED
+        BITA #$10
+        BEQ DELUXE_ORBIT_PREVIEW_HIDE
+        JSR DELUXE_SHOW_ORBIT_PREVIEW_VALUE
+        BRA DELUXE_PERIODIC_AWARD_DISPLAY_TICK
+DELUXE_ORBIT_PREVIEW_HIDE:
+        JSR DELUXE_HIDE_ORBIT_PREVIEW_VALUE
+        BRA DELUXE_PERIODIC_AWARD_DISPLAY_TICK
+DELUXE_ORBIT_PREVIEW_FINISHED:
+        JSR DELUXE_HIDE_ORBIT_PREVIEW_VALUE
 DELUXE_PERIODIC_AWARD_DISPLAY_TICK:
         JSR DELUXE_UPDATE_SUNK_BALL_SCORE_DISPLAY
 DELUXE_PERIODIC_TICK_DONE:
@@ -128,6 +147,7 @@ DELUXE_INITIALIZE_BALL:
         STAA DELUXE_COLLECT_STATE
         CLR DELUXE_SPINNER_IDLE_TIMER
         CLR DELUXE_SPINNER_PREVIEW_TIMER
+        CLR DELUXE_ORBIT_PREVIEW_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
 ; Permit the first new C or P return-lane letter of each ball. H/A/M top-lane
 ; letters never use this latch.
@@ -289,9 +309,15 @@ DELUXE_HANDLE_ACTIVE_LEFT_ORBIT:
         JMP DELUXE_SCORE_ACTIVE_LEFT_ORBIT
 
 DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
-; Finish the original chase before changing location. Then advance to right-
-; orbit inactive and darken the shared orbit value lamps.
+; Score the lit value and finish the original chase, but restore the value that
+; was current before the canonical routine advanced it. The stack keeps this
+; side-specific snapshot out of persistent player RAM. Then advance only the
+; collect location to right-orbit inactive and darken the shared orbit lamps.
+        LDAA DELUXE_ORBIT_VALUE_STATE
+        PSHA
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
+        PULA
+        STAA DELUXE_ORBIT_VALUE_STATE
         LDAA DELUXE_COLLECT_STATE
         ANDA #$c0
         ORAA #DELUXE_COLLECT_RIGHT_ORBIT
@@ -302,7 +328,15 @@ DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
 DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
 ; Finish the original chase before moving the sequence to spinner inactive.
 ; Preserve only the two saucer flags, and darken the spinner value lamps until
-; a newly sunk ball activates that location; sunk balls are never queued.
+; a newly sunk ball activates that location; sunk balls are never queued. Once
+; the chase advances the orbit value, preview that new value with the same
+; roughly three-second blink cadence used by the E-I-G-H-T spinner preview.
+; Send the existing right-orbit command twice back-to-back before scoring and
+; the chase. C27E clobbers B, so reload the selector for the second send inside
+; DELUXE_RUN_ORIGINAL_LIT_ORBIT.
+        LDAA #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
+        JSR $c27e
+        LDAB #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
         LDAA DELUXE_COLLECT_STATE
         ANDA #$c0
@@ -311,7 +345,12 @@ DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
         JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
         CLR $10b1
         CLR $10b2
-        BRA DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
+        LDAA #DELUXE_ORBIT_PREVIEW_TICKS
+        STAA DELUXE_ORBIT_PREVIEW_TIMER
+; Moving to spinner inactive must hide the orbit Special even while the newly
+; advanced numeric arrow value is being previewed.
+        JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
+        BRA DELUXE_SHOW_ORBIT_PREVIEW_VALUE
 
 DELUXE_RUN_ORIGINAL_LIT_ORBIT:
         TBA
@@ -355,17 +394,30 @@ DELUXE_HIDE_ORBIT_SPECIAL:
 DELUXE_HIDE_INACTIVE_ORBIT_LAMPS:
 ; The caller has already moved the collect to an inactive non-orbit location.
 ; Suppress the live special flash while retaining qualification at 10FF.
+        CLR DELUXE_ORBIT_PREVIEW_TIMER
         JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
+DELUXE_HIDE_ORBIT_PREVIEW_VALUE:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ORAA #$0f
+        STAA SHARED_ORBIT_VALUE_LAMP_STATE
+        RTS
+
+DELUXE_SHOW_ORBIT_PREVIEW_VALUE:
+; Show only the retained orbit-value low nibble. Preserve 1044's unrelated
+; upper pool-bonus/special bits while the preview alternates visible and dark.
+        LDAA SHARED_ORBIT_VALUE_LAMP_STATE
+        ANDA #$f0
+        ORAA DELUXE_ORBIT_VALUE_STATE
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
         RTS
 
 DELUXE_SCORE_UNLIT_ORBIT:
 ; The first original orbit score-table entry proves the printed base value is
 ; 5,000; Deluxe's global score scale makes the displayed award 500.
-; Bypassing CB5C prevents an unlit hit from advancing the shared value.
-        TBA
+; Bypassing CB5C prevents an unlit hit from advancing the shared value. Use
+; command $31 from the playfield's 500-point center rollover at CAA3 so the
+; inactive shot is audibly distinct from an active left/right orbit collect.
+        LDAA #CENTER_ROLLOVER_500_SOUND_COMMAND
         JSR $c27e
         JMP AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER
 
@@ -1091,6 +1143,7 @@ DELUXE_FIRST_SINK_ACTIVATE_ORBIT:
 ; Activating either orbit collect promotes only that baseline to $xE, which
 ; the original table displays and scores as 10,000. Preserve any higher orbit
 ; value retained by the operator adjustment.
+        CLR DELUXE_ORBIT_PREVIEW_TIMER
         LDAA DELUXE_ORBIT_VALUE_STATE
         CMPA #$0f
         BNE DELUXE_FIRST_SINK_SHOW_ORBIT
@@ -1110,6 +1163,8 @@ DELUXE_FIRST_SINK_SHOW_ORBIT:
 DELUXE_FIRST_SINK_ACTIVATE_SPINNER:
 ; Activating spinner collect only reveals the value already accumulated in
 ; DELUXE_SPINNER_VALUE_MASK. It does not advance that value by itself.
+        CLR DELUXE_ORBIT_PREVIEW_TIMER
+        JSR DELUXE_HIDE_ORBIT_PREVIEW_VALUE
         CLR DELUXE_SPINNER_PREVIEW_TIMER
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
