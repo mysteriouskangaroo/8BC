@@ -110,13 +110,10 @@ does not collect the lit 8-ball is not an activation event.
    active has no collect-state effect. They are not queued for later stages.
 5. Hitting an inactive collect location does not advance the sequence.
 
-While either orbit is active, a short directional lamp sweep starts
-immediately and repeats approximately every five seconds. The right-orbit
-animation rolls H -> A -> M twice; the left-orbit animation rolls M -> A -> H
-twice. It first forces H/A/M all off for about 0.25 seconds, then displays
-exactly one roll lamp for each of the six 0.2-second steps, followed by the
-delay to the next roll. At the end it removes the temporary output copy and
-restores the exact collected-letter pattern; actual CHAMP state never changes.
+Collect activation no longer overlays the H/A/M lamps. All five C-H-A-M-P
+lamps continuously show their normal collected-letter state, independently of
+the collect feature. This visual restoration does not change CHAMP scoring,
+completion milestones, or the C/P anti-shatz latch.
 
 ### Left orbit
 
@@ -394,10 +391,7 @@ per-player counters:
 | `$10FF-$1102` | Called ball scores for players 1-4 |
 | `$1103` | Called-ball lamp ID whose reversible flash overlay is currently applied |
 | `$1104` | Temporary spinner-value preview countdown |
-| `$1105-$1106` | Directional orbit-sweep wait countdown |
-| `$1107` | Directional orbit-roll step: none, blackout, or roll step 1-6 |
-| `$1108` | Current directional sweep-phase countdown |
-| `$1109-$110E` | Six-byte temporary Phase-B lamp-output copy used during a directional sweep or player-specific "more" blink |
+| `$1109-$110E` | Six-byte temporary Phase-B lamp-output copy used only for player-specific rack/B-A-L-L "more" blinks |
 | `$110F-$1115` | Seven-digit sunk-ball award overlay in canonical ones-first display format |
 | `$1116` | Sunk-ball award display countdown |
 | `$1117` | Player number whose live display is excluded from the overlay |
@@ -505,14 +499,10 @@ per-player counters.
   retaining the next orbit value, and that a later activation restores it.
   On each collect, verify the original fast upward arrow chase completes before
   the arrows turn off and the logical state advances.
-- On each newly activated orbit, verify the correct side sweep starts
-  immediately and repeats about every five seconds: H -> A -> M twice for the
-  right orbit, and M -> A -> H twice for the left orbit. Verify H/A/M first go
-  completely off, exactly one roll lamp is on at a time, and the original
-  pattern returns after the second roll. Verify there is no sweep during
-  inactive or spinner stages. Test with H/A/M in several collected patterns
-  and verify CHAMP scoring, completion, and multiplier progression are
-  unchanged.
+- Activate and collect both orbits with several C-H-A-M-P patterns. Verify all
+  five letter lamps continuously retain the normal collected-letter display
+  with no H/A/M blackout or roll, while CHAMP scoring, completion, multiplier
+  progression, and the C/P anti-shatz latch remain unchanged.
 - Verify an inactive left rollover still scores only 500 at the retained
   100,000/special terminal state and does not consume the special. Verify the
   special indication is hidden whenever neither orbit is active, begins

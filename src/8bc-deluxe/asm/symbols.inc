@@ -71,16 +71,12 @@ DELUXE_CALLED_BALL_SCORE_1000S               equ $10FE
 DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $10FF
 DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1103
 DELUXE_SPINNER_PREVIEW_TIMER                 equ $1104
-DELUXE_ORBIT_SWEEP_WAIT_TIMER_HIGH           equ $1105
-DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW            equ $1106
-DELUXE_ORBIT_SWEEP_PHASE                     equ $1107
-DELUXE_ORBIT_SWEEP_PHASE_TIMER               equ $1108
 DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1109
 ; Temporary sunk-ball award display. The seven digit bytes use the canonical
 ; player-score layout (ones first, digit in the high nibble). While active,
 ; the four live score buffers at 1046-1061 are backed up at 111B-1136; only
 ; the three displays that do not belong to the scoring player are overlaid.
-; Start after the directional sweep's six-byte 1109-110E output buffer.
+; Start after the "more" indicators' six-byte 1109-110E output buffer.
 DELUXE_SUNK_BALL_SCORE_DIGITS                 equ $110F
 DELUXE_SUNK_BALL_SCORE_TIMER                  equ $1116
 DELUXE_SUNK_BALL_SCORE_ACTIVE_PLAYER          equ $1117
@@ -129,19 +125,6 @@ DELUXE_SPINNER_INACTIVITY_TICKS              equ $78
 ; $BF is about 3.2 seconds at this tick rate and begins bit 4 at the start of
 ; a complete visible blink phase instead of entering halfway through one.
 DELUXE_SPINNER_PREVIEW_TICKS                 equ $BF
-; One 15-tick all-off pause (about 250 ms) plus six 12-tick H/A/M lamp steps
-; lasts about 1.45 seconds. Waiting 213 ticks after that produces a roughly
-; five-second start-to-start roll cadence at the periodic gameplay tick rate.
-DELUXE_ORBIT_SWEEP_PHASE_TICKS               equ $0C
-DELUXE_ORBIT_SWEEP_BLACKOUT_TICKS            equ $0F
-DELUXE_ORBIT_SWEEP_WAIT_TICKS_HIGH           equ $00
-DELUXE_ORBIT_SWEEP_WAIT_TICKS_LOW            equ $D5
-DELUXE_ORBIT_SWEEP_PHASE_COUNT               equ $07
-DELUXE_ORBIT_SWEEP_BLACKOUT_PHASE            equ $01
-DELUXE_CHAMP_ROLL_LAMP_MASK                  equ $0E
-DELUXE_H_ROLLOVER_LAMP_BIT                   equ $02
-DELUXE_A_ROLLOVER_LAMP_BIT                   equ $04
-DELUXE_M_ROLLOVER_LAMP_BIT                   equ $08
 ; The gameplay periodic hook runs at about 60 Hz. $B4 is roughly three
 ; seconds; bit 4 supplies a clearly visible roughly half-second blink cycle.
 DELUXE_SUNK_BALL_SCORE_DISPLAY_TICKS          equ $B4

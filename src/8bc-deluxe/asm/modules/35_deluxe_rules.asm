@@ -37,7 +37,7 @@ DELUXE_SPINNER_PREVIEW_TICK:
 ; phase. Only 10B1 changes; DELUXE_COLLECT_STATE remains authoritative for
 ; scoring, so spinner pulses during the preview still take the unlit path.
         LDAA DELUXE_SPINNER_PREVIEW_TIMER
-        BEQ DELUXE_ORBIT_SWEEP_TICK
+        BEQ DELUXE_PERIODIC_AWARD_DISPLAY_TICK
         DECA
         STAA DELUXE_SPINNER_PREVIEW_TIMER
         BEQ DELUXE_SPINNER_PREVIEW_FINISHED
@@ -45,104 +45,25 @@ DELUXE_SPINNER_PREVIEW_TICK:
         BEQ DELUXE_SPINNER_PREVIEW_HIDE
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
-        BRA DELUXE_ORBIT_SWEEP_TICK
+        BRA DELUXE_PERIODIC_AWARD_DISPLAY_TICK
 DELUXE_SPINNER_PREVIEW_HIDE:
         CLR $10b1
-        BRA DELUXE_ORBIT_SWEEP_TICK
+        BRA DELUXE_PERIODIC_AWARD_DISPLAY_TICK
 DELUXE_SPINNER_PREVIEW_FINISHED:
         CLR $10b1
-DELUXE_ORBIT_SWEEP_TICK:
+DELUXE_PERIODIC_AWARD_DISPLAY_TICK:
         JSR DELUXE_UPDATE_SUNK_BALL_SCORE_DISPLAY
-        BSR DELUXE_UPDATE_ORBIT_SWEEP
 DELUXE_PERIODIC_TICK_DONE:
         PULA
         LDX $10b3
         RTS
 
-DELUXE_UPDATE_ORBIT_SWEEP:
-; Only an active left or right orbit receives the directional sweep. The
-; output helper validates the state again inside the lamp-refresh interrupt,
-; so a collect transition cannot leave a stale overlay on the next location.
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BEQ DELUXE_ORBIT_SWEEP_ADVANCE
-        CMPA #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BEQ DELUXE_ORBIT_SWEEP_ADVANCE
-        CLR DELUXE_ORBIT_SWEEP_PHASE
-        CLR DELUXE_ORBIT_SWEEP_PHASE_TIMER
-        CLR DELUXE_ORBIT_SWEEP_WAIT_TIMER_HIGH
-        CLR DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW
-        RTS
-
-DELUXE_ORBIT_SWEEP_ADVANCE:
-        LDAA DELUXE_ORBIT_SWEEP_PHASE
-        BEQ DELUXE_ORBIT_SWEEP_WAIT
-        DEC DELUXE_ORBIT_SWEEP_PHASE_TIMER
-        BNE DELUXE_ORBIT_SWEEP_UPDATE_DONE
-        INCA
-        CMPA #DELUXE_ORBIT_SWEEP_PHASE_COUNT+1
-        BEQ DELUXE_ORBIT_SWEEP_FINISH
-        STAA DELUXE_ORBIT_SWEEP_PHASE
-        LDAA #DELUXE_ORBIT_SWEEP_PHASE_TICKS
-        STAA DELUXE_ORBIT_SWEEP_PHASE_TIMER
-        RTS
-
-DELUXE_ORBIT_SWEEP_FINISH:
-        CLR DELUXE_ORBIT_SWEEP_PHASE
-        LDAA #DELUXE_ORBIT_SWEEP_WAIT_TICKS_HIGH
-        STAA DELUXE_ORBIT_SWEEP_WAIT_TIMER_HIGH
-        LDAA #DELUXE_ORBIT_SWEEP_WAIT_TICKS_LOW
-        STAA DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW
-        RTS
-
-DELUXE_ORBIT_SWEEP_WAIT:
-        LDAA DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW
-        BNE DELUXE_ORBIT_SWEEP_DECREMENT_LOW
-        LDAA DELUXE_ORBIT_SWEEP_WAIT_TIMER_HIGH
-        BEQ DELUXE_ORBIT_SWEEP_BEGIN
-        DECA
-        STAA DELUXE_ORBIT_SWEEP_WAIT_TIMER_HIGH
-        LDAA #$ff
-        STAA DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW
-        RTS
-DELUXE_ORBIT_SWEEP_DECREMENT_LOW:
-        DECA
-        STAA DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW
-DELUXE_ORBIT_SWEEP_UPDATE_DONE:
-        RTS
-DELUXE_ORBIT_SWEEP_BEGIN:
-        BRA DELUXE_START_ORBIT_SWEEP
-
-DELUXE_START_ORBIT_SWEEP:
-; Start with all three roll lamps off, followed by six H/A/M phases. The output
-; routine changes only its temporary copy, so no phase can collect or clear a
-; CHAMP letter.
-        CLR DELUXE_ORBIT_SWEEP_WAIT_TIMER_HIGH
-        CLR DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW
-        LDAA #DELUXE_ORBIT_SWEEP_BLACKOUT_PHASE
-        STAA DELUXE_ORBIT_SWEEP_PHASE
-        LDAA #DELUXE_ORBIT_SWEEP_BLACKOUT_TICKS
-        STAA DELUXE_ORBIT_SWEEP_PHASE_TIMER
-        RTS
-
 DELUXE_SELECT_PHASE_B_LAMP_OUTPUT:
 ; E111 calls this from the timing-sensitive lamp-refresh interrupt instead of
-; loading X with 1040 directly. Outside a directional sweep or an active
-; "more" indication, retain the original fast path. Otherwise copy the six
-; Phase-B shadow bytes and change only that output buffer. This is important:
-; the per-player counters remain authoritative, and neither blink phase can be
-; mistaken for saved rack/B-A-L-L progress by gameplay or player switching.
-        LDAA DELUXE_ORBIT_SWEEP_PHASE
-        BEQ DELUXE_PHASE_B_CHECK_MORE_INDICATORS
-        LDAB DELUXE_COLLECT_STATE
-        ANDB #DELUXE_COLLECT_STATE_MASK
-        CMPB #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BEQ DELUXE_COPY_PHASE_B_LAMPS
-        CMPB #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BEQ DELUXE_COPY_PHASE_B_LAMPS
-
-DELUXE_PHASE_B_CHECK_MORE_INDICATORS:
+; loading X with 1040 directly. Outside an active rack/B-A-L-L "more"
+; indication, retain the original fast path. Otherwise copy the six Phase-B
+; shadow bytes and change only the applicable bonus-lamp output bits. The
+; C-H-A-M-P byte at 1040 is always copied unchanged.
         LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CMPA #DELUXE_RACK_MORE_THRESHOLD
         BCC DELUXE_COPY_PHASE_B_LAMPS
@@ -165,60 +86,6 @@ DELUXE_COPY_PHASE_B_LAMPS:
         STAA $04,X
         LDAA $1045
         STAA $05,X
-; A stale sweep phase is harmless if the collect has already changed. Apply a
-; directional roll only while its matching orbit remains active; the output
-; copy may still be needed for either player-specific "more" indication.
-        LDAA DELUXE_ORBIT_SWEEP_PHASE
-        BEQ DELUXE_APPLY_MORE_LAMP_OUTPUT
-        LDAB DELUXE_COLLECT_STATE
-        ANDB #DELUXE_COLLECT_STATE_MASK
-        CMPB #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BEQ DELUXE_APPLY_ORBIT_SWEEP_OUTPUT
-        CMPB #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BNE DELUXE_APPLY_MORE_LAMP_OUTPUT
-
-DELUXE_APPLY_ORBIT_SWEEP_OUTPUT:
-; The Phase-B CHAMP lamps are active-low at the serializer. Set all three bits
-; for the opening all-off pause; later phases begin from this same black base.
-        LDAA $00,X
-        ORAA #DELUXE_CHAMP_ROLL_LAMP_MASK
-        STAA $00,X
-        LDAA DELUXE_ORBIT_SWEEP_PHASE
-        CMPA #DELUXE_ORBIT_SWEEP_BLACKOUT_PHASE
-        BEQ DELUXE_PHASE_B_OUTPUT_READY
-; Remove the blackout phase, then normalize roll steps 4-6 to 1-3 so the same
-; three-lamp roll runs twice.
-        DECA
-        CMPA #$04
-        BCS DELUXE_ORBIT_SWEEP_PHASE_NORMALIZED
-        SUBA #$03
-DELUXE_ORBIT_SWEEP_PHASE_NORMALIZED:
-        CMPA #$02
-        BEQ DELUXE_SWEEP_A_LAMP
-        CMPB #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
-        BEQ DELUXE_SELECT_LEFT_SWEEP_END_LAMP
-; Right phases 1/3 select H/M respectively.
-        CMPA #$01
-        BEQ DELUXE_SWEEP_H_LAMP
-        BRA DELUXE_SWEEP_M_LAMP
-; Left phases 1/3 select M/H respectively.
-DELUXE_SELECT_LEFT_SWEEP_END_LAMP:
-        CMPA #$01
-        BEQ DELUXE_SWEEP_M_LAMP
-DELUXE_SWEEP_H_LAMP:
-        LDAA $00,X
-        ANDA #$FF-DELUXE_H_ROLLOVER_LAMP_BIT
-        BRA DELUXE_STORE_SWEEP_CHAMP_LAMP
-DELUXE_SWEEP_A_LAMP:
-        LDAA $00,X
-        ANDA #$FF-DELUXE_A_ROLLOVER_LAMP_BIT
-        BRA DELUXE_STORE_SWEEP_CHAMP_LAMP
-DELUXE_SWEEP_M_LAMP:
-        LDAA $00,X
-        ANDA #$FF-DELUXE_M_ROLLOVER_LAMP_BIT
-DELUXE_STORE_SWEEP_CHAMP_LAMP:
-        STAA $00,X
-DELUXE_PHASE_B_OUTPUT_READY:
 DELUXE_APPLY_MORE_LAMP_OUTPUT:
 ; The canonical lamp-effect edge toggles this phase between $00 and $FF. Once
 ; the active player owns at least four racks, blink both active-low 120K/240K
@@ -261,10 +128,6 @@ DELUXE_INITIALIZE_BALL:
         STAA DELUXE_COLLECT_STATE
         CLR DELUXE_SPINNER_IDLE_TIMER
         CLR DELUXE_SPINNER_PREVIEW_TIMER
-        CLR DELUXE_ORBIT_SWEEP_WAIT_TIMER_HIGH
-        CLR DELUXE_ORBIT_SWEEP_WAIT_TIMER_LOW
-        CLR DELUXE_ORBIT_SWEEP_PHASE
-        CLR DELUXE_ORBIT_SWEEP_PHASE_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
 ; Permit the first new C or P return-lane letter of each ball. H/A/M top-lane
 ; letters never use this latch.
@@ -1240,7 +1103,6 @@ DELUXE_FIRST_SINK_SHOW_ORBIT:
         ANDA #$f0
         ORAA DELUXE_ORBIT_VALUE_STATE
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
-        JSR DELUXE_START_ORBIT_SWEEP
         JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
         BRA DELUXE_COLLECT_ACTIVATION_DONE
 

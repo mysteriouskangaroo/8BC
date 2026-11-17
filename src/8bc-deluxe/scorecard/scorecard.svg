@@ -69,10 +69,11 @@
   <circle cx="99" cy="376" r="6" fill="#ffffff" opacity="0.5"/>
   <text class="number" x="111" y="390">1</text>
   <text class="rule-title" x="155" y="398">C-H-A-M-P</text>
-  <text class="rule-body" x="90" y="441">
+  <text class="rule-body" x="90" y="432">
     <tspan x="90">2 TIMES = </tspan><tspan class="accent">2X</tspan><tspan> • 4 TIMES = </tspan><tspan class="accent">3X PLAYFIELD</tspan>
-    <tspan x="90" dy="34">6 TIMES = </tspan><tspan class="gold">OUTLANE SPECIALS • 750K</tspan>
+    <tspan x="90" dy="32">6 TIMES = </tspan><tspan class="gold">OUTLANE SPECIALS • 750K</tspan>
   </text>
+  <text x="330" y="493" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="1.2" fill="#ff7a25">NO ALLEY PASS ALLOWED</text>
 
   <!-- 2 ball: blue -->
   <circle cx="681" cy="388" r="33" fill="#2764a5" stroke="#17110b" stroke-width="5"/>

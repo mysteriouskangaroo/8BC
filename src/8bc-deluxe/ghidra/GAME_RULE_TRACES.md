@@ -189,28 +189,19 @@ already set in `10C3` is omitted, so a sunk ball cannot continue carrying the
 called indication. The complete physical and emulator mapping is recorded in
 [HARDWARE_MAP.md](HARDWARE_MAP.md).
 
-## Deluxe directional orbit sweep
+## Deluxe Phase-B "more" indicators
 
-The shared orbit-value/Special drivers cannot identify which physical orbit is
-active. When a pool ball activates an orbit collect, the Deluxe activation
-path starts a six-step directional roll immediately. The periodic hook at
-`C14E` first holds H/A/M all off, then advances H -> A -> M twice for a
-right-orbit collect, or M -> A -> H twice for a left-orbit collect. It then
-waits so roll starts recur approximately every five seconds while that orbit
-remains active. The inactive and spinner states clear all sweep timing.
+The directional orbit sweep has been removed. Orbit collect activation no
+longer starts a timer or substitutes an H/A/M output pattern; `1040` remains
+the continuously displayed authoritative C-H-A-M-P state.
 
-The H/A/M lamps share `1040` with authoritative CHAMP progress, so the animation
-does not XOR that byte in place. At `E111`, only while a sweep phase is active,
-the Phase-B lamp serializer calls `DELUXE_SELECT_PHASE_B_LAMP_OUTPUT`. That
-helper copies `1040-1045` to `1109-110E`, constructs the selected lamp pattern
-in the copy, and returns the temporary buffer to the unchanged serializer. H,
-A, and M are `1040` bits 1, 2, and 3. At this serializer boundary those outputs
-are active-low: the helper sets all three bits for the roughly 250 ms opening
-blackout, then starts from that all-off pattern and clears one selected bit for
-every roll step.
-When phase returns to zero, `E111` resumes serializing live `1040-1045`, so the
-exact original collected-letter pattern returns without authoritative CHAMP
-state ever changing.
+The Phase-B serializer hook at `E111` remains because extended completed-rack
+and B-A-L-L counts still need output-only "more" blinks. Only when either
+counter exceeds its physical lamps does `DELUXE_SELECT_PHASE_B_LAMP_OUTPUT`
+copy `1040-1045` to `1109-110E`. It preserves copied byte `1040` exactly and
+changes only the applicable rack or B-A-L-L bits before returning the temporary
+buffer to the unchanged serializer. With neither extended indication active,
+the helper returns live `1040` directly, matching the original fast path.
 
 The paired switches require two first-sink hits. Switch 25 records ball 1 on
 its first eligible hit and ball 2 on its next eligible hit; switch 28 does the
