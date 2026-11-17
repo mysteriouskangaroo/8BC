@@ -1,14 +1,18 @@
-# Eight Ball Champ CPU / Hardware Reference
+# Eight Ball Champ Deluxe Hardware and Memory Reference
 
-This note accompanies the canonical analysis project for the original,
-read-only ROM. It records the hardware model used when reading the 6803 ROM
-and distinguishes confirmed facts from the remaining schematic-tracing work.
+This is the authoritative hardware and working-memory reference for the Eight
+Ball Champ Deluxe variation. It carries forward the verified physical map of
+the original ROM and adds the Deluxe RAM allocation. Original behavior remains
+traceable to `../../originals/ghidra/HARDWARE_MAP.md`; variation-only state is
+identified explicitly below.
 
 ## Evidence
 
-- **ROM:** `../roms/u3_cpu.128` (16 KiB, mapped at `C000-FFFF`). Its SHA-1 is `25D310F169B92CE6B348330816DDC3B5710E57DA`.
+- **Original reference ROM:** `../roms/u3_cpu.128` (16 KiB, mapped at `C000-FFFF`). Its SHA-1 is `25D310F169B92CE6B348330816DDC3B5710E57DA`.
+- **Deluxe build:** `../build/u3_cpu.rebuilt.128`; the current hash and structural checks are recorded by `../asm/build.ps1` in `../build/verification.txt`.
 - **Manual:** `../../../docs/Eight_Ball_Champ_OPS.pdf`, especially section 3: control-board layout/designations and cabinet/playfield schematics.
 - **Ghidra program:** `u3_cpu.128`, analyzed as a Motorola 6801/6803-family processor.
+- **Squawk & Talk command responses:** [PinWiki's Eight Ball Champ speech-command table](https://www.pinwiki.com/wiki/index.php/Eight_Ball_Champ), credited there to PinSider "Quench". The ROM confirms the command-byte transport described below; the audible response names remain community-sourced pending independent sound-ROM or hardware verification.
 
 ## Definitions
 
@@ -38,6 +42,129 @@ disassembly has no direct absolute ROM reference into any of those ranges.
 That is useful negative evidence, but an address calculated at runtime and
 accessed through the X index register might not appear as an absolute
 reference.
+
+### U4 RAM: dedicated player-score display buffers
+
+Each player has a dedicated seven-byte score buffer. Digits are stored
+ones-first, with the displayed digit in the high nibble. These ranges are
+separate from the saved rule-state slots described below.
+
+| Player | Score-display buffer |
+| ---: | --- |
+| 1 | `1046-104C` |
+| 2 | `104D-1053` |
+| 3 | `1054-105A` |
+| 4 | `105B-1061` |
+
+### U4 RAM: canonical per-player record slots
+
+The canonical record selector at `C5C3` assigns each player a **complete
+13-byte slot**. For every player after Player 1, it calls the entry at `F821`
+(seven consecutive `INX` instructions) and then the entry at `F822` (six
+`INX` instructions), advancing X by 13 bytes. Within each slot, the first nine
+bytes hold saved state and the final four bytes are reserved stride space.
+
+| Player | Complete 13-byte slot | Nine stored bytes | Reserved stride bytes |
+| ---: | --- | --- | --- |
+| 1 | `10C7-10D3` | `10C7-10CF` | `10D0-10D3` |
+| 2 | `10D4-10E0` | `10D4-10DC` | `10DD-10E0` |
+| 3 | `10E1-10ED` | `10E1-10E9` | `10EA-10ED` |
+| 4 | `10EE-10FA` | `10EE-10F6` | `10F7-10FA` |
+
+The save routine at `C58C-C5BD` defines exactly what each stored byte contains.
+An unresolved source byte is kept explicitly unnamed rather than assigned a
+speculative game-rule meaning.
+
+| Slot offset | Player 1 | Player 2 | Player 3 | Player 4 | Stored content |
+| ---: | --- | --- | --- | --- | --- |
+| `+0` | `10C7` | `10D4` | `10E1` | `10EE` | Copy of live byte `10A0`; exact feature meaning remains untraced |
+| `+1` | `10C8` | `10D5` | `10E2` | `10EF` | Sunk pool balls 1-7 from `10C3` |
+| `+2` | `10C9` | `10D6` | `10E3` | `10F0` | Copy of live byte `10BE`; exact feature meaning remains untraced |
+| `+3` | `10CA` | `10D7` | `10E4` | `10F1` | Saucer/bonus progression from `10C1` |
+| `+4` | `10CB` | `10D8` | `10E5` | `10F2` | Orbit-special state from `10C2` |
+| `+5` | `10CC` | `10D9` | `10E6` | `10F3` | C-H-A-M-P state from `1040`; upper spinner-lamp bits are forced inactive when saved |
+| `+6` | `10CD` | `10DA` | `10E7` | `10F4` | B-A-L-L state from `1041`; upper multiplier/special output bits are forced inactive when saved |
+| `+7` | `10CE` | `10DB` | `10E8` | `10F5` | Shared orbit/rack-value state from `1044` |
+| `+8` | `10CF` | `10DC` | `10E9` | `10F6` | E-I-G-H-T target state from `1045` |
+| `+9` | `10D0` | `10DD` | `10EA` | `10F7` | Reserved; canonical record save/restore stores no field here |
+| `+10` | `10D1` | `10DE` | `10EB` | `10F8` | Reserved; canonical record save/restore stores no field here |
+| `+11` | `10D2` | `10DF` | `10EC` | `10F9` | Reserved; canonical record save/restore stores no field here |
+| `+12` | `10D3` | `10E0` | `10ED` | `10FA` | Reserved; canonical record save/restore stores no field here |
+
+### U4 RAM: Deluxe allocation
+
+Deluxe begins at `10FB`, the first byte after all four canonical slots. Its
+currently reserved envelope ends at `1148`. Persistent per-player values use
+parallel arrays; active-player mirrors and temporary work remain shared.
+
+| Address | Storage role | Meaning |
+| --- | --- | --- |
+| `10FB` | Live rule state | Collect location in bits 0-1; active flag in bit 2; post-5x waiting flag in bit 6; collect-deactivation authorization in bit 7 |
+| `10FC` | Timer | Spinner inactivity countdown |
+| `10FD` | Current ball | C-H-A-M-P completion count for the current ball |
+| `10FE` | Live rule state | Spinner weighted binary value mask (`$20/$40/$80`) |
+| `10FF` | Live rule state | Retained orbit-value low nibble while inactive orbit lamps are hidden |
+| `1100` | Active-player mirror | Selected player's completed 8-ball racks; saturates at 255 |
+| `1101` | Bonus working state | Completed-rack countdown, reloaded for each bonus-multiplier pass |
+| `1102-1103` | Display backup | Saved credit-display ones and tens during end-of-ball bonus |
+| `1104` | Active-player mirror | Selected player's completed B-A-L-L letters; saturates at 255 |
+| `1105` | Bonus working state | B-A-L-L countdown, reloaded for each bonus-multiplier pass |
+| `1106-1109` | Persistent per-player array | Completed-rack counters for Players 1-4 |
+| `110A-110D` | Persistent per-player array | Completed B-A-L-L-letter counters for Players 1-4 |
+| `110E` | Active-player mirror | Selected player's Called ball score in displayed 1,000-point units |
+| `110F-1112` | Persistent per-player array | Called ball scores for Players 1-4 |
+| `1113` | Lamp-overlay state | Called-ball lamp ID whose reversible flash overlay is applied |
+| `1114` | Timer | Temporary spinner-value preview countdown |
+| `1115-1118` | Unassigned | No Deluxe symbol; do not claim without a fresh original-ROM trace |
+| `1119-111E` | Lamp-output scratch | Six-byte Phase-B copy for player-specific rack/B-A-L-L "more" blinks |
+| `111F-1125` | Display-overlay scratch | Seven-digit sunk-ball award in canonical ones-first display format |
+| `1126` | Timer | Sunk-ball award display countdown |
+| `1127` | Display-overlay state | Player number whose live score display is excluded from the overlay |
+| `1128` | Display-overlay state | Active marker for the reversible score-display overlay |
+| `1129-112A` | Formatting scratch | Binary work value for multiplied Called ball awards |
+| `112B-1146` | Display backup | Backup of all four seven-digit player score buffers |
+| `1147` | Lamp-output state | Blink phase for rack and B-A-L-L "more" indications |
+| `1148` | Current ball | C/P anti-shatz rearm latch |
+
+The active-player mirrors at `1100`, `1104`, and `110E` are loaded from the
+selected player's array entries when the canonical restore path finishes and
+are written back when their values advance. They are working copies, not a
+second independent set of player progress.
+
+#### Logical combined player state
+
+The state is physically split to preserve the original 13-byte addressing
+contract, but it can be read as one logical record per player. This table
+combines every currently identified persistent player-owned field. Shared
+timers, current-ball latches, lamp overlays, and display scratch are excluded
+because they are not four independent player values.
+
+| Logical field | Player 1 | Player 2 | Player 3 | Player 4 | Physical organization |
+| --- | --- | --- | --- | --- | --- |
+| Score-display digits | `1046-104C` | `104D-1053` | `1054-105A` | `105B-1061` | Four dedicated seven-byte buffers |
+| Canonical `10A0` copy | `10C7` | `10D4` | `10E1` | `10EE` | Slot `+0` |
+| Sunk pool balls 1-7 | `10C8` | `10D5` | `10E2` | `10EF` | Slot `+1` |
+| Canonical `10BE` copy | `10C9` | `10D6` | `10E3` | `10F0` | Slot `+2` |
+| Saucer/bonus progression | `10CA` | `10D7` | `10E4` | `10F1` | Slot `+3` |
+| Orbit-special state | `10CB` | `10D8` | `10E5` | `10F2` | Slot `+4` |
+| C-H-A-M-P state | `10CC` | `10D9` | `10E6` | `10F3` | Slot `+5` |
+| B-A-L-L state | `10CD` | `10DA` | `10E7` | `10F4` | Slot `+6` |
+| Orbit/rack-value state | `10CE` | `10DB` | `10E8` | `10F5` | Slot `+7` |
+| E-I-G-H-T state | `10CF` | `10DC` | `10E9` | `10F6` | Slot `+8` |
+| Deluxe completed racks | `1106` | `1107` | `1108` | `1109` | Four-byte parallel array |
+| Deluxe completed B-A-L-L letters | `110A` | `110B` | `110C` | `110D` | Four-byte parallel array |
+| Deluxe Called ball value | `110F` | `1110` | `1111` | `1112` | Four-byte parallel array |
+
+The four reserved bytes in each canonical slot remain reserved. New
+persistent Deluxe fields should use another four-byte parallel array rather
+than changing the 13-byte stride or moving original state. This keeps the
+original selector and save/restore routines stable while giving the source
+and documentation a single logical player model.
+
+`build.ps1` resolves the boundary symbols after assembly and fails unless
+Deluxe begins at `10FB`, ends inside U4 RAM, and does not overlap the canonical
+player slots. These tables describe verified allocations only; they do not
+declare every other byte of `1000-17FF` unused.
 
 ### PIA address names and mode selection
 The two PIAs are the ROM's bridge to the machine: each connects eight input or
@@ -163,14 +290,13 @@ Consequently, an all-B-A-L-L output mask is `0F`. Mask `F0` instead reaches
 unrelated Phase-B outputs, including playfield-multiplier/special indications,
 and must not be used for a B-A-L-L animation.
 
-### CHAMP lamps used for the directional orbit roll
+### C-H-A-M-P lamp shadows
 
 The stock orbit-value and Special inserts on the left and right sides are
 parallel physical lamps on one driver per printed value; the ROM cannot select
-one orbit bank independently. Deluxe therefore rolls the middle H/A/M CHAMP
-lamps in opposite directions to identify the active orbit. These rows are
-cross-checked against the same manual/PinWiki chart and against the Phase-A
-partners already located in the ROM serializer.
+one orbit bank independently. The C-H-A-M-P rows below are cross-checked
+against the same manual/PinWiki chart and against the Phase-A partners already
+located in the ROM serializer.
 
 | Driver | Connector | Lamp description | Wire code/color | ROM shadow |
 | --- | --- | --- | --- | --- |
@@ -180,10 +306,11 @@ partners already located in the ROM serializer.
 | Q24 | J10-2 | M Top Lane | 45 Grn-Wht | `1040` bit 3 |
 | Q41 | J10-8 | P Return Lane | 62 Brn-Blu | `1040` bit 4 |
 
-All five bits in `1040` are also authoritative CHAMP progress. At the Phase-B
-serializer output used by the roll, set H/A/M bits are off and cleared bits are
-on. The Deluxe roll must consequently alter only a temporary lamp-output copy,
-never this live state byte.
+All five bits in `1040` are authoritative C-H-A-M-P progress as well as live
+lamp shadows. The former directional H/A/M orbit animation has been removed;
+current Deluxe code does not substitute an orbit-direction pattern over these
+lamps. C/P anti-shatz logic changes only whether a new C or P is awarded and
+does not change this physical lamp mapping.
 
 ## Confirmed switch matrix: PIA0 at `0020` / `0022`
 
@@ -302,6 +429,44 @@ Note: Page 1-18's solenoid-test numbering conflicts with the numbered locator dr
 
 Note: The schematic also shows `M5`, `M6`, and `M12`, but the Eight Ball Champ driver-location table does not give each one a physical-coil name. They remain unnamed here rather than guessed. They are also absent from the ROM's automatic-test selector sequence.
 
+## Squawk & Talk command transport and response map
+
+The CPU queues an eight-bit sound command at `1024`. The output routine at
+`C26D` writes the command's low nibble to 6803 port 2 (`0002`), pulses bit 4
+of port 3 (`0003`), then shifts the saved command right four places and
+writes the high nibble to port 2. Thus the wire-level order is **low nibble
+first, then high nibble**. The physical connector pins and sound-board net
+names for these port signals remain untraced in the supplied schematic scan.
+
+The response names below are the reported Squawk & Talk results from PinWiki.
+Ranges compress commands whose response follows the command's low nibble;
+for example, `41-4F` selects ball 1 through ball 15 respectively.
+
+| Command | Reported Squawk & Talk response |
+| --- | --- |
+| `1D` | Sound effect used during register 93 sound-test mode |
+| `41-4F` | One of four get/make/sink/shoot prompts for ball 1-15 |
+| `50` | Pool-chalking quip telling the player to stop talking |
+| `51-5F` | Announces ball 1 through ball 15 |
+| `60` | Prompt to rack the balls |
+| `61` | Assigns or announces solids |
+| `62` | Assigns or announces stripes |
+| `63` | Joke about applying too much English |
+| `64` | Chalking prompt |
+| `65` | Scratch callout |
+| `66` | Shot compliment |
+| `67-6B` | Announces the 8 ball followed by ball 1 through ball 5 |
+| `6C` | One of four get/make/sink/shoot prompts for the 8 ball |
+| `6D` + `6E` | Success callout; PinWiki presents the two bytes as one paired entry, but the exact invocation semantics are not independently verified |
+| `6F` | Enthusiastic praise |
+| `70-78` | Chalking prompt |
+| `79` | Invitation to play another game |
+| `7A` | Slow-play warning |
+| `7B` | 2X multiplier announcement |
+| `7C` | 3X multiplier announcement |
+| `7D` | 5X multiplier announcement |
+| `7E-80` | Chalking prompt |
+
 ## Executable starting points
 
 The vector table at `FFF0-FFFF` identifies the first useful control-flow
@@ -355,9 +520,10 @@ Ghidra labels and comments use these rules:
 - Names for a particular switch, lamp, or coil are only final after their
   signal is followed through the schematic and cross-checked against ROM use.
 
-The Ghidra annotations are deliberately kept in this original analysis
-project.  Experimental rules changes belong in the separately named variation
-directory, not here.
+The physical names and original-ROM evidence originate in the canonical
+analysis under `../../originals/ghidra/`. Deluxe-specific RAM and rule behavior
+must remain identified as variation work and agree with `../asm/`,
+`GAME_RULE_TRACES.md`, and `../gamerules.md`.
 
 
 ## More information

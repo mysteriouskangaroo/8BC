@@ -354,7 +354,7 @@ DELUXE_HIDE_ORBIT_SPECIAL:
 
 DELUXE_HIDE_INACTIVE_ORBIT_LAMPS:
 ; The caller has already moved the collect to an inactive non-orbit location.
-; Suppress the live special flash while retaining qualification at 10EF.
+; Suppress the live special flash while retaining qualification at 10FF.
         JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ORAA #$0f
@@ -782,7 +782,7 @@ DELUXE_BEGIN_BALL_BONUS_DISPLAY:
 ; multiplier passes. Save the actual credit-display bytes, then temporarily
 ; show completed racks in decimal while bonus is counted. The physical credit
 ; display has only two digits, so 100-255 racks display as 99 without changing
-; the authoritative score counter at 10F0. Preserve B because the displaced
+; the authoritative score counter at 1100. Preserve B because the displaced
 ; C84B routine does not alter it.
 ; Restore any live sunk-ball display overlay before bonus or later end-of-ball
 ; score comparisons can inspect the four canonical player-score buffers.
@@ -868,7 +868,8 @@ DELUXE_AFTER_EIGHT_WORD_COUNTED:
 
 DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
 ; The canonical new-game loop at C4E6 visits player numbers 4, 3, 2, and 1 and
-; initializes each original nine-byte player record. Clear the previous game's
+; initializes each original 13-byte player slot (nine stored bytes followed by
+; four reserved stride bytes). Clear the previous game's
 ; collect state first so DELUXE_LOAD_ORBIT_STATE_FOR_SAVE takes its new-game
 ; path and stores the freshly initialized live orbit value instead of stale
 ; DELUXE_ORBIT_VALUE_STATE. Then clear the active Deluxe bonus counters, reset
@@ -889,7 +890,7 @@ DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
         JMP $c58c
 
 DELUXE_RESTORE_ACTIVE_PLAYER_BONUS_COUNTERS:
-; C603 runs at the end of the original nine-byte player-record restore. Load
+; C603 runs at the end of the original nine-byte player-data restore. Load
 ; the extended counters and Called ball score for the same 1-based player
 ; number in 008F, then execute C603's displaced call. Tail-jumping preserves
 ; F197's return state.
@@ -939,8 +940,8 @@ DELUXE_LOAD_CALLED_BALL_SCORE:
 
 DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER:
 ; $008F is the same 1-based player number used by the canonical record selector
-; at C5C3. The rack array occupies 10F6-10F9; the B-A-L-L array is four bytes
-; later at 10FA-10FD, and Called ball score is nine bytes later at 10FF-1102.
+; at C5C3. The rack array occupies 1106-1109; the B-A-L-L array is four bytes
+; later at 110A-110D, and Called ball score is nine bytes later at 110F-1112.
         LDX #DELUXE_PLAYER_RACK_COUNTS-1
         LDAB.w $008f
 DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER_LOOP:

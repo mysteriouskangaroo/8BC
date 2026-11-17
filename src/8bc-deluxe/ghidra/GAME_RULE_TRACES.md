@@ -1,10 +1,11 @@
 # Eight Ball Champ Game-Rule Traces
 
-This note accompanies the canonical Ghidra analysis of the original,
-read-only ROM. It follows physical events through the ROM's dispatchers,
-gameplay state, scoring, lamps, sounds, and output queues. Physical addresses,
-switch-matrix positions, and driver identities remain in
-[HARDWARE_MAP.md](HARDWARE_MAP.md).
+This note records cross-function behavior for the Eight Ball Champ Deluxe
+variation, building on the canonical original-ROM analysis in
+`../../originals/ghidra/GAME_RULE_TRACES.md`. It follows physical events
+through dispatchers, gameplay state, scoring, lamps, sounds, and output queues.
+Physical addresses, player-memory allocations, switch-matrix positions, and
+driver identities remain in [HARDWARE_MAP.md](HARDWARE_MAP.md).
 
 Each trace should start with an input or scheduled event, identify its handler,
 follow all material RAM changes and helper calls, and end at the observable
@@ -142,8 +143,8 @@ starts at 10,000 playfield / 1,000 displayed and advances by 10,000 playfield /
 called-lamp overlay, that hook clears both the stale call ID at `10C4` and the
 16-bit reminder delay at `10B3-10B4`; the canonical selector can therefore
 choose the new rack's first solid or stripe immediately instead of interpreting
-the 8-ball reminder as a numbered target. Active state is at `10FE`; parallel
-player values are at `10FF-1102` and use the existing `C4E6` new-game and
+the 8-ball reminder as a numbered target. Active state is at `110E`; parallel
+player values are at `110F-1112` and use the existing `C4E6` new-game and
 `C603` player-restore hooks, so drains preserve the value while a new game
 resets every player to 10,000. Restore and award both normalize a zero legacy
 record to the initial value before scoring, allowing existing NVRAM to migrate
@@ -151,16 +152,16 @@ without producing a zero-point first award.
 
 Both first-sink outcomes also start the reversible sunk-ball award display.
 The uncalled branch formats 250/500/750 directly from authoritative multiplier
-state `10C0`. The called-ball helper multiplies the pre-advance value at `10FE`
+state `10C0`. The called-ball helper multiplies the pre-advance value at `110E`
 by the same 1x/2x/3x state, converts the resulting 1-765 displayed-thousands
-value to the canonical seven digit-byte format at `110F-1115`, and then queues
+value to the canonical seven digit-byte format at `111F-1125`, and then queues
 the real score normally. Thus the visual value is the exact award for that hit,
 including the collected 8-ball path, rather than the later incremented Called
 ball value.
 
 On the first popup, `DELUXE_BEGIN_SUNK_BALL_SCORE_DISPLAY` copies the four
-seven-byte score buffers at `1046-1061` to `111B-1136` and records the scoring
-player at `1117`. The periodic `C14E` hook alternates the formatted award and
+seven-byte score buffers at `1046-1061` to `112B-1146` and records the scoring
+player at `1127`. The periodic `C14E` hook alternates the formatted award and
 blank digits on only the other three buffers for roughly three seconds. The
 scoring player's buffer is never replaced, so pending-score transfer continues
 to update and display it. Expiry, the `C765` end-of-ball bonus entry, or
@@ -175,7 +176,7 @@ original lamp-flash block at `C1AC`, after its established divider and gameplay
 gates. This is important: toggling from the earlier `C14E` periodic entry can
 run faster than PinMAME's lamp-smoothing boundary and appear steady. The hook
 first reproduces the displaced five-lamp `103F`/`10BF` operation, then overlays
-the individual called lamp at the canonical visible cadence. Byte `1103`
+the individual called lamp at the canonical visible cadence. Byte `1113`
 records which called ID is currently XORed into the shadow, allowing the next
 edge to restore it before the call moves or ends.
 
@@ -198,7 +199,7 @@ the continuously displayed authoritative C-H-A-M-P state.
 The Phase-B serializer hook at `E111` remains because extended completed-rack
 and B-A-L-L counts still need output-only "more" blinks. Only when either
 counter exceeds its physical lamps does `DELUXE_SELECT_PHASE_B_LAMP_OUTPUT`
-copy `1040-1045` to `1109-110E`. It preserves copied byte `1040` exactly and
+copy `1040-1045` to `1119-111E`. It preserves copied byte `1040` exactly and
 changes only the applicable rack or B-A-L-L bits before returning the temporary
 buffer to the unchanged serializer. With neither extended indication active,
 the helper returns live `1040` directly, matching the original fast path.
@@ -263,14 +264,14 @@ CHAMP playfield multiplier (250 / 500 / 750 at 1x / 2x / 3x).
 Only a new letter reaches the hook at `CC91`, clears its bit in `1045`, and
 advances the Deluxe spinner value. An already-lit letter branches around that
 hook, so it still scores 250 through `CC85` but does not advance the spinner.
-When the collect state at `10EB` is not spinner-active, the hook also loads the
-temporary preview timer at `1104`. `DELUXE_PERIODIC_TICK` alternates the live
-lamp mask at `10B1` between the accumulated value in `10EE` and zero for about
+When the collect state at `10FB` is not spinner-active, the hook also loads the
+temporary preview timer at `1114`. `DELUXE_PERIODIC_TICK` alternates the live
+lamp mask at `10B1` between the accumulated value in `10FE` and zero for about
 three seconds, then leaves it hidden. The `$BF` reload also aligns bit 4 so the
 preview begins with a complete visible phase. This is output state only: the switch-32
-handler continues to authorize the accumulated award solely from `10EB`, so a
+handler continues to authorize the accumulated award solely from `10FB`, so a
 spinner pulse during the preview follows the unlit 10-point path. Activating
-spinner clears `1104` before displaying `10EE` steadily.
+spinner clears `1114` before displaying `10FE` steadily.
 
 ## Playfield Scores Double and Triple
 
@@ -305,13 +306,13 @@ receives its scaled 300-point award (original 3,000) through `C9F3`, using the m
 already active. If the letter is new, the hook at `CAE4` checks its bit mask.
 H (`02`), A (`04`), and M (`08`) always continue directly to the original
 recording path. Only C (`01`) and P (`10`) test
-`DELUXE_CHAMP_INLANE_REARMED` at `1138`. A locked C/P exits without changing
+`DELUXE_CHAMP_INLANE_REARMED` at `1148`. A locked C/P exits without changing
 `1040`; its already-awarded lane score remains. An accepted C/P clears the
 latch before the original handler records its bit. Because the test occurs
 after the original already-lit check at `CAE0`, repeating an existing C/P does
 not consume a valid rearm.
 
-The normal-play dispatcher hook at `E63A` rearms `1138` only for verified
+The normal-play dispatcher hook at `E63A` rearms `1148` only for verified
 C011 table offsets belonging to either thumper/pop bumper, the saucer,
 left/right orbit rollover, center rollover, spinner, numbered pool-ball drops,
 and E-I-G-H-T targets. It excludes slings, the rebound, CHAMP lanes, outlanes,
@@ -320,7 +321,7 @@ first new C/P of a ball is armed by `DELUXE_INITIALIZE_BALL`; thereafter one
 qualifying shot permits one new C/P. H/A/M neither test nor consume this state.
 
 When all five accepted letters are complete, the hook at `CB07` calls
-`DELUXE_ADVANCE_CHAMP`. Its first action rearms the C/P latch at `1138`, so a
+`DELUXE_ADVANCE_CHAMP`. Its first action rearms the C/P latch at `1148`, so a
 completed word makes the next new C or P immediately available irrespective
 of which letter completed that word. Completions 2, 4, and 6 then select
 double, triple, and the two outlane specials respectively. Consequently, the

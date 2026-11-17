@@ -1,8 +1,9 @@
-# Eight Ball Champ CPU / Hardware Reference
+# Eight Ball Champ Hardware and Memory Reference
 
-This note accompanies the canonical analysis project for the original,
-read-only ROM. It records the hardware model used when reading the 6803 ROM
-and distinguishes confirmed facts from the remaining schematic-tracing work.
+This is the authoritative hardware and working-memory reference for the
+original, read-only Eight Ball Champ CPU ROM. It records the hardware model,
+the confirmed 6803 address space, and persistent per-player RAM layout while
+distinguishing established facts from remaining schematic-tracing work.
 
 ## Evidence
 
@@ -39,6 +40,60 @@ disassembly has no direct absolute ROM reference into any of those ranges.
 That is useful negative evidence, but an address calculated at runtime and
 accessed through the X index register might not appear as an absolute
 reference.
+
+### U4 RAM: dedicated player-score display buffers
+
+Each player has a dedicated seven-byte score buffer. Digits are stored
+ones-first, with the displayed digit in the high nibble. These ranges are
+separate from the saved rule-state slots described below.
+
+| Player | Score-display buffer |
+| ---: | --- |
+| 1 | `1046-104C` |
+| 2 | `104D-1053` |
+| 3 | `1054-105A` |
+| 4 | `105B-1061` |
+
+### U4 RAM: canonical per-player record slots
+
+The canonical record selector at `C5C3` assigns each player a complete
+**13-byte slot**. For every player after Player 1, it calls the entry at
+`F821` (seven consecutive `INX` instructions) and then the entry at `F822`
+(six `INX` instructions), advancing X by 13 bytes. Within each slot, the
+first nine bytes hold saved state and the final four bytes are reserved
+stride space.
+
+| Player | Complete 13-byte slot | Nine stored bytes | Reserved stride bytes |
+| ---: | --- | --- | --- |
+| 1 | `10C7-10D3` | `10C7-10CF` | `10D0-10D3` |
+| 2 | `10D4-10E0` | `10D4-10DC` | `10DD-10E0` |
+| 3 | `10E1-10ED` | `10E1-10E9` | `10EA-10ED` |
+| 4 | `10EE-10FA` | `10EE-10F6` | `10F7-10FA` |
+
+The save routine at `C58C-C5BD` defines the stored fields. The corresponding
+restore path ends at `C603`. An unresolved source byte remains explicitly
+unnamed instead of being given a speculative rules meaning.
+
+| Slot offset | Player 1 | Player 2 | Player 3 | Player 4 | Stored content |
+| ---: | --- | --- | --- | --- | --- |
+| `+0` | `10C7` | `10D4` | `10E1` | `10EE` | Copy of live byte `10A0`; exact feature meaning remains untraced |
+| `+1` | `10C8` | `10D5` | `10E2` | `10EF` | Sunk pool balls 1-7 from `10C3` |
+| `+2` | `10C9` | `10D6` | `10E3` | `10F0` | Copy of live byte `10BE`; exact feature meaning remains untraced |
+| `+3` | `10CA` | `10D7` | `10E4` | `10F1` | Saucer/bonus progression from `10C1` |
+| `+4` | `10CB` | `10D8` | `10E5` | `10F2` | Orbit-special state from `10C2` |
+| `+5` | `10CC` | `10D9` | `10E6` | `10F3` | C-H-A-M-P state from `1040`; upper spinner-lamp bits are forced inactive when saved |
+| `+6` | `10CD` | `10DA` | `10E7` | `10F4` | B-A-L-L state from `1041`; upper multiplier/special output bits are forced inactive when saved |
+| `+7` | `10CE` | `10DB` | `10E8` | `10F5` | Shared orbit/rack-value state from `1044` |
+| `+8` | `10CF` | `10DC` | `10E9` | `10F6` | E-I-G-H-T target state from `1045` |
+| `+9` | `10D0` | `10DD` | `10EA` | `10F7` | Reserved; canonical save/restore stores no field here |
+| `+10` | `10D1` | `10DE` | `10EB` | `10F8` | Reserved; canonical save/restore stores no field here |
+| `+11` | `10D2` | `10DF` | `10EC` | `10F9` | Reserved; canonical save/restore stores no field here |
+| `+12` | `10D3` | `10E0` | `10ED` | `10FA` | Reserved; canonical save/restore stores no field here |
+
+The 13-byte stride is part of the original program's addressing contract, not
+a suggested size for later variations. A variation that needs additional
+persistent fields should preserve these slots and use separately documented
+parallel per-player storage.
 
 ### PIA address names and mode selection
 The two PIAs are the ROM's bridge to the machine: each connects eight input or
@@ -112,6 +167,39 @@ The timer output-compare service at `E022` jumps to the periodic I/O refresh
 routine at `E28C`, which repeatedly updates `0020` and strobes the associated
 control line. That behavior agrees with a multiplexed lamp matrix.
 
+### Numbered pool-ball drop-target lamps
+
+The manual lamp chart, cross-checked against the
+[PinWiki Eight Ball Champ lamp chart](https://www.pinwiki.com/wiki/index.php/Eight_Ball_Champ),
+identifies the fourteen individually numbered Phase-A drop-target lamps below.
+[PinMAME's Bally 6803 connector table](https://github.com/vpinball/pinmame/blob/master/src/wpc/by6803.c)
+converts each connector pin to its controller lamp number. The ROM serializer
+at `E107-E1EF` consumes the six-byte Phase-A shadow at `103A-103F` as
+interleaved U15/U16/U17 triples; following that order gives the exact shadow
+byte and bit in the last column.
+
+| Driver | Connector | Lamp description | Wire code/color | PinMAME lamp | ROM shadow |
+| --- | --- | --- | --- | ---: | --- |
+| Q57 | J10-18 | Drop Target 1 | 58 Wht-Blk | 35 | `103B` bit 0 |
+| Q26 | J10-4 | Drop Target 2 | 41 Grn-Red | 4 | `103B` bit 1 |
+| Q43 | J10-11 | Drop Target 3 | 43 Grn-Yel | 20 | `103B` bit 2 |
+| Q58 | J10-19 | Drop Target 4 | 10 Red | 36 | `103B` bit 3 |
+| Q27 | J10-5 | Drop Target 5 | 60 Brn | 5 | `103B` bit 4 |
+| Q44 | J10-12 | Drop Target 6 | 34 Yel-Grn | 21 | `103B` bit 5 |
+| Q59 | J10-14 | Drop Target 7 | 36 Yel-Brn | 37 | `103B` bit 6 |
+| Q45 | J10-10 | Drop Target 9 | 57 Wht-Orn | 22 | `103C` bit 0 |
+| Q60 | J10-13 | Drop Target 10 | 51 Wht-Red | 38 | `103C` bit 1 |
+| Q29 | J11-8 | Drop Target 11 | 67 Brn-Orn | 7 | `103C` bit 2 |
+| Q46 | J11-16 | Drop Target 12 | 53 Wht-Yel | 23 | `103C` bit 3 |
+| Q61 | J11-6/J12-10 | Drop Target 13 | 12 Red-Blu | 39 | `103C` bit 4 |
+| Q30 | J11-12/J12-14 | Drop Target 14 | 45 Grn-Wht | 8 | `103C` bit 5 |
+| Q47 | J11-11/J12-6 | Drop Target 15 | 13 Red-Yel | 24 | `103C` bit 6 |
+
+These are distinct from the five shared **5,000 Drop Target** lamps on J13.
+Those shared lamps occupy `103F` bits 0-4 and correspond to target groups 1/2,
+3, 4/5, 6, and 7. The two lamp sets must remain distinct in ROM and table
+mappings.
+
 ### B-A-L-L inserts and the paired AC lamp phases
 
 The manual lamp chart and the actual-machine lamp behavior establish that the
@@ -130,6 +218,26 @@ B-A-L-L inserts are `1041` bits 0-3. The upper nibble is not part of B-A-L-L.
 Consequently, an all-B-A-L-L output mask is `0F`. Mask `F0` instead reaches
 unrelated Phase-B outputs, including playfield-multiplier/special indications,
 and must not be used for a B-A-L-L animation.
+
+### C-H-A-M-P lamp shadows
+
+The stock orbit-value and Special inserts on the left and right sides are
+parallel physical lamps on one driver per printed value; the ROM cannot select
+one orbit bank independently. The C-H-A-M-P rows below are cross-checked
+against the same manual/PinWiki chart and against the Phase-A partners already
+located in the ROM serializer.
+
+| Driver | Connector | Lamp description | Wire code/color | ROM shadow |
+| --- | --- | --- | --- | --- |
+| Q23 | J10-1 | C Return Lane | 91 Gry-Red | `1040` bit 0 |
+| Q70 | J10-7 | H Top Lane | 56 Wht-Brn | `1040` bit 1 |
+| Q55 | J10-16 | A Top Lane | 71 Orn-Red | `1040` bit 2 |
+| Q24 | J10-2 | M Top Lane | 45 Grn-Wht | `1040` bit 3 |
+| Q41 | J10-8 | P Return Lane | 62 Brn-Blu | `1040` bit 4 |
+
+All five bits in `1040` are authoritative C-H-A-M-P progress as well as live
+lamp shadows. Scoring and rules analysis must read this stable state rather
+than infer progress from a temporary lamp animation or output copy.
 
 ## Confirmed switch matrix: PIA0 at `0020` / `0022`
 

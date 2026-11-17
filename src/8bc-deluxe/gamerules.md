@@ -368,53 +368,33 @@ completion milestones, or the C/P anti-shatz latch.
 
 ## Deluxe implementation state
 
-The original four-player records occupy `$10C7-$10EA`. Deluxe uses `$10EB`
-through `$1137` for active state, temporary bonus/display work, and parallel
-per-player counters:
-
-| Address | Meaning |
-| --- | --- |
-| `$10EB` | Collect location in bits 0-1; active flag in bit 2; post-5x waiting flag in bit 6; collect-deactivation authorization in bit 7 |
-| `$10EC` | Spinner inactivity countdown |
-| `$10ED` | CHAMP completion count for the current ball |
-| `$10EE` | Spinner weighted binary value mask (`$20/$40/$80`) |
-| `$10EF` | Retained orbit-value low nibble while inactive orbit lamps are hidden |
-| `$10F0` | Active player's completed 8-ball racks (saturates at 255) |
-| `$10F1` | Working completed-rack countdown, reloaded for each bonus-multiplier pass |
-| `$10F2` | Saved credit-display ones byte during end-of-ball bonus |
-| `$10F3` | Saved credit-display tens byte during end-of-ball bonus |
-| `$10F4` | Active player's completed B-A-L-L letters (saturates at 255) |
-| `$10F5` | Working B-A-L-L countdown, reloaded for each bonus-multiplier pass |
-| `$10F6-$10F9` | Completed-rack counters for players 1-4 |
-| `$10FA-$10FD` | Completed B-A-L-L-letter counters for players 1-4 |
-| `$10FE` | Active player's Called ball score in displayed 1,000-point units (values 1, 2, 3...) |
-| `$10FF-$1102` | Called ball scores for players 1-4 |
-| `$1103` | Called-ball lamp ID whose reversible flash overlay is currently applied |
-| `$1104` | Temporary spinner-value preview countdown |
-| `$1109-$110E` | Six-byte temporary Phase-B lamp-output copy used only for player-specific rack/B-A-L-L "more" blinks |
-| `$110F-$1115` | Seven-digit sunk-ball award overlay in canonical ones-first display format |
-| `$1116` | Sunk-ball award display countdown |
-| `$1117` | Player number whose live display is excluded from the overlay |
-| `$1118` | Active marker for the reversible score-display overlay |
-| `$1119-$111A` | Binary formatting work value for multiplied Called ball awards |
-| `$111B-$1136` | Backup of the four seven-digit player score displays |
-| `$1137` | Output-only blink phase for the rack and B-A-L-L "more" indications |
+The original player records occupy four 13-byte slots at `$10C7-$10FA`.
+Each slot contains nine saved bytes plus four reserved stride bytes; the exact
+per-player and per-field layout is in [HARDWARE_MAP.md](ghidra/HARDWARE_MAP.md#u4-ram-canonical-per-player-record-slots).
+Deluxe begins at the next byte and uses `$10FB-$1148` for active state,
+temporary bonus/display work, and parallel per-player counters. The
+[authoritative Deluxe allocation](ghidra/HARDWARE_MAP.md#u4-ram-deluxe-allocation)
+lists every assigned address, storage role, active-player mirror, reserved gap,
+and scratch range. Its
+[logical combined player table](ghidra/HARDWARE_MAP.md#logical-combined-player-state)
+presents the original and Deluxe fields as one player record without changing
+their safe physical layout.
 
 The canonical new-game loop initializes all four original player records at
 `$C4E6`; Deluxe hooks the same loop to clear the prior collect state before
 capturing the new game's baseline orbit value, clear all eight bonus counters,
 and set all four Called ball scores to their initial value. The canonical
-player restore ends at `$C603`; Deluxe loads `$10F0/$10F4/$10FE` from the
+player restore ends at `$C603`; Deluxe loads `$1100/$1104/$110E` from the
 selected player's parallel entries there. Counter/value advances are written
 back immediately, so drain animations cannot erase another player's progress.
 
 The original `$10B1` byte remains the live spinner-lamp mask. It is zero when
-the spinner collect is inactive and mirrors `$10EE` only while the spinner is
+the spinner collect is inactive and mirrors `$10FE` only while the spinner is
 the active collect.
 
 The original `$1044` byte still drives the live orbit-value lamps and retains
 its unrelated upper-bit meanings. Deluxe shadows only its orbit-value low
-nibble in `$10EF`, allowing an inactive orbit stage to be dark without losing
+nibble in `$10FF`, allowing an inactive orbit stage to be dark without losing
 its next value. The player-record save hook substitutes that retained nibble,
 preserving the original multiplayer and operator-retention behavior.
 
@@ -428,14 +408,10 @@ only the left or only the right bank without a coordinated VPX-table change
 
 To identify the active side without changing that wiring, the lamp-refresh
 path at `$E111` normally uses the original `$1040-$1045` Phase-B shadows
-directly. During a directional sweep or either player-specific "more" blink,
-it instead copies those six bytes to `$1109-$110E`, applies the temporary lamp
-pattern, and serializes the copy. The Phase-B outputs are active-low: the first
-sweep phase sets all three H/A/M bits to turn them off; each later phase starts
-with all three off and clears exactly one bit to light it. The rack and B-A-L-L
-blinks likewise alter only their output-copy bits. This path never changes the
-authoritative CHAMP bits in `$1040`, the live rack/letter shadows, or the
-per-player counters.
+directly. During either player-specific "more" blink, it instead copies those
+six bytes to `$1119-$111E`, alters only the applicable rack or B-A-L-L bits,
+and serializes the copy. This path never changes the authoritative CHAMP bits
+in `$1040`, the live rack/letter shadows, or the per-player counters.
 
 ## Required gameplay verification
 

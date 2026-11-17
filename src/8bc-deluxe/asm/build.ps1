@@ -106,6 +106,24 @@ function Get-DasmSymbolAddress([string]$Name) {
     return [Convert]::ToInt32($symbolLine.Matches[0].Groups[1].Value, 16)
 }
 
+# The canonical selector at C5C3 advances X by 7 bytes through F821 and then
+# by 6 more through F822, giving each player a 13-byte slot. Four slots begin
+# at 10C7 and end at 10FA. Deluxe must begin at the very next byte; this check
+# prevents a future RAM-layout edit from silently corrupting Player 4 again.
+$canonicalPlayerRecordStart = 0x10C7
+$canonicalPlayerRecordStride = 13
+$canonicalPlayerRecordCount = 4
+$canonicalPlayerRecordEnd = $canonicalPlayerRecordStart +
+    ($canonicalPlayerRecordStride * $canonicalPlayerRecordCount) - 1
+$deluxeRamStart = Get-DasmSymbolAddress 'DELUXE_COLLECT_STATE'
+$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_CHAMP_INLANE_REARMED'
+if ($deluxeRamStart -ne ($canonicalPlayerRecordEnd + 1)) {
+    throw "Deluxe RAM must begin at $('$' + ($canonicalPlayerRecordEnd + 1).ToString('X4')) immediately after the four canonical player slots; found $('$' + $deluxeRamStart.ToString('X4'))."
+}
+if ($deluxeRamStart -le $canonicalPlayerRecordEnd -or $deluxeRamEnd -gt 0x17FF) {
+    throw "Deluxe RAM range $('$' + $deluxeRamStart.ToString('X4'))-$('$' + $deluxeRamEnd.ToString('X4')) overlaps canonical player records or exceeds U4 RAM."
+}
+
 # These checks keep each rule hook at its required original ROM address,
 # resolve expansion targets from DASM's current symbol output, and lock down
 # behavior-critical fixed-address instruction sequences such as the Deluxe
@@ -206,6 +224,8 @@ $report = @(
     "Byte differences: $differenceCount"
     "Startup checksum compensation at C000: $('$' + $checksumCompensation.ToString('X2'))"
     "Startup additive checksum: $('$' + $startupChecksum.ToString('X2')) (PASS)"
+    "Canonical player slots: $('$' + $canonicalPlayerRecordStart.ToString('X4'))-$('$' + $canonicalPlayerRecordEnd.ToString('X4')) (4 x 13 bytes)"
+    "Deluxe RAM: $('$' + $deluxeRamStart.ToString('X4'))-$('$' + $deluxeRamEnd.ToString('X4')) (non-overlap PASS)"
     "Deluxe fixed-address executable checks: $($deluxeHookChecks.Count) (PASS)"
     $vectorLines
 )

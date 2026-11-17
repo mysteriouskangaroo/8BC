@@ -51,44 +51,46 @@ SUNK_POOL_BALLS_1_TO_7                       equ $10C3
 CALLED_POOL_BALL_SOUND_ID                    equ $10C4
 DROP_TARGET_SWITCH_CLOSURE_LATCHES           equ $10C5
 CALLED_BALL_SPEECH_DELAY_TIMER                equ $10B3
-; Deluxe working state follows the original four 9-byte player records at
-; $10C7-$10EA. $10F6-$1102 provide parallel persistent values for players 1-4;
-; the other bytes hold active-player, per-ball, and temporary bonus state.
-DELUXE_COLLECT_STATE                         equ $10EB
-DELUXE_SPINNER_IDLE_TIMER                    equ $10EC
-DELUXE_CHAMP_COMPLETION_COUNT                equ $10ED
-DELUXE_SPINNER_VALUE_MASK                    equ $10EE
-DELUXE_ORBIT_VALUE_STATE                     equ $10EF
-DELUXE_COMPLETED_EIGHT_BALL_RACKS            equ $10F0
-DELUXE_BONUS_RACKS_REMAINING                 equ $10F1
-DELUXE_SAVED_CREDIT_DISPLAY_ONES             equ $10F2
-DELUXE_SAVED_CREDIT_DISPLAY_TENS             equ $10F3
-DELUXE_COMPLETED_BALL_LETTERS                equ $10F4
-DELUXE_BONUS_BALL_LETTERS_REMAINING          equ $10F5
-DELUXE_PLAYER_RACK_COUNTS                    equ $10F6
-DELUXE_PLAYER_BALL_LETTER_COUNTS             equ $10FA
-DELUXE_CALLED_BALL_SCORE_1000S               equ $10FE
-DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $10FF
-DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1103
-DELUXE_SPINNER_PREVIEW_TIMER                 equ $1104
-DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1109
+; Canonical player slots use a 13-byte stride: $10C7, $10D4, $10E1, $10EE.
+; Each slot stores nine bytes and reserves four, so Player 4 owns $10EE-$10FA.
+; Deluxe begins at the first byte after all four slots. $1106-$1112 provide
+; parallel persistent values for players 1-4; the other bytes hold active-
+; player, per-ball, and temporary bonus/display state.
+DELUXE_COLLECT_STATE                         equ $10FB
+DELUXE_SPINNER_IDLE_TIMER                    equ $10FC
+DELUXE_CHAMP_COMPLETION_COUNT                equ $10FD
+DELUXE_SPINNER_VALUE_MASK                    equ $10FE
+DELUXE_ORBIT_VALUE_STATE                     equ $10FF
+DELUXE_COMPLETED_EIGHT_BALL_RACKS            equ $1100
+DELUXE_BONUS_RACKS_REMAINING                 equ $1101
+DELUXE_SAVED_CREDIT_DISPLAY_ONES             equ $1102
+DELUXE_SAVED_CREDIT_DISPLAY_TENS             equ $1103
+DELUXE_COMPLETED_BALL_LETTERS                equ $1104
+DELUXE_BONUS_BALL_LETTERS_REMAINING          equ $1105
+DELUXE_PLAYER_RACK_COUNTS                    equ $1106
+DELUXE_PLAYER_BALL_LETTER_COUNTS             equ $110A
+DELUXE_CALLED_BALL_SCORE_1000S               equ $110E
+DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $110F
+DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1113
+DELUXE_SPINNER_PREVIEW_TIMER                 equ $1114
+DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1119
 ; Temporary sunk-ball award display. The seven digit bytes use the canonical
 ; player-score layout (ones first, digit in the high nibble). While active,
-; the four live score buffers at 1046-1061 are backed up at 111B-1136; only
+; the four live score buffers at 1046-1061 are backed up at 112B-1146; only
 ; the three displays that do not belong to the scoring player are overlaid.
-; Start after the "more" indicators' six-byte 1109-110E output buffer.
-DELUXE_SUNK_BALL_SCORE_DIGITS                 equ $110F
-DELUXE_SUNK_BALL_SCORE_TIMER                  equ $1116
-DELUXE_SUNK_BALL_SCORE_ACTIVE_PLAYER          equ $1117
-DELUXE_SUNK_BALL_SCORE_OVERLAY_MARKER         equ $1118
-DELUXE_SUNK_BALL_SCORE_BINARY_WORK            equ $1119
-DELUXE_SUNK_BALL_SCORE_DISPLAY_BACKUP         equ $111B
+; Start after the "more" indicators' six-byte 1119-111E output buffer.
+DELUXE_SUNK_BALL_SCORE_DIGITS                 equ $111F
+DELUXE_SUNK_BALL_SCORE_TIMER                  equ $1126
+DELUXE_SUNK_BALL_SCORE_ACTIVE_PLAYER          equ $1127
+DELUXE_SUNK_BALL_SCORE_OVERLAY_MARKER         equ $1128
+DELUXE_SUNK_BALL_SCORE_BINARY_WORK            equ $1129
+DELUXE_SUNK_BALL_SCORE_DISPLAY_BACKUP         equ $112B
 ; Output-only phase used by the "more" indicators. The score-display backup
-; occupies $111B-$1136, so this byte begins immediately after it.
-DELUXE_MORE_LAMPS_FLASH_PHASE                 equ $1137
+; occupies $112B-$1146, so this byte begins immediately after it.
+DELUXE_MORE_LAMPS_FLASH_PHASE                 equ $1147
 ; Per-ball anti-shatz latch for the C/P return lanes only. A newly awarded
 ; inlane letter locks C/P progress until a whitelisted shot rearms it.
-DELUXE_CHAMP_INLANE_REARMED                    equ $1138
+DELUXE_CHAMP_INLANE_REARMED                    equ $1148
 
 PLAYER_SCORE_DISPLAY_START                    equ $1046
 PLAYER_SCORE_DISPLAY_END                      equ $1062
