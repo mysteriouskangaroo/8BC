@@ -134,6 +134,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xC8A6; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS'; Name = 'completed B-A-L-L bonus loop' }
     @{ Address = 0xC912; Bytes = [byte[]](0x09);             Name = 'faster E-I-G-H-T bonus-letter delay' }
     @{ Address = 0xC9A6; Bytes = [byte[]](0xB6, 0x10, 0xC0, 0x84, 0x30); Name = 'multiplier-aware variable-thousands award entry' }
+    @{ Address = 0xCAE4; Opcode = 0x7E; Target = 'DELUXE_ACCEPT_NEW_CHAMP_LETTER'; Name = 'C/P-only anti-shatz CHAMP acceptance gate' }
     @{ Address = 0xC7F0; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11, 0xCE, 0x05, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,500-point pool-ball drain bonus' }
     @{ Address = 0xC906; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,000-point E-I-G-H-T drain-bonus unit' }
     @{ Address = 0xCA3B; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPINNER'; Name = 'spinner switch handler' }

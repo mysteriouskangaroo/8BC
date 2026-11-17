@@ -266,6 +266,10 @@ DELUXE_INITIALIZE_BALL:
         CLR DELUXE_ORBIT_SWEEP_PHASE
         CLR DELUXE_ORBIT_SWEEP_PHASE_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
+; Permit the first new C or P return-lane letter of each ball. H/A/M top-lane
+; letters never use this latch.
+        LDAA #DELUXE_CHAMP_INLANE_ARMED
+        STAA DELUXE_CHAMP_INLANE_REARMED
         CLR DELUXE_BONUS_RACKS_REMAINING
         CLR DELUXE_BONUS_BALL_LETTERS_REMAINING
         CLR DELUXE_CALLED_BALL_FLASH_APPLIED_ID
@@ -354,6 +358,10 @@ DELUXE_ADVANCE_CHAMP:
 ; Called after each completed C-H-A-M-P word. Low milestones intentionally do
 ; nothing: completion 2 selects double, 4 selects triple, and 6 adds both
 ; outlane-special bits while retaining triple.
+; Completing the word also rearms the C/P anti-shatz latch, irrespective of
+; which of the five letters completed it.
+        LDAA #DELUXE_CHAMP_INLANE_ARMED
+        STAA DELUXE_CHAMP_INLANE_REARMED
         INC DELUXE_CHAMP_COMPLETION_COUNT
         LDAA DELUXE_CHAMP_COMPLETION_COUNT
         CMPA #$02
@@ -1374,9 +1382,65 @@ DELUXE_LOAD_LIVE_ORBIT_STATE_FOR_SAVE:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         RTS
 
+DELUXE_ACCEPT_NEW_CHAMP_LETTER:
+; CAE4 reaches here only after the lane has scored and the original 1040 test
+; has proved that this CHAMP letter is new. A contains the letter bit: C=$01,
+; H=$02, A=$04, M=$08, P=$10. H/A/M bypass the latch and always record. Only
+; C/P can be blocked, and their already-awarded lane score remains intact.
+        BITA #DELUXE_CHAMP_INLANE_MASK
+        BEQ DELUXE_ACCEPT_NEW_CHAMP_LETTER_RECORD
+        TST DELUXE_CHAMP_INLANE_REARMED
+        BNE DELUXE_ACCEPT_NEW_CHAMP_INLANE_ARMED
+        JMP CHAMP_LANE_HANDLER_DONE
+DELUXE_ACCEPT_NEW_CHAMP_INLANE_ARMED:
+        CLR DELUXE_CHAMP_INLANE_REARMED
+DELUXE_ACCEPT_NEW_CHAMP_LETTER_RECORD:
+; Reproduce the displaced canonical sound increment before recording the bit.
+        INC PENDING_SOUND_COMMAND
+        JMP RECORD_NEW_CHAMP_LANE
+
+DELUXE_REARM_CHAMP_INLANES_FOR_MEANINGFUL_SWITCH:
+; B is the C011 handler-table byte offset, whose order is return 7 down to 0
+; within each strobe. Rearm only for intentional shots that carry the ball
+; away from an inlane shatz: thumper bumpers (01/02), saucer (05), orbit
+; rollovers (12/13), center rollover (29), spinner (32), numbered pool-ball
+; drops (25/27/28/30/31), or E-I-G-H-T targets (33-37). Slings/rebound,
+; CHAMP lanes, outlanes,
+; cabinet/service switches, outhole, and unused matrix positions stay excluded.
+        CMPB #$0c                    ; switch 02 Left Thumper Bumper
+        BEQ DELUXE_REARM_CHAMP_INLANES
+        CMPB #$0e                    ; switch 01 Right Thumper Bumper
+        BEQ DELUXE_REARM_CHAMP_INLANES
+        CMPB #$06                    ; switch 05 Saucer
+        BEQ DELUXE_REARM_CHAMP_INLANES
+        CMPB #$16                    ; switch 13 Right Rollover Button
+        BEQ DELUXE_REARM_CHAMP_INLANES
+        CMPB #$18                    ; switch 12 Left Rollover Button
+        BEQ DELUXE_REARM_CHAMP_INLANES
+        CMPB #$30                    ; switches 32 down through 25
+        BCS DELUXE_REARM_CHAMP_DONE
+        CMPB #$40
+        BCC DELUXE_REARM_CHAMP_CHECK_EIGHT
+        CMPB #$3c                    ; switch 26 Lane Change (Cabinet)
+        BEQ DELUXE_REARM_CHAMP_DONE
+        BRA DELUXE_REARM_CHAMP_INLANES
+DELUXE_REARM_CHAMP_CHECK_EIGHT:
+        CMPB #$46                    ; switches 37-33 occupy offsets 46-4E
+        BCS DELUXE_REARM_CHAMP_DONE
+        CMPB #$50
+        BCC DELUXE_REARM_CHAMP_DONE
+DELUXE_REARM_CHAMP_INLANES:
+        LDAA #DELUXE_CHAMP_INLANE_ARMED
+        STAA DELUXE_CHAMP_INLANE_REARMED
+DELUXE_REARM_CHAMP_DONE:
+        RTS
+
 DELUXE_PREPARE_PLAYFIELD_SWITCH_HANDLER_TABLE:
 ; E63A enters after the normal-play dispatcher has accepted and cleared one
 ; switch event. B is the even byte offset into C011's handler-pointer table.
+; First update the invisible CHAMP anti-shatz rearm latch from the verified
+; shot whitelist. The accepted switch still reaches its original handler.
+        BSR DELUXE_REARM_CHAMP_INLANES_FOR_MEANINGFUL_SWITCH
 ; While no called ball has yet been selected, expire the ball-start speech
 ; delay on the first genuine scoring/playfield closure. Deliberately exclude
 ; Outhole (offset 00), Credit (04), coin/tilt/slam/unused cabinet positions

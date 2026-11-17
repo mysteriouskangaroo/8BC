@@ -298,25 +298,43 @@ else {
 }
 ```
 
-Testing triple first makes the intended precedence explicit. The original
-game generates only the valid states below, in which bits `0x10` and `0x20`
-are mutually exclusive:
+Testing triple first makes the intended precedence explicit. Deluxe's
+`DELUXE_CHAMP_COMPLETION_COUNT` is the per-ball milestone counter; it writes
+only the scoring states below to `10C0`:
 
 | Value at `10C0` | Meaning for scoring |
 | ---: | --- |
-| `00` | Normal playfield value; CHAMP has not yet been completed this ball |
-| `10` | **Double**; first CHAMP completion |
-| `20` | **Triple**; second CHAMP completion |
-| `60` | **Triple** remains active; third CHAMP completion also recorded in bit `0x40` |
-| `E0` | **Triple** remains active; fourth-or-later completion also recorded in bit `0x80` |
+| `00` | Normal playfield value; fewer than two CHAMP completions this ball |
+| `10` | **Double**; reached on the second CHAMP completion |
+| `20` | **Triple**; reached on the fourth CHAMP completion |
+| `E0` | **Triple** remains active; reached on the sixth completion and lights both outlane specials |
 
 Switches 17 through 21 share the CHAMP-lane handler at `CAD4`. Each lane first
 receives its scaled 300-point award (original 3,000) through `C9F3`, using the multiplier that was
-already active. The handler then records that lane in `1040`; when all five
-letters are complete, `CB07-CB23` advances `10C0` through
-`00 -> 10 -> 20 -> 60 -> E0`. Consequently, the lane that completes CHAMP for
-the first time still scores its pre-completion value, and **double begins with
-the next scoring event**. The same timing applies when advancing to triple.
+already active. If the letter is new, the hook at `CAE4` checks its bit mask.
+H (`02`), A (`04`), and M (`08`) always continue directly to the original
+recording path. Only C (`01`) and P (`10`) test
+`DELUXE_CHAMP_INLANE_REARMED` at `1138`. A locked C/P exits without changing
+`1040`; its already-awarded lane score remains. An accepted C/P clears the
+latch before the original handler records its bit. Because the test occurs
+after the original already-lit check at `CAE0`, repeating an existing C/P does
+not consume a valid rearm.
+
+The normal-play dispatcher hook at `E63A` rearms `1138` only for verified
+C011 table offsets belonging to either thumper/pop bumper, the saucer,
+left/right orbit rollover, center rollover, spinner, numbered pool-ball drops,
+and E-I-G-H-T targets. It excludes slings, the rebound, CHAMP lanes, outlanes,
+cabinet/service and ball-management switches, and unused matrix positions. The
+first new C/P of a ball is armed by `DELUXE_INITIALIZE_BALL`; thereafter one
+qualifying shot permits one new C/P. H/A/M neither test nor consume this state.
+
+When all five accepted letters are complete, the hook at `CB07` calls
+`DELUXE_ADVANCE_CHAMP`. Its first action rearms the C/P latch at `1138`, so a
+completed word makes the next new C or P immediately available irrespective
+of which letter completed that word. Completions 2, 4, and 6 then select
+double, triple, and the two outlane specials respectively. Consequently, the
+lane that reaches a milestone still scores at the pre-milestone multiplier,
+and the new multiplier begins with the next scoring event.
 
 The periodic lamp-animation code at `C1B3-C1B8` XORs `10C0` into `1041`,
 making the corresponding Double/Triple and later-completion lamps blink.

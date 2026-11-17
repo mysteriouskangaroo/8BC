@@ -329,6 +329,19 @@ restores the exact collected-letter pattern; actual CHAMP state never changes.
 
 ## CHAMP
 
+- Only the C and P return lanes use the anti-shatz latch. The first new C or P
+  of each ball is available immediately. After one is awarded, another new C
+  or P requires either thumper/pop bumper, the saucer, either orbit rollover,
+  the center rollover, spinner, a numbered pool-ball drop target, or an
+  E-I-G-H-T target first.
+- H, A, and M top-lane letters always advance normally and do not consume the
+  C/P latch. Slingshots, the rebound, CHAMP lanes, outlanes, cabinet/service
+  switches, and ball-management switches do not rearm C/P. A locked C or P
+  still awards its normal lane points without lighting the new letter. Hitting
+  an already-lit C or P does not consume a valid rearm.
+- Completing the full C-H-A-M-P word rearms the C/P latch, regardless of which
+  letter completed the word. The next new C or P is therefore immediately
+  available, after which the normal qualifying-shot requirement resumes.
 - First completion: no playfield multiplier change.
 - Second completion: light/award 2x playfield.
 - Third completion: retain 2x.

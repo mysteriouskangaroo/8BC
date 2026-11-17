@@ -133,9 +133,13 @@ QUEUE_SOUND_AND_CHECK_SCORE_GATE:
         RTS                          ; $CAB6: $39
         dc.b $BD,$F4,$DF,$26,$FA,$CE,$10,$3A,$A6,$06,$16,$CA,$1F,$E7,$06,$48 ; $CAB7 data/unclassified
         dc.b $85,$20,$27,$02,$8A,$01,$8A,$E0,$A4,$06,$A7,$06 ; $CAC7 data/unclassified
+CHAMP_LANE_HANDLER_DONE:
         RTS                          ; $CAD3: $39
 HANDLE_CHAMP_LANE_SWITCH:
-; Shared handler for switches 17-21 (C, H, A, M, P lanes). It scores the lane first, then records its bit in lamp/state byte 1040. Completing all five advances CHAMP_COMPLETION_STATE at 10C0: 00 -> 10 (double) -> 20 (triple) -> 60 -> E0.
+; Shared handler for switches 17-21 (C, H, A, M, P lanes). It scores the lane
+; first, then Deluxe's CAE4 gate applies anti-shatz only to the C/P return-lane
+; masks; H/A/M remain unconditional. Completed words reach the per-ball
+; milestones at completions 2, 4, and 6.
         LDAB #$25                    ; $CAD4: $C6,$25
         BSR QUEUE_SOUND_AND_CHECK_SCORE_GATE ; $CAD6: $8D,$D2
         PSHA                         ; $CAD8: $36
@@ -145,7 +149,9 @@ HANDLE_CHAMP_LANE_SWITCH:
         LDX #$1040                   ; $CADD: $CE,$10,$40
         BITA $0,X                    ; $CAE0: $A5,$00
         BNE $cad3                    ; $CAE2: $26,$EF
-        INC PENDING_SOUND_COMMAND    ; $CAE4: $7C,$10,$24
+; The lane's normal score has already been awarded. Deluxe gates only C/P.
+        JMP DELUXE_ACCEPT_NEW_CHAMP_LETTER ; $CAE4: gate C/P, accept H/A/M
+RECORD_NEW_CHAMP_LANE:
         ORAA $0,X                    ; $CAE7: $AA,$00
         STAA $0,X                    ; $CAE9: $A7,$00
         ORAA #$e0                    ; $CAEB: $8A,$E0

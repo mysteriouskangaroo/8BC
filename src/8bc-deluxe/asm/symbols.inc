@@ -90,6 +90,9 @@ DELUXE_SUNK_BALL_SCORE_DISPLAY_BACKUP         equ $111B
 ; Output-only phase used by the "more" indicators. The score-display backup
 ; occupies $111B-$1136, so this byte begins immediately after it.
 DELUXE_MORE_LAMPS_FLASH_PHASE                 equ $1137
+; Per-ball anti-shatz latch for the C/P return lanes only. A newly awarded
+; inlane letter locks C/P progress until a whitelisted shot rearms it.
+DELUXE_CHAMP_INLANE_REARMED                    equ $1138
 
 PLAYER_SCORE_DISPLAY_START                    equ $1046
 PLAYER_SCORE_DISPLAY_END                      equ $1062
@@ -109,6 +112,9 @@ DELUXE_COLLECT_SPINNER                       equ $02
 DELUXE_COLLECT_RIGHT_ORBIT                   equ $03
 DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION equ $40
 DELUXE_COLLECT_DEACTIVATION_AUTHORIZED       equ $80
+DELUXE_CHAMP_INLANE_LOCKED                   equ $00
+DELUXE_CHAMP_INLANE_ARMED                    equ $01
+DELUXE_CHAMP_INLANE_MASK                     equ $11
 
 HOLE_BONUS_2X_STATE                          equ $01
 HOLE_BONUS_3X_STATE                          equ $02
