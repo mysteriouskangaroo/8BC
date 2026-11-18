@@ -95,9 +95,9 @@
   <circle cx="669" cy="376" r="6" fill="#ffffff" opacity="0.5"/>
   <text class="number" x="681" y="390">2</text>
   <text class="rule-title" x="735" y="398">CALLED BALL</text>
-  <text class="rule-copy" x="660" y="444">
-    <tspan x="660" class="gold">5K START</tspan><tspan> &#8226; </tspan><tspan class="accent">+5K EACH MAKE</tspan><tspan>, MAX </tspan><tspan class="gold">50K</tspan>
-    <tspan x="660" dy="30">VALUE CARRIES BETWEEN DRAINS</tspan>
+  <text class="rule-copy gold" x="660" y="444">
+    <tspan x="660">5K START</tspan><tspan fill="#fff2c2"> &#8226; </tspan><tspan>+5K EACH MAKE</tspan><tspan fill="#fff2c2"> &#8226; </tspan><tspan>MAX 50K</tspan>
+    <tspan x="660" dy="30" fill="#fff2c2">VALUE CARRIES BETWEEN DRAINS</tspan>
   </text>
 
   <!-- 3 ball: red; tall combined Orbit / Spinner progressive explanation -->
@@ -107,18 +107,18 @@
   <circle cx="1239" cy="376" r="6" fill="#ffffff" opacity="0.5"/>
   <text class="number" x="1251" y="390">3</text>
   <text class="rule-title" x="1305" y="398">PROGRESSIVE COLLECT</text>
-  <text class="rule-copy" x="1230" y="441">SINK A NEW BALL TO LIGHT EACH STAGE</text>
+  <text class="rule-copy" x="1470" y="441" text-anchor="middle">SINK A NEW BALL TO LIGHT EACH STAGE</text>
   <g>
-    <rect x="1230" y="454" width="220" height="36" rx="18" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
-    <rect x="1530" y="454" width="170" height="36" rx="18" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
-    <text class="value" x="1340" y="473">ORBITS</text>
-    <text class="value-arrow" x="1490" y="473">&#8644;</text>
-    <text class="value" x="1615" y="473">SPINNER</text>
+    <rect x="1230" y="454" width="210" height="36" rx="18" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="1490" y="454" width="210" height="36" rx="18" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <text class="value" x="1335" y="473">ORBITS</text>
+    <text class="value-arrow" x="1465" y="473">&#8644;</text>
+    <text class="value" x="1595" y="473">SPINNER</text>
   </g>
   <text class="section-title" x="1250" y="545">ORBITS</text>
   <line x1="1250" y1="555" x2="1690" y2="555" stroke="#d8871b" stroke-width="3"/>
   <text class="rule-copy" x="1250" y="574">
-    <tspan class="gold">LEFT:</tspan><tspan> COLLECT</tspan><tspan x="1430" class="accent">RIGHT:</tspan><tspan> COLLECT + ADV. 10K</tspan>
+    <tspan class="gold">LEFT:</tspan><tspan> COLLECT</tspan><tspan x="1430" class="gold">RIGHT:</tspan><tspan> COLLECT + ADV. 10K</tspan>
     <tspan x="1250" dy="30">REACH </tspan><tspan class="gold">100K</tspan><tspan> TO LIGHT </tspan><tspan class="accent">SPECIAL</tspan>
     <tspan x="1250" dy="30">VALUE CARRIES BETWEEN DRAINS</tspan>
   </text>
@@ -126,7 +126,7 @@
   <text class="section-title" x="1250" y="690">SPINNER</text>
   <line x1="1250" y1="700" x2="1690" y2="700" stroke="#d8871b" stroke-width="3"/>
   <text class="rule-copy" x="1250" y="727">
-    <tspan class="accent">E-I-G-H-T</tspan><tspan> INCREASES VALUE, MAX </tspan><tspan class="gold">9K PER SPIN</tspan>
+    <tspan class="gold">E-I-G-H-T</tspan><tspan> INCREASES VALUE, MAX </tspan><tspan class="gold">9K PER SPIN</tspan>
     <tspan x="1250" dy="30">VALUE RESETS BETWEEN DRAINS</tspan>
   </text>
   </g>
@@ -161,8 +161,8 @@
   <text class="number" x="681" y="565">5</text>
   <text class="rule-title" x="735" y="573">END-OF-BALL BONUS</text>
   <text class="rule-copy" x="660" y="624">
-    <tspan x="660" class="gold">15K / BALL</tspan><tspan x="855" class="gold">&#8226;</tspan><tspan x="890" class="gold">120K / RACK</tspan>
-    <tspan x="660" dy="26" class="gold">10K / E-I-G-H-T</tspan><tspan x="855" class="gold">&#8226;</tspan><tspan x="890" class="gold">50K / B-A-L-L</tspan>
+    <tspan x="660" class="gold">15K / POOL BALL SUNK</tspan><tspan x="910" fill="#fff2c2">&#8226;</tspan><tspan x="945" class="gold">120K / RACK</tspan>
+    <tspan x="660" dy="26" class="gold">10K / E-I-G-H-T</tspan><tspan x="910" fill="#fff2c2">&#8226;</tspan><tspan x="945" class="gold">50K / B-A-L-L</tspan>
     <tspan x="660" dy="26">VALUE CARRIES BETWEEN DRAINS</tspan>
   </text>
   </g>
@@ -181,8 +181,17 @@
   </g>
 
   <g transform="translate(0 -18)">
-  <path d="M63,868 H525 L553,899 525,930 H63 L92,899 Z" fill="#26140c" fill-opacity="0.9" stroke="#e99920" stroke-width="5"/>
-  <text x="306" y="893" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="20" letter-spacing="2" fill="#ffbd35">WATCH THE LAMPS</text>
-  <text x="306" y="918" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="16" letter-spacing="0.7" fill="#fff2c2">ALL SPECIALS: 250K &#215; PLAYFIELD</text>
+  <path d="M70,850 H380 L410,890 380,930 H70 L99,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
+  <path d="M420,850 H730 L760,890 730,930 H420 L449,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
+  <path d="M770,850 H1080 L1110,890 1080,930 H770 L799,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
+
+  <text x="240" y="880" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="15" letter-spacing="0.5" fill="#ffbd35">COMPLETE B-A-L-L</text>
+  <text x="240" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="14" letter-spacing="0.3" fill="#fff2c2">FOR EXTRA BALL + SPECIALS</text>
+
+  <text x="590" y="880" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="14" letter-spacing="0.3" fill="#ffbd35">COMPLETE 2 OR MORE RACKS</text>
+  <text x="590" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="14" letter-spacing="0.3" fill="#fff2c2">FOR SPECIALS</text>
+
+  <text x="940" y="880" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="15" letter-spacing="0.5" fill="#ffbd35">ALL SPECIALS</text>
+  <text x="940" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="14" letter-spacing="0.3" fill="#fff2c2">250K &#215; PLAYFIELD</text>
   </g>
 </svg>
