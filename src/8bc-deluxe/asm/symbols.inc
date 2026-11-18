@@ -69,8 +69,10 @@ DELUXE_COMPLETED_BALL_LETTERS                equ $1104
 DELUXE_BONUS_BALL_LETTERS_REMAINING          equ $1105
 DELUXE_PLAYER_RACK_COUNTS                    equ $1106
 DELUXE_PLAYER_BALL_LETTER_COUNTS             equ $110A
-DELUXE_CALLED_BALL_SCORE_1000S               equ $110E
-DELUXE_PLAYER_CALLED_BALL_SCORE_1000S        equ $110F
+; Called Ball progression is stored in displayed 500-point units. Values 1-10
+; represent the requested 5,000-50,000 playfield range after Deluxe scaling.
+DELUXE_CALLED_BALL_SCORE_500S                 equ $110E
+DELUXE_PLAYER_CALLED_BALL_SCORE_500S          equ $110F
 DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1113
 DELUXE_SPINNER_PREVIEW_TIMER                 equ $1114
 DELUXE_ORBIT_PREVIEW_TIMER                   equ $1115
@@ -106,9 +108,10 @@ CREDIT_DISPLAY_TENS                          equ $106A
 DELUXE_COLLECT_LOCATION_MASK                 equ $03
 DELUXE_COLLECT_ACTIVE                        equ $04
 DELUXE_COLLECT_STATE_MASK                    equ $07
-DELUXE_COLLECT_LEFT_ORBIT                    equ $01
+; Both legacy orbit encodings now accept either physical rollover.
+DELUXE_COLLECT_DUAL_ORBIT                    equ $01
 DELUXE_COLLECT_SPINNER                       equ $02
-DELUXE_COLLECT_RIGHT_ORBIT                   equ $03
+DELUXE_COLLECT_OPENING_ORBIT                 equ $03
 DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION equ $40
 DELUXE_COLLECT_DEACTIVATION_AUTHORIZED       equ $80
 DELUXE_CHAMP_INLANE_LOCKED                   equ $00
@@ -132,6 +135,8 @@ DELUXE_ORBIT_PREVIEW_TICKS                   equ DELUXE_SPINNER_PREVIEW_TICKS
 ; The gameplay periodic hook runs at about 60 Hz. $B4 is roughly three
 ; seconds; bit 4 supplies a clearly visible roughly half-second blink cycle.
 DELUXE_SUNK_BALL_SCORE_DISPLAY_TICKS          equ $B4
+DELUXE_CALLED_BALL_INITIAL_500S                equ $01
+DELUXE_CALLED_BALL_MAXIMUM_500S                equ $0A
 DELUXE_SUNK_BALL_SCORE_BLINK_BIT              equ $10
 DELUXE_SUNK_BALL_SCORE_OVERLAY_ACTIVE         equ $A5
 DELUXE_SCORE_DISPLAY_BLANK_DIGIT              equ $F0

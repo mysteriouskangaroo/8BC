@@ -21,11 +21,12 @@ DELUXE_PERIODIC_TICK:
         BNE DELUXE_SPINNER_PREVIEW_TICK
 ; Each active spinner pulse restarts this inactivity timer.  A pulse inside
 ; the window continues the same collect; only about two seconds with no
-; further pulse closes it and advances to left-orbit inactive. Preserve the
-; two saucer-qualification flags while clearing active and selecting left.
+; further pulse closes it and advances to dual-orbit inactive. Preserve the
+; two saucer-qualification flags while clearing active and selecting both
+; orbits.
         LDAA DELUXE_COLLECT_STATE
         ANDA #$C0
-        ORAA #DELUXE_COLLECT_LEFT_ORBIT
+        ORAA #DELUXE_COLLECT_DUAL_ORBIT
         STAA DELUXE_COLLECT_STATE
         JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
         CLR $10b1
@@ -143,7 +144,7 @@ DELUXE_INITIALIZE_BALL:
 ; If the previous ball drained during the three-second award display, restore
 ; all three overlaid scores before the newly selected player can begin scoring.
         JSR DELUXE_CANCEL_SUNK_BALL_SCORE_DISPLAY
-        LDAA #DELUXE_COLLECT_RIGHT_ORBIT
+        LDAA #DELUXE_COLLECT_OPENING_ORBIT
         STAA DELUXE_COLLECT_STATE
         CLR DELUXE_SPINNER_IDLE_TIMER
         CLR DELUXE_SPINNER_PREVIEW_TIMER
@@ -162,7 +163,7 @@ DELUXE_INITIALIZE_BALL:
         STAA DELUXE_SPINNER_VALUE_MASK
 ; The canonical player restore at C500 has already loaded the retained orbit
 ; value into 1044. Keep its low-nibble value in Deluxe RAM, then set the live
-; low nibble to all-off while the new ball begins at right-orbit inactive.
+; low nibble to all-off while the new ball begins at orbit inactive.
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         ANDA #$0f
         STAA DELUXE_ORBIT_VALUE_STATE
@@ -170,7 +171,7 @@ DELUXE_INITIALIZE_BALL:
         ORAA #$0f
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
 ; The terminal special may be retained from the player record, but the new
-; ball begins at right-orbit inactive, so its live blinking mask must be hidden.
+; ball begins at orbit inactive, so its live blinking mask must be hidden.
         JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
 ; High bits of 1040 are active-low spinner-value lamps. Keep them dark until
 ; the collect reaches the spinner, while preserving the five CHAMP lane bits.
@@ -284,18 +285,25 @@ DELUXE_HANDLE_ORBIT:
 DELUXE_HANDLE_RIGHT_ORBIT:
         LDAA DELUXE_COLLECT_STATE
         ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
+        CMPA #DELUXE_COLLECT_OPENING_ORBIT+DELUXE_COLLECT_ACTIVE
+        BEQ DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT
+; Both encoded orbit stages accept either physical rollover. Either rollover
+; advances the collect to spinner inactive; only the right advances the shared
+; arrow value.
+        CMPA #DELUXE_COLLECT_DUAL_ORBIT+DELUXE_COLLECT_ACTIVE
         BEQ DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT
         JMP DELUXE_SCORE_UNLIT_ORBIT
 DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT:
-; Keep right active while the original handler runs its fast upward arrow
-; chase. Advance to spinner inactive only after that animation returns.
+; Keep the orbit stage active while the original handler runs its fast upward
+; arrow chase. Advance to spinner inactive only after that animation returns.
         JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
 
 DELUXE_HANDLE_LEFT_ORBIT:
         LDAA DELUXE_COLLECT_STATE
         ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
+        CMPA #DELUXE_COLLECT_OPENING_ORBIT+DELUXE_COLLECT_ACTIVE
+        BEQ DELUXE_HANDLE_ACTIVE_LEFT_ORBIT
+        CMPA #DELUXE_COLLECT_DUAL_ORBIT+DELUXE_COLLECT_ACTIVE
         BEQ DELUXE_HANDLE_ACTIVE_LEFT_ORBIT
 ; An inactive left orbit always scores the unlit 5,000 and cannot collect or
 ; advance the retained orbit value. This includes the terminal 100,000/special
@@ -304,15 +312,14 @@ DELUXE_HANDLE_LEFT_ORBIT:
         JMP DELUXE_SCORE_UNLIT_ORBIT
 
 DELUXE_HANDLE_ACTIVE_LEFT_ORBIT:
-; The active-to-inactive transition and 100,000 relight occur only after the
-; original lit-orbit scoring and arrow chase complete.
+; Advance to spinner inactive only after lit scoring and the arrow chase finish.
         JMP DELUXE_SCORE_ACTIVE_LEFT_ORBIT
 
 DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
 ; Score the lit value and finish the original chase, but restore the value that
 ; was current before the canonical routine advanced it. The stack keeps this
-; side-specific snapshot out of persistent player RAM. Then advance only the
-; collect location to right-orbit inactive and darken the shared orbit lamps.
+; side-specific snapshot out of persistent player RAM. Then advance the collect
+; to spinner inactive without advancing the retained arrow value.
         LDAA DELUXE_ORBIT_VALUE_STATE
         PSHA
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
@@ -320,10 +327,10 @@ DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
         STAA DELUXE_ORBIT_VALUE_STATE
         LDAA DELUXE_COLLECT_STATE
         ANDA #$c0
-        ORAA #DELUXE_COLLECT_RIGHT_ORBIT
+        ORAA #DELUXE_COLLECT_SPINNER
         STAA DELUXE_COLLECT_STATE
         JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
-        BRA DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
+        JMP DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
 
 DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
 ; Finish the original chase before moving the sequence to spinner inactive.
@@ -371,9 +378,9 @@ DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY:
 ; active Deluxe collect and the retained value is the terminal 100,000 state.
         LDAA DELUXE_COLLECT_STATE
         ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_LEFT_ORBIT+DELUXE_COLLECT_ACTIVE
+        CMPA #DELUXE_COLLECT_DUAL_ORBIT+DELUXE_COLLECT_ACTIVE
         BEQ DELUXE_SHOW_QUALIFIED_ORBIT_SPECIAL
-        CMPA #DELUXE_COLLECT_RIGHT_ORBIT+DELUXE_COLLECT_ACTIVE
+        CMPA #DELUXE_COLLECT_OPENING_ORBIT+DELUXE_COLLECT_ACTIVE
         BNE DELUXE_HIDE_ORBIT_SPECIAL
 DELUXE_SHOW_QUALIFIED_ORBIT_SPECIAL:
         LDAA DELUXE_ORBIT_VALUE_STATE
@@ -456,32 +463,33 @@ DELUXE_COMPARE_CALLED_BALL_ID:
         RTS
 
 DELUXE_AWARD_AND_ADVANCE_CALLED_BALL_SCORE:
-; The active byte stores displayed thousands: 1, 2, 3... corresponds to the
-; requested 10K, 20K, 30K... playfield values after Deluxe's divide-by-ten
-; score scale. Award the current value through the CHAMP multiplier, then add
-; one displayed thousand (10K playfield). Values above 240 are split across
-; two normalized queue additions so B plus the existing decimal digit cannot
-; overflow; this does not alter the score or multiplier. Treat zero from an
-; older saved game/NVRAM image as the initial value, and saturate at 255.
-        LDAA DELUXE_CALLED_BALL_SCORE_1000S
-        BNE DELUXE_CALLED_BALL_SCORE_READY
-        INCA
-        STAA DELUXE_CALLED_BALL_SCORE_1000S
+; The active byte stores displayed 500-point units: 1-10 corresponds to the
+; requested 5K-50K playfield range after Deluxe's divide-by-ten score scale.
+; Award the current value through the CHAMP multiplier, then add one unit
+; (5K playfield) until the value saturates at 50K. Treat zero from an older
+; saved game/NVRAM image as the initial value.
+        LDAA DELUXE_CALLED_BALL_SCORE_500S
+        BNE DELUXE_CALLED_BALL_SCORE_NONZERO
+        LDAA #DELUXE_CALLED_BALL_INITIAL_500S
+        STAA DELUXE_CALLED_BALL_SCORE_500S
+        BRA DELUXE_CALLED_BALL_SCORE_READY
+DELUXE_CALLED_BALL_SCORE_NONZERO:
+; Clamp records from an earlier ROM revision before they can exceed the new cap.
+        CMPA #DELUXE_CALLED_BALL_MAXIMUM_500S
+        BLS DELUXE_CALLED_BALL_SCORE_READY
+        LDAA #DELUXE_CALLED_BALL_MAXIMUM_500S
+        STAA DELUXE_CALLED_BALL_SCORE_500S
 DELUXE_CALLED_BALL_SCORE_READY:
         JSR DELUXE_START_CALLED_BALL_SCORE_DISPLAY
         TAB
-        CMPB #$f1
-        BCS DELUXE_AWARD_CALLED_BALL_SCORE_LOW_CHUNK
-        SUBB #$f0
-        JSR AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER
-        LDAB #$f0
-DELUXE_AWARD_CALLED_BALL_SCORE_LOW_CHUNK:
-        JSR AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER
-        LDAA DELUXE_CALLED_BALL_SCORE_1000S
-        CMPA #$ff
-        BEQ DELUXE_CALLED_BALL_SCORE_ADVANCED
+        LDAA #$05
+        MUL
+        JSR AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER
+        LDAA DELUXE_CALLED_BALL_SCORE_500S
+        CMPA #DELUXE_CALLED_BALL_MAXIMUM_500S
+        BCC DELUXE_CALLED_BALL_SCORE_ADVANCED
         ADDA #$01
-        STAA DELUXE_CALLED_BALL_SCORE_1000S
+        STAA DELUXE_CALLED_BALL_SCORE_500S
 DELUXE_CALLED_BALL_SCORE_ADVANCED:
         RTS
 
@@ -531,10 +539,10 @@ DELUXE_NORMAL_BALL_SCORE_READY:
         RTS
 
 DELUXE_START_CALLED_BALL_SCORE_DISPLAY:
-; Input A is the active Called ball score in displayed thousands (1-255).
+; Input A is the active Called ball score in displayed 500-point units (1-10).
 ; Multiply it by the same authoritative 1x/2x/3x CHAMP state used by the
-; scoring helper, convert the resulting 1-765 thousands to decimal, and append
-; three zeroes. MUL leaves the 16-bit binary product in D.
+; scoring helper, convert the resulting award to displayed hundreds, and append
+; two zeroes. The maximum formatted award is 15,000 at 50K playfield and 3x.
         PSHA
         PSHB
         PSHX
@@ -553,16 +561,20 @@ DELUXE_CALLED_BALL_DISPLAY_TRIPLE:
         LDAA #$03
 DELUXE_CALLED_BALL_DISPLAY_MULTIPLY:
         MUL
+; D is now 1-30 half-thousands. It fits in B, so multiply by five to obtain
+; displayed hundreds before formatting the decimal digits.
+        LDAA #$05
+        MUL
         STD DELUXE_SUNK_BALL_SCORE_BINARY_WORK
         JSR DELUXE_BEGIN_SUNK_BALL_SCORE_DISPLAY
-; The award is always an integral number of thousands.
+; The award is always an integral number of hundreds.
         CLR DELUXE_SUNK_BALL_SCORE_DIGITS+0
         CLR DELUXE_SUNK_BALL_SCORE_DIGITS+1
         CLR DELUXE_SUNK_BALL_SCORE_DIGITS+2
         CLR DELUXE_SUNK_BALL_SCORE_DIGITS+3
         CLR DELUXE_SUNK_BALL_SCORE_DIGITS+4
-        CLR DELUXE_SUNK_BALL_SCORE_DIGITS+5
         LDAA #DELUXE_SCORE_DISPLAY_BLANK_DIGIT
+        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+5
         STAA DELUXE_SUNK_BALL_SCORE_DIGITS+6
 
 DELUXE_CALLED_BALL_DISPLAY_HUNDREDS_LOOP:
@@ -570,33 +582,33 @@ DELUXE_CALLED_BALL_DISPLAY_HUNDREDS_LOOP:
         SUBD #$0064
         BCS DELUXE_CALLED_BALL_DISPLAY_HUNDREDS_DONE
         STD DELUXE_SUNK_BALL_SCORE_BINARY_WORK
-        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+5
+        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
         ADDA #$10
-        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+5
+        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
         BRA DELUXE_CALLED_BALL_DISPLAY_HUNDREDS_LOOP
 DELUXE_CALLED_BALL_DISPLAY_HUNDREDS_DONE:
-        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+5
+        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
         BNE DELUXE_CALLED_BALL_DISPLAY_TENS_LOOP
         LDAA #DELUXE_SCORE_DISPLAY_BLANK_DIGIT
-        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+5
+        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
 
 DELUXE_CALLED_BALL_DISPLAY_TENS_LOOP:
         LDD DELUXE_SUNK_BALL_SCORE_BINARY_WORK
         SUBD #$000A
         BCS DELUXE_CALLED_BALL_DISPLAY_TENS_DONE
         STD DELUXE_SUNK_BALL_SCORE_BINARY_WORK
-        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
+        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+3
         ADDA #$10
-        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
+        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+3
         BRA DELUXE_CALLED_BALL_DISPLAY_TENS_LOOP
 DELUXE_CALLED_BALL_DISPLAY_TENS_DONE:
-        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+5
+        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
         CMPA #DELUXE_SCORE_DISPLAY_BLANK_DIGIT
         BNE DELUXE_CALLED_BALL_DISPLAY_ONES
-        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
+        LDAA DELUXE_SUNK_BALL_SCORE_DIGITS+3
         BNE DELUXE_CALLED_BALL_DISPLAY_ONES
         LDAA #DELUXE_SCORE_DISPLAY_BLANK_DIGIT
-        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+4
+        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+3
 DELUXE_CALLED_BALL_DISPLAY_ONES:
         LDAB DELUXE_SUNK_BALL_SCORE_BINARY_WORK+1
         TBA
@@ -604,7 +616,7 @@ DELUXE_CALLED_BALL_DISPLAY_ONES:
         ASLA
         ASLA
         ASLA
-        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+3
+        STAA DELUXE_SUNK_BALL_SCORE_DIGITS+2
         JSR DELUXE_APPLY_SUNK_BALL_SCORE_DISPLAY
         PULX
         PULB
@@ -801,9 +813,10 @@ DELUXE_AFTER_FIRST_SINK:
 DELUXE_AFTER_EIGHT_BALL:
 ; CFAE calls this immediately after the original 8-ball completion sequence
 ; clears the balls-1-through-7 rack state. Award the active player's current
-; Called ball score and advance it by 10K playfield value, then treat the
+; Called ball score and advance it by 5K playfield value, then treat the
 ; committed 8-ball collect as one new-ball event for Deluxe and record the
-; completed rack. Saturating at 255 prevents theoretical counter/value wraps.
+; completed rack. The rack counter saturates at 255; the Called Ball helper
+; separately saturates its progression at the 50K playfield maximum.
 ; The activation helper is deliberately a no-op if the current stage is active,
 ; so an 8-ball is never queued for the following stage.
         JSR DELUXE_AWARD_AND_ADVANCE_CALLED_BALL_SCORE
@@ -925,7 +938,7 @@ DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
 ; collect state first so DELUXE_LOAD_ORBIT_STATE_FOR_SAVE takes its new-game
 ; path and stores the freshly initialized live orbit value instead of stale
 ; DELUXE_ORBIT_VALUE_STATE. Then clear the active Deluxe bonus counters, reset
-; Called ball score to 10K playfield value (one displayed thousand), and write
+; Called ball score to 5K playfield value (one displayed 500-point unit), and write
 ; all three values to the matching parallel record before executing the
 ; displaced original record initializer at C58C.
 ; A new game rebuilds all four canonical score displays, so discard any stale
@@ -936,8 +949,8 @@ DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
         CLR DELUXE_COLLECT_STATE
         CLR DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CLR DELUXE_COMPLETED_BALL_LETTERS
-        LDAA #$01
-        STAA DELUXE_CALLED_BALL_SCORE_1000S
+        LDAA #DELUXE_CALLED_BALL_INITIAL_500S
+        STAA DELUXE_CALLED_BALL_SCORE_500S
         JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
         JMP $c58c
 
@@ -961,7 +974,7 @@ DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS:
         STAA 0,X
         LDAA DELUXE_COMPLETED_BALL_LETTERS
         STAA 4,X
-        LDAA DELUXE_CALLED_BALL_SCORE_1000S
+        LDAA DELUXE_CALLED_BALL_SCORE_500S
         STAA 9,X
         PULX
         PULB
@@ -980,11 +993,11 @@ DELUXE_LOAD_ACTIVE_PLAYER_BONUS_COUNTERS:
         LDAA 9,X
         BNE DELUXE_LOAD_CALLED_BALL_SCORE
 ; A zero record predates Called ball score or is otherwise uninitialized.
-; Migrate it in place so the first award is 10K playfield / 1K displayed.
-        INCA
+; Migrate it in place so the first award is 5K playfield / 500 displayed.
+        LDAA #DELUXE_CALLED_BALL_INITIAL_500S
         STAA 9,X
 DELUXE_LOAD_CALLED_BALL_SCORE:
-        STAA DELUXE_CALLED_BALL_SCORE_1000S
+        STAA DELUXE_CALLED_BALL_SCORE_500S
         PULX
         PULB
         PULA
@@ -1122,8 +1135,9 @@ DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
         BRA DELUXE_FIRST_SINK_ACTIVATE_ORBIT
 
 DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION:
-; Called only after right orbit, spinner, or left orbit has changed from active
-; to the following inactive location. Relight 100,000 only after 5x has already
+; Called only after either orbit collect or spinner inactivity has changed from
+; active to the following inactive location. Relight 100,000 only after 5x has
+; already
 ; been collected. The post-5x waiting bit is set while 100,000 is dark; if it is
 ; clear, the award is already lit and this transition deliberately does nothing.
         LDAA $10c1

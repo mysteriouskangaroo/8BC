@@ -137,8 +137,9 @@ When the IDs differ, it applies Deluxe's divide-by-ten score scale to the
 normal 2,500 playfield value and awards **250 Deluxe points** through the
 current CHAMP playfield multiplier. When the IDs match, it instead awards that
 player's Called ball score through the same multiplier. The per-player value
-starts at 10,000 playfield / 1,000 displayed and advances by 10,000 playfield /
-1,000 displayed after each successful call. The collected 8-ball path at
+starts at 5,000 playfield / 500 displayed and advances by 5,000 playfield /
+500 displayed after each successful call, saturating at 50,000 playfield /
+5,000 displayed. The collected 8-ball path at
 `CFAE` also awards and advances this value. After restoring any reversible
 called-lamp overlay, that hook clears both the stale call ID at `10C4` and the
 16-bit reminder delay at `10B3-10B4`; the canonical selector can therefore
@@ -146,18 +147,18 @@ choose the new rack's first solid or stripe immediately instead of interpreting
 the 8-ball reminder as a numbered target. Active state is at `110E`; parallel
 player values are at `110F-1112` and use the existing `C4E6` new-game and
 `C603` player-restore hooks, so drains preserve the value while a new game
-resets every player to 10,000. Restore and award both normalize a zero legacy
-record to the initial value before scoring, allowing existing NVRAM to migrate
-without producing a zero-point first award.
+resets every player to 5,000. Award normalizes a zero legacy record to the
+initial value and clamps an earlier revision's above-cap value before scoring,
+allowing existing NVRAM to migrate without a zero or over-limit award.
 
 Both first-sink outcomes also start the reversible sunk-ball award display.
 The uncalled branch formats 250/500/750 directly from authoritative multiplier
-state `10C0`. The called-ball helper multiplies the pre-advance value at `110E`
-by the same 1x/2x/3x state, converts the resulting 1-765 displayed-thousands
-value to the canonical seven digit-byte format at `111F-1125`, and then queues
-the real score normally. Thus the visual value is the exact award for that hit,
-including the collected 8-ball path, rather than the later incremented Called
-ball value.
+state `10C0`. The called-ball helper treats the pre-advance value at `110E` as
+500-point units, multiplies it by the same 1x/2x/3x state, converts the resulting
+5-150 displayed-hundreds value to the canonical seven digit-byte format at
+`111F-1125`, and then queues the real score normally. Thus the visual value is
+the exact award for that hit, including the collected 8-ball path, rather than
+the later incremented Called ball value.
 
 On the first popup, `DELUXE_BEGIN_SUNK_BALL_SCORE_DISPLAY` copies the four
 seven-byte score buffers at `1046-1061` to `112B-1146` and records the scoring
@@ -239,7 +240,9 @@ inactive path substitutes command `31`, the command loaded by switch 29's
 500-point center-rollover handler at `CAA3`. Active orbit hits keep their
 original side-specific `29`/`2A` commands.
 
-An active hit on either side calls the canonical lit-orbit routine at `CB5C`,
+Both the opening (`03`) and repeating (`01`) active orbit encodings accept
+either physical rollover. An active hit on either side calls the canonical
+lit-orbit routine at `CB5C`,
 which awards the current value and runs the fast upward arrow chase. The right
 path first sends its existing command `2A` directly through `C27E`, reloads B
 with `2A` because the sender clobbers it, and enters the common helper that
@@ -250,9 +253,9 @@ snapshots `10FF` on the CPU stack before the call and restores it afterward.
 Its score, single side-specific sound, chase, and collect-location transition
 therefore still occur, but its arrow value does not advance.
 
-The left path then moves to right-orbit inactive and hides the shared physical
-arrow lamps by setting the low nibble of `1044`. The right path moves to
-spinner inactive and loads timer `1115` with `BF`. `DELUXE_PERIODIC_TICK` uses
+Both paths move to spinner inactive and hide the shared physical arrow lamps by
+setting the low nibble of `1044`. The right path additionally loads timer `1115`
+with `BF`. `DELUXE_PERIODIC_TICK` uses
 timer bit 4 to alternate `1044`'s low nibble between the retained value at
 `10FF` and all-off for roughly 3.2 seconds, matching the E-I-G-H-T spinner
 preview cadence. The preview changes only lamp output; scoring and collect
@@ -274,16 +277,15 @@ authorization before the original dispatch advances `10C1` to `08`. The first
 100,000 therefore lights immediately, independent of the collect feature, while
 the same `08` state keeps the end-of-ball bonus at 5x.
 
-The three paths that end an active collect call
+The three physical paths that end an active collect call
 `DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION` only after storing the next
-inactive state: the right-orbit chase advances to spinner inactive, spinner
-inactivity advances to left-orbit inactive, and the left-orbit chase advances
-to right-orbit inactive. The helper requires both `10C1` bit `08` and the
-waiting flag, then clears waiting and sets the generic collect-deactivation
-authorization. Consequently, every active collect can relight 100,000 after its
-previous award has been collected, while a completion during the initial lit
-award is a no-op. The inactive-to-active pool-ball helper has no 100,000 side
-effect.
+inactive state: either orbit chase advances to spinner inactive, and spinner
+inactivity advances to orbit inactive. The helper requires both `10C1` bit `08`
+and the waiting flag, then clears waiting and sets the generic
+collect-deactivation authorization. Consequently, every active collect can
+relight 100,000 after its previous award has been collected, while a completion
+during the initial lit award is a no-op. The inactive-to-active pool-ball helper
+has no 100,000 side effect.
 
 Collecting 100,000 awards the existing scaled 10,000 through its original
 multiplier-aware path, clears the authorization, and restores the waiting flag.

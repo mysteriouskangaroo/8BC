@@ -111,8 +111,8 @@ parallel arrays; active-player mirrors and temporary work remain shared.
 | `1105` | Bonus working state | B-A-L-L countdown, reloaded for each bonus-multiplier pass |
 | `1106-1109` | Persistent per-player array | Completed-rack counters for Players 1-4 |
 | `110A-110D` | Persistent per-player array | Completed B-A-L-L-letter counters for Players 1-4 |
-| `110E` | Active-player mirror | Selected player's Called ball score in displayed 1,000-point units |
-| `110F-1112` | Persistent per-player array | Called ball scores for Players 1-4 |
+| `110E` | Active-player mirror | Selected player's Called ball progression in displayed 500-point units (`1-10` = playfield `5,000-50,000`) |
+| `110F-1112` | Persistent per-player array | Called ball progressions for Players 1-4 |
 | `1113` | Lamp-overlay state | Called-ball lamp ID whose reversible flash overlay is applied |
 | `1114` | Timer | Temporary spinner-value preview countdown |
 | `1115` | Timer | Temporary orbit-value preview countdown after a right-orbit collect |

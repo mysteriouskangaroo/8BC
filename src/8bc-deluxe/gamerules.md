@@ -82,9 +82,14 @@ so. Activating the ones digit does not change Match probability or presentation.
 
 ## Deluxe collect feature
 
-The collect feature has six ordered states:
+The collect feature alternates between an **orbit stage** and a **spinner
+stage**, each with inactive and active phases:
 
-`right orbit inactive -> right orbit active -> spinner inactive -> spinner active -> left orbit inactive -> left orbit active -> right orbit inactive`
+`orbit inactive -> orbit active --either orbit--> spinner inactive -> spinner active -> orbit inactive`
+
+Internally, the opening and repeating orbit stages retain two legacy location
+encodings, but both accept either physical rollover and behave identically
+except for the side-specific value rule described below.
 
 In this section, a **newly sunk pool ball** means the first hit that changes
 that ball's bit in `$10C3` from clear to set and lights its sunk-ball lamp.
@@ -98,14 +103,14 @@ inactive. If the location is already active, the 8-ball has no collect-state
 effect and is not queued for the next location. An ordinary saucer hit that
 does not collect the lit 8-ball is not an activation event.
 
-1. Starting a new ball places the feature at **right orbit inactive**.
+1. Starting a new ball places the feature at **orbit inactive**.
 2. A newly sunk pool ball changes the current location from inactive to active;
    it does not change the location. Activating either orbit promotes the
    original 5,000 baseline to the printed 10,000 value so the orbit-value
    arrows visibly indicate the active collect.
-3. Collecting an active location clears its active state and advances to the
-   next location's inactive state. The next newly sunk ball is required to
-   activate that new location.
+3. Collecting either active orbit or the active spinner clears its active state
+   and advances to the other location's inactive state. The next newly sunk
+   ball is required to activate that location.
 4. Sinking additional new pool balls while the current location is already
    active has no collect-state effect. They are not queued for later stages.
 5. Hitting an inactive collect location does not advance the sequence.
@@ -129,16 +134,14 @@ completion milestones, or the C/P anti-shatz latch.
   the orbit is inactive or the collect is at the spinner, without losing the
   retained qualification. The original already-collected latch in `$10A0` bit
   `$20` prevents it from being relit after collection during the same ball.
-- When a newly sunk ball activates the collect feature at the left orbit, any
-  higher orbit value carried forward by the operator's retain setting is
-  preserved instead of being reduced to 10,000.
-- When the left-orbit collect is active, switch 12 awards the current shared
+- When a newly sunk ball activates either encoded orbit stage, any higher orbit
+  value carried forward by the operator's retain setting is preserved instead
+  of being reduced to 10,000.
+- During any active orbit stage, switch 12 awards the current shared
   orbit value using the original handler and runs the original fast upward
-  arrow-chase collect animation. Only after that animation finishes does it
-  hide the orbit-value arrows and move the feature to **right orbit inactive**.
-  It retains the collected arrow value; only an active right-orbit collect
-  advances that value by 10,000 (1,000 Deluxe points). A later newly sunk pool
-  ball must activate the right orbit.
+  arrow-chase collect animation. It then hides the orbit-value arrows and moves
+  the feature to **spinner inactive**. It retains the collected arrow value;
+  only the right rollover advances that value by 10,000 (1,000 Deluxe points).
 ### Spinner
 
 - An unlit spinner scores 10 points per spin and does not use the playfield
@@ -177,16 +180,15 @@ completion milestones, or the C/P anti-shatz latch.
   score.
 - Only after approximately two seconds with no further spinner pulse is the
   spinner considered to have stopped. The collect then closes and advances to
-  **left orbit inactive**; a later newly sunk pool ball must activate it.
+  **orbit inactive**; a later newly sunk pool ball must activate it.
 - Spinner value lamps are otherwise shown only while spinner is the active
   collect; the temporary E-I-G-H-T preview is the sole inactive exception.
 
 ### Right orbit
 
-- Activating the right orbit from the original 5,000 baseline lights the
-  printed 10,000 value, just as activation at the left orbit does. A higher
-  retained orbit value is preserved.
-- When the right-orbit collect is active, switch 13 awards the same shared
+- Activating either encoded orbit stage from the original 5,000 baseline lights
+  the printed 10,000 value. A higher retained orbit value is preserved.
+- During any active orbit stage, switch 13 awards the same shared
   orbit value as the left side and runs the original fast upward arrow-chase
   collect animation. Its existing sound command `$2A` is sent twice
   back-to-back before scoring and the chase, distinguishing the active right
@@ -206,10 +208,9 @@ completion milestones, or the C/P anti-shatz latch.
 - Collecting the lit 5x saucer step immediately advances to and lights the first
   100,000 award, irrespective of the collect feature's location or transition
   state. It also preserves the 5x end-of-ball bonus.
-- After that 100,000 has been collected and turned off, completing any of the
-  three active collect stages relights it:
-  right orbit active -> spinner inactive, spinner active -> left orbit inactive,
-  or left orbit active -> right orbit inactive. A completion before the first
+- After that 100,000 has been collected and turned off, either orbit collect
+  advancing to spinner inactive or spinner active advancing to orbit inactive
+  relights it. A completion before the first
   100,000 is available cannot advance or skip the 2x, 3x, or 5x saucer steps.
 - If 100,000 is already lit, later active-to-inactive transitions do nothing.
 - Collecting the lit 100,000 consumes that transition authorization and turns
@@ -241,12 +242,13 @@ completion milestones, or the C/P anti-shatz latch.
   After the ball is sunk, its numbered target lamp stops carrying the called
   indication; the next spoken selection moves the flash to the newly called
   target.
-- Called ball score begins at a 10,000 playfield value, displayed as 1,000
-  under Deluxe's divide-by-ten score scale. Every successful called ball
-  advances the next value by 10,000 playfield points: 10,000, 20,000, 30,000,
-  and so on (displayed as 1,000, 2,000, 3,000...).
+- Called ball score begins at a 5,000 playfield value, displayed as 500 under
+  Deluxe's divide-by-ten score scale. Every successful called ball advances the
+  next value by 5,000 playfield points: 5,000, 10,000, 15,000, and so on
+  (displayed as 500, 1,000, 1,500...). The value stops advancing at 50,000
+  playfield / 5,000 displayed.
 - Collecting the lit 8-ball to complete a rack always awards the current Called
-  ball score and then advances its next value by 10,000, even though balls 1-7
+  ball score and then advances its next value by 5,000, even though balls 1-7
   are the ones selected by the spoken call. It also restores any old called-
   target flash overlay, clears the old 8-ball reminder ID and delay, and lets
   the normal selector immediately call and flash the first target of the new
@@ -257,10 +259,11 @@ completion milestones, or the C/P anti-shatz latch.
   5,000 playfield-value path, displayed as 500 before multiplication.
 - Called ball score is stored separately for every player and survives drains
   and intervening players' turns. Starting a new game resets all four player
-  values to 10,000. The one-byte stored value saturates at a 2,550,000
-  playfield value (255,000 displayed) rather than wrapping to a lower value.
-  A zero/uninitialized value from an older NVRAM or saved game is migrated to
-  the initial 10,000 value before it can be awarded.
+  values to 5,000. The one-byte stored progression saturates at 50,000 rather
+  than wrapping or advancing farther. A zero/uninitialized value from an older
+  NVRAM or saved game is migrated to the initial 5,000 value before it can be
+  awarded; an above-cap value from an earlier Deluxe revision is clamped to
+  50,000 before scoring.
 
 ## Sunk-ball award display
 
@@ -427,11 +430,11 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   correct original "Eight Ball" ball-count phrase in one continuous flow,
   without a long pause or a cut-off command. Verify disabling speech still
   suppresses the sequence.
-- Start a new game and verify it begins at right-orbit inactive and the first
+- Start a new game and verify it begins at orbit inactive and the first
   newly sunk ball activates that same location.
-- Verify the complete sequence is right inactive -> right active -> spinner
-  inactive -> spinner active -> left inactive -> left active -> right
-  inactive, with a distinct newly sunk ball required for each activation.
+- Verify the repeating sequence is orbit inactive -> orbit active --either
+  orbit--> spinner inactive -> spinner active -> orbit inactive, with a
+  distinct newly sunk ball required for each activation.
 - Verify additional newly sunk balls while a location is already active do not
   move it and are not queued to activate the following location.
 - After reset, enter replay/extra-ball thresholds and High Score to Date at
@@ -455,8 +458,8 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   the first and restarts the timer. Drain during the blink and verify every
   displaced score is restored before the next player/ball begins.
 - Follow the spoken call and verify the first three successful called balls
-  award 1,000/2,000/3,000 at 1x, 2,000/4,000/6,000 at 2x, or
-  3,000/6,000/9,000 at 3x, replacing rather than adding the normal 250-point
+  award 500/1,000/1,500 at 1x, 1,000/2,000/3,000 at 2x, or
+  1,500/3,000/4,500 at 3x, replacing rather than adding the normal 250-point
   first-sink award. Verify an incorrect first sink does not advance the value.
 - Verify the individually numbered physical drop-target lamp for the spoken
   ball flashes: targets 1-7 for solids and 9-15 for stripes. Verify the five
@@ -464,13 +467,17 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   the called indication, and an incorrect sink leaves or moves it only as
   dictated by the next spoken call.
 - Complete a rack with the lit 8-ball and verify it awards the current Called
-  ball value, then advances that player's next value by 10,000 playfield
+  ball value, then advances that player's next value by 5,000 playfield
   points. Verify the old called lamp is restored and the new rack immediately
   calls and flashes ball 1 for solids or ball 9 for stripes, with no stale
   reminder delay or wrong target flash. Drain and verify the next ball retains
   the advanced value. In a
   four-player game, advance each player differently and verify their values
-  restore independently; start a new game and verify all return to 10,000.
+  restore independently; drain and verify each value persists. Start a new
+  game and verify all return to 5,000.
+- Advance Called Ball to 50,000 and verify successful calls and collected
+  8-balls continue awarding 5,000 displayed points at 1x (10,000 at 2x or
+  15,000 at 3x) without advancing or wrapping the stored value.
 - Verify collecting the lit 8-ball activates the current location when it is
   inactive, does nothing to an already-active collect state, and is never
   queued for the next location. Verify ordinary saucer hits do not activate it.
@@ -478,16 +485,15 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   and use the same sound as the playfield's 500-point center rollover. Verify
   the active left collect retains its original side-specific sound and the
   active right collect sends its original `$2A` sound twice back-to-back.
-- Verify the first active orbit collect lights the printed 10,000 insert (or
-  preserves a higher retained value) and scores 1,000. Verify a right collect
-  advances the shared printed value by 10,000 / Deluxe value by 1,000, while a
-  left collect retains the value it just awarded.
-- Verify collecting left and right hides their active orbit indication and
-  that a later activation restores the retained value. On each collect, verify
-  the original fast upward arrow chase completes before the collect location
-  advances. After a right collect, verify the newly advanced arrow value blinks
-  for approximately three seconds and then turns off; after a left collect,
-  verify the arrows turn off without a value preview.
+- Verify either rollover can collect during both the opening and repeating
+  active orbit stages. Both sides must score the current value, finish the
+  original fast upward arrow chase, hide the active orbit indication, and move
+  to spinner inactive.
+- Verify the right rollover advances the shared printed value by 10,000 /
+  Deluxe value by 1,000 and blinks that new value for approximately three
+  seconds. Verify the left rollover retains the value it just awarded and does
+  not show a false next-value preview. A later orbit activation must restore
+  the appropriate retained value in either case.
 - During the right-orbit value preview, activate the spinner with a newly sunk
   pool ball and verify the orbit preview is canceled immediately while the
   spinner's accumulated value is shown. Also trigger an E-I-G-H-T spinner
@@ -523,15 +529,15 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   current value becomes steady immediately.
 - Verify every spinner pulse restarts the inactivity window, a pulse inside two
   seconds continues scoring, and roughly two seconds with no pulse closes the
-  collect and advances it to the left orbit.
+  collect and advances it to the inactive orbit stage.
 - Verify the saucer displays and collects 2x, then 3x, then 5x without any
   collect transition changing or skipping those steps. Verify collecting 5x
   immediately lights the first 100,000 regardless of the current collect state.
   While it is already lit, complete another active collect and verify nothing
   changes. Collect 100,000, verify it awards 10,000 at 1x and turns off, then
-  verify right active -> spinner inactive, spinner active -> left inactive, and
-  left active -> right inactive can each relight it while end-of-ball bonus and
-  the 5x state remain unchanged.
+  verify either active orbit -> spinner inactive and spinner active -> orbit
+  inactive can each relight it while end-of-ball bonus and the 5x state remain
+  unchanged.
 - Complete at least four 8-ball racks in one ball and verify both 120K and 240K
   inserts blink together beginning with the fourth rack while every completed
   rack is still counted at drain. With six completed racks, verify the

@@ -120,7 +120,7 @@ The interactive rule checklist is in ../gamerules.md. For the spinner collect,
 each pulse during the active collection window must score and restart the
 approximately two-second inactivity timer. A further pulse inside that window
 continues the same collect. Only two seconds with no further pulse means the
-spinner has stopped and advances the collect to the left orbit.
+spinner has stopped and advances the collect to the inactive orbit stage.
 
 Source maintenance
 ------------------
