@@ -37,6 +37,7 @@
       .value-arrow { font-family: "Arial Black", Arial, sans-serif; font-size: 28px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; fill: #ff9a25; }
       .saucer-arrow { font-family: "Arial Black", Arial, sans-serif; font-size: 16px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; fill: #ff9a25; }
       .saucer-value { font-family: "Arial Black", Arial, sans-serif; font-size: 14px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; fill: #fff3c7; }
+      .saucer-key { font-family: "Arial Black", Arial, sans-serif; font-size: 12px; font-weight: 900; text-anchor: middle; fill: #ffbd31; }
     </style>
   </defs>
 
@@ -141,32 +142,32 @@
   <text class="number" x="111" y="565">4</text>
   <text class="rule-title" x="165" y="573">BONUS X SAUCER</text>
   <g>
-    <rect x="88" y="594" width="100" height="32" rx="16" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
-    <rect x="210" y="594" width="100" height="32" rx="16" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
-    <rect x="332" y="594" width="100" height="32" rx="16" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
-    <rect x="454" y="594" width="100" height="32" rx="16" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
-    <text class="value" x="138" y="611">2X</text>
-    <text class="saucer-arrow" x="199" y="611">&#8594;</text>
-    <text class="value" x="260" y="611">3X</text>
-    <text class="saucer-arrow" x="321" y="611">&#8594;</text>
-    <text class="value" x="382" y="611">5X</text>
-    <text class="saucer-arrow" x="443" y="611">&#8594;</text>
-    <text class="value" x="504" y="611">100K</text>
+    <rect x="88" y="600" width="100" height="30" rx="15" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="210" y="600" width="100" height="30" rx="15" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="332" y="600" width="100" height="30" rx="15" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="454" y="600" width="100" height="30" rx="15" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <text class="value" x="138" y="616">2X</text>
+    <text class="saucer-arrow" x="199" y="616">&#8594;</text>
+    <text class="value" x="260" y="616">3X</text>
+    <text class="saucer-arrow" x="321" y="616">&#8594;</text>
+    <text class="value" x="382" y="616">5X</text>
+    <text class="saucer-arrow" x="443" y="616">&#8594;</text>
+    <text class="value" x="504" y="616">100K</text>
   </g>
   <g>
-    <rect x="88" y="638" width="100" height="32" rx="16" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
-    <rect x="210" y="638" width="100" height="32" rx="16" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
-    <rect x="332" y="638" width="100" height="32" rx="16" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
-    <rect x="454" y="638" width="100" height="32" rx="16" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
-    <text class="saucer-value" x="138" y="655"><tspan class="accent">P </tspan><tspan>7X+100K</tspan></text>
-    <text class="saucer-arrow" x="199" y="655">&#8594;</text>
-    <text class="saucer-value" x="260" y="655"><tspan class="accent">P </tspan><tspan>8X+100K</tspan></text>
-    <text class="saucer-arrow" x="321" y="655">&#8594;</text>
-    <text class="saucer-value" x="382" y="655"><tspan class="accent">P </tspan><tspan>10X+100K</tspan></text>
-    <text class="saucer-arrow" x="443" y="655">&#8594;</text>
-    <text class="saucer-value" x="504" y="655"><tspan class="accent">P </tspan><tspan>100K &#8635;</tspan></text>
+    <rect x="88" y="641" width="100" height="30" rx="15" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="210" y="641" width="100" height="30" rx="15" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="332" y="641" width="100" height="30" rx="15" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="454" y="641" width="100" height="30" rx="15" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <text class="saucer-value" x="138" y="657"><tspan class="accent">P </tspan><tspan>7X+100K</tspan></text>
+    <text class="saucer-arrow" x="199" y="657">&#8594;</text>
+    <text class="saucer-value" x="260" y="657"><tspan class="accent">P </tspan><tspan>8X+100K</tspan></text>
+    <text class="saucer-arrow" x="321" y="657">&#8594;</text>
+    <text class="saucer-value" x="382" y="657"><tspan class="accent">P </tspan><tspan>10X+100K</tspan></text>
+    <text class="saucer-arrow" x="443" y="657">&#8594;</text>
+    <text class="saucer-value" x="504" y="657"><tspan class="accent">P </tspan><tspan>100K &#8635;</tspan></text>
   </g>
-  <text class="indicator-count" x="330" y="691">P = COMPLETE PROGRESSIVE COLLECT TO LIGHT</text>
+  <text class="saucer-key" x="330" y="691">P = COMPLETE PROGRESSIVE COLLECT TO LIGHT</text>
   </g>
 
   <!-- 5 ball: orange; three deliberately separated lines -->
