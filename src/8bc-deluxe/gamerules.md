@@ -51,8 +51,9 @@ so. Activating the ones digit does not change Match probability or presentation.
 - Spinner value/lamp state is stored at `$10B1`. The bit state is changed by completing the C-H-A-M-P rollovers. The three physical lamp bits are labeled 1,000, 3,000, and 5,000; their Deluxe awards are 100, 300, and 500. Any subsequent completion after the 5,000 lamp keeps that bit selected.
 - Switches 12 and 13 are the left and right rollover buttons. They enter the shared orbit-value handler at `$CB53` and `$CB4F`. Its first score-table entry calls `$C9EF`, establishing **500 Deluxe points** (original 5,000) as the unlit/default orbit score.
 - The original orbit-value handler keeps the left and right values synchronized, advances the printed lit value by 10,000 (1,000 Deluxe points), and honors the operator setting that controls whether that value is retained between balls. At the printed 100,000 state, it lights a special collect on each orbit and awards 10,000 Deluxe points per collection.
-- Switch 05 is the saucer/hole. State `$10C1` controls its progression through
-  the 2x, 3x, and 5x bonus multipliers to the terminal 100,000 insert.
+- Switch 05 is the saucer/hole. State `$10C1` controls the original progression
+  through 2x, 3x, and 5x to the terminal 100,000 insert. Deluxe RAM `$1149`
+  then extends the actual bonus multiplier through 7x, 8x, and 10x.
   Bit `$08` selects its repeatable 10,000-point Deluxe award at `$D070`,
   which is also affected by the current playfield multiplier. Once balls 1-7
   have been sunk (`$10C3 = $7F`), the saucer lights to collect the 8-ball. The
@@ -61,7 +62,8 @@ so. Activating the ones digit does not change Match probability or presentation.
   120K+240K; clears the sunk-ball state for a new rack; and then continues
   through the normal saucer scoring/progression code at `$D069`.
 - The original drain-bonus routine at `$C765` awards 1,500 Deluxe points for each sunk pool
-  ball and repeats that award pass for the selected 2x, 3x, or 5x bonus. Its
+  ball. Deluxe repeats that award pass for the selected 1x, 2x, 3x, 5x, 7x,
+  8x, or 10x bonus. Its
   completed-rack calculation originally used only the two 120K/240K lamp bits
   in `$1044`, which can encode no more than three completed racks.
 - New pool balls are recorded in `$10C3`; their first-sink path is `$CE07`.
@@ -203,23 +205,35 @@ completion milestones, or the C/P anti-shatz latch.
 
 ## Hole / saucer
 
-- The existing bonus progression remains 2x -> 3x -> 5x -> the 100,000 insert,
-  whose Deluxe award is 10,000.
+- The saucer progression is 2x -> 3x -> 5x -> 100,000 -> 7x + 100,000 ->
+  8x + 100,000 -> 10x + 100,000 -> repeatable 100,000 at 10x. The 100,000
+  playfield award is scaled to 10,000 displayed Deluxe points.
 - Collecting the lit 5x saucer step immediately advances to and lights the first
   100,000 award, irrespective of the collect feature's location or transition
   state. It also preserves the 5x end-of-ball bonus.
-- After that 100,000 has been collected and turned off, either orbit collect
+- Collecting the first standalone 100,000 turns every next-award lamp off. The
+  next qualifying collect transition makes 7x+100,000 blink together, while
+  the earned end-of-ball multiplier remains 5x until that saucer award is
+  collected. Its collection earns 7x and turns the next-award lamps off; the
+  following transition blinks 8x+100,000. The same sequence then blinks and
+  awards 10x+100,000. The inserts represent 7x as 2x+5x, 8x as 3x+5x, and
+  10x as 2x+3x+5x, with the complete combination and 100,000 blinking in phase.
+- After any terminal 100,000 has been collected and turned off, either orbit collect
   advancing to spinner inactive or spinner active advancing to orbit inactive
   relights it. A completion before the first
   100,000 is available cannot advance or skip the 2x, 3x, or 5x saucer steps.
 - If 100,000 is already lit, later active-to-inactive transitions do nothing.
-- Collecting the lit 100,000 consumes that transition authorization and turns
-  off 100,000. The bonus multiplier remains at 5x; only the live 100,000 flash
-  and award are disabled. The next active-to-inactive transition at any collect
-  stage relights one more scaled 10,000 award without replaying the bonus-
-  multiplier progression.
+- Collecting a lit terminal award consumes that transition authorization,
+  advances the multiplier when a 7x/8x/10x step remains, and turns off its
+  entire blinking combination. After 10x+100,000 is collected, every later
+  active-to-inactive transition blinks 100,000 alone; collecting it turns it
+  off again. This final qualify/collect pair repeats until ball drain. A saucer
+  hit while dark scores only its ordinary value, makes no multiplier callout,
+  and cannot advance the multiplier.
 - Once qualified, the scaled 10,000 award retains its original playfield-multiplier
   behavior.
+- Every terminal collection uses the original 100,000 sound; the extended
+  multiplier stages do not attempt new 7x, 8x, or 10x speech.
 - Bonus progression, collect-deactivation authorization, and the waiting state
   all reset when a new ball starts.
 
@@ -293,7 +307,7 @@ completion milestones, or the C/P anti-shatz latch.
   lamp output, remains authoritative for scoring.
 - At drain, each completed rack is worth `8 * 1,500 = 12,000`, and each ball
   already sunk in the unfinished current rack adds another 1,500 Deluxe points.
-- The existing 1x/2x/3x/5x end-of-ball bonus multiplier applies to the entire
+- The selected 1x/2x/3x/5x/7x/8x/10x end-of-ball bonus multiplier applies to the entire
   result. For example, six completed racks contribute `6 * 12,000` before
   the multiplier, plus 1,500 for each sunk ball in the current partial rack.
 - Each player's completed-rack counter carries across that player's balls and
@@ -326,7 +340,7 @@ completion milestones, or the C/P anti-shatz latch.
 - At drain, each completed B-A-L-L letter is worth five scaled 1,000-point
   E-I-G-H-T units, or 5,000. Each E-I-G-H-T letter collected toward the next
   B-A-L-L letter adds another 1,000.
-- The 1x/2x/3x/5x end-of-ball bonus multiplier applies to the complete result.
+- The 1x/2x/3x/5x/7x/8x/10x end-of-ball bonus multiplier applies to the complete result.
   Each player's counter carries across their later balls, saturates at 255,
   and resets only with a new game. The two-digit display caps at 99 without
   changing the scored count.
@@ -381,7 +395,7 @@ completion milestones, or the C/P anti-shatz latch.
 The original player records occupy four 13-byte slots at `$10C7-$10FA`.
 Each slot contains nine saved bytes plus four reserved stride bytes; the exact
 per-player and per-field layout is in [HARDWARE_MAP.md](ghidra/HARDWARE_MAP.md#u4-ram-canonical-per-player-record-slots).
-Deluxe begins at the next byte and uses `$10FB-$1148` for active state,
+Deluxe begins at the next byte and uses `$10FB-$114B` for active state,
 temporary bonus/display work, and parallel per-player counters. The
 [authoritative Deluxe allocation](ghidra/HARDWARE_MAP.md#u4-ram-deluxe-allocation)
 lists every assigned address, storage role, active-player mirror, reserved gap,
@@ -534,10 +548,17 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   collect transition changing or skipping those steps. Verify collecting 5x
   immediately lights the first 100,000 regardless of the current collect state.
   While it is already lit, complete another active collect and verify nothing
-  changes. Collect 100,000, verify it awards 10,000 at 1x and turns off, then
+  changes. Collect 100,000, verify it awards 10,000 at 1x and every next-award
+  lamp turns off, then
   verify either active orbit -> spinner inactive and spinner active -> orbit
-  inactive can each relight it while end-of-ball bonus and the 5x state remain
-  unchanged.
+  inactive can each relight it. Verify the first qualifying transition blinks
+  7x+100,000 (2x+5x+100,000 lamps) while bonus remains 5x. Its collection earns
+  7x and darkens the combination; the next transition blinks 8x+100,000
+  (3x+5x+100,000), and the following one blinks 10x+100,000
+  (2x+3x+5x+100,000). Verify collecting that award earns 10x and darkens it,
+  then every later transition blinks only 100,000 and every collection darkens
+  it again. At every stage, verify a dark saucer hit gives no 5x announcement
+  and does not advance, and an already-lit collect transition does nothing.
 - Complete at least four 8-ball racks in one ball and verify both 120K and 240K
   inserts blink together beginning with the fourth rack while every completed
   rack is still counted at drain. With six completed racks, verify the
@@ -552,7 +573,7 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   with the fifth completion, the fifth completion is retained in RAM, and the
   credit display changes to `05` after the rack
   bonus. At 1x, verify those five letters contribute 25,000, plus 1,000 for
-  each partial E-I-G-H-T letter; repeat at 2x/3x/5x to confirm multiplication.
+  each partial E-I-G-H-T letter; repeat at 2x/3x/5x/7x/8x/10x to confirm multiplication.
 - In a four-player game, give Player 1 four completed racks and five B-A-L-L
   letters, then play through Players 2-4. Verify Player 1's next ball restores
   `04` racks and `05` B-A-L-L letters for display and bonus, resumes both blink

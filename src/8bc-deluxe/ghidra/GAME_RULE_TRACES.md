@@ -268,29 +268,60 @@ spinner. The canonical `10A0` already-collected latch is deliberately not
 restored, so a left-side collection cannot repeat the original Special during
 the same ball even though the arrow value itself remains at the terminal state.
 
-## Saucer 100,000 relight qualification
+## Saucer multiplier progression and 100,000 relight qualification
 
 The saucer state in `10C1` still progresses through 2x (`01`), 3x (`02`), 5x
-(`04`), and the post-5x/100,000 state (`08`). When the player collects 5x,
-`DELUXE_HANDLE_HOLE_STATE` clears any stale waiting flag and sets the
-authorization before the original dispatch advances `10C1` to `08`. The first
-100,000 therefore lights immediately, independent of the collect feature, while
-the same `08` state keeps the end-of-ball bonus at 5x.
+(`04`), and the post-5x/100,000 state (`08`). `DELUXE_HANDLE_HOLE_STATE`
+records the actually collected multiplier numerically at `1149`: 1x initially,
+then 2x, 3x, and 5x. When the player collects 5x, the handler clears any stale
+waiting flag and sets the authorization before the original dispatch advances
+`10C1` to `08`. The first 100,000 therefore lights immediately, independent of
+the collect feature.
+
+`114B` records the terminal multiplier stage to display on the next qualifying
+transition. The first
+standalone 100,000 collection copies 5 from `114B` to the earned multiplier at
+`1149`, then advances `114B` to 7. A later relit 7x+100,000 collection copies
+7 to `1149` and advances the pending stage to 8; the following collections
+similarly produce earned/pending 8/10 and then 10/10. This preserves the original
+rule that a lit multiplier is earned when that stage is collected, not when it
+first appears.
+
+The active-low steady lamp shadow at `1043` represents the multiplier already
+earned: 5x (`BF`), 7x as 2x+5x (`AF`), 8x as 3x+5x (`9F`), and 10x as
+2x+3x+5x (`8F`). While waiting, `10C1` is the dormant `08` and the periodic
+XOR is suppressed, so the next-award lamps remain dark. A qualifying transition
+loads the complete blinking mask into `10C1`: `0D` for 7x+100,000, `0E` for
+8x+100,000, or `0F` for 10x+100,000. Once 10x has been earned, it loads `08`
+and therefore blinks 100,000 alone. The numeric byte at `1149`, never `114B`
+or a combined/blinking lamp mask, controls bonus scoring.
 
 The three physical paths that end an active collect call
 `DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION` only after storing the next
 inactive state: either orbit chase advances to spinner inactive, and spinner
 inactivity advances to orbit inactive. The helper requires both `10C1` bit `08`
-and the waiting flag, then clears waiting and sets the generic
-collect-deactivation authorization. Consequently, every active collect can
-relight 100,000 after its previous award has been collected, while a completion
-during the initial lit award is a no-op. The inactive-to-active pool-ball helper
-has no 100,000 side effect.
+and the waiting flag, then clears waiting, sets the generic
+collect-deactivation authorization, and installs the next full blinking mask.
+Consequently, every active collect can reveal exactly one pending award after
+its predecessor has been collected, while a completion during an already-lit
+award is a no-op. The inactive-to-active pool-ball helper has no saucer-relight
+side effect.
 
 Collecting 100,000 awards the existing scaled 10,000 through its original
-multiplier-aware path, clears the authorization, and restores the waiting flag.
-The next active-to-inactive transition at any collect stage can therefore
-relight exactly one more award.
+playfield-multiplier-aware path, plays the original 100,000 sound, advances the
+bonus stage if it is below 10x, clears the authorization, and restores the
+waiting flag while restoring `10C1` to dormant `08`. The next active-to-inactive
+transition at any collect stage can therefore reveal exactly one more award.
+After 10x+100,000, the revealed award is 100,000 alone and that qualify/collect
+cycle repeats until drain. An unarmed saucer hit bypasses the original terminal
+5x speech dispatch, scores only the ordinary saucer value, and cannot advance
+the multiplier.
+
+The original drain dispatchers inferred at most 5x from one-hot lamps. Deluxe
+hooks the rack phase at `C776` and the B-A-L-L/E-I-G-H-T phase at `C869`.
+Each loads the authoritative `1149` value, runs the complete bonus pass that
+many times, and uses `114A` only as a temporary countdown. This applies the
+same 1x/2x/3x/5x/7x/8x/10x multiplier to both bonus phases.
 
 ## E-I-G-H-T stand-up targets: scaled 2,500 per hit
 

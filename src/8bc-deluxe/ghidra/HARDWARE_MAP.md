@@ -94,12 +94,12 @@ speculative game-rule meaning.
 ### U4 RAM: Deluxe allocation
 
 Deluxe begins at `10FB`, the first byte after all four canonical slots. Its
-currently reserved envelope ends at `1148`. Persistent per-player values use
+currently reserved envelope ends at `114B`. Persistent per-player values use
 parallel arrays; active-player mirrors and temporary work remain shared.
 
 | Address | Storage role | Meaning |
 | --- | --- | --- |
-| `10FB` | Live rule state | Collect location in bits 0-1; active flag in bit 2; post-5x waiting flag in bit 6; collect-deactivation authorization in bit 7 |
+| `10FB` | Live rule state | Collect location in bits 0-1; active flag in bit 2; terminal saucer waiting flag in bit 6; collect-deactivation authorization in bit 7 |
 | `10FC` | Timer | Spinner inactivity countdown |
 | `10FD` | Current ball | C-H-A-M-P completion count for the current ball |
 | `10FE` | Live rule state | Spinner weighted binary value mask (`$20/$40/$80`) |
@@ -126,6 +126,9 @@ parallel arrays; active-player mirrors and temporary work remain shared.
 | `112B-1146` | Display backup | Backup of all four seven-digit player score buffers |
 | `1147` | Lamp-output state | Blink phase for rack and B-A-L-L "more" indications |
 | `1148` | Current ball | C/P anti-shatz rearm latch |
+| `1149` | Current ball | Authoritative numeric saucer bonus multiplier (`1`, `2`, `3`, `5`, `7`, `8`, or `10`) |
+| `114A` | Bonus working state | Remaining whole-bonus passes for the numeric multiplier dispatcher |
+| `114B` | Current ball | Next saucer multiplier stage to blink with 100,000 after qualification (`5`, `7`, `8`, or `10`) |
 
 The active-player mirrors at `1100`, `1104`, and `110E` are loaded from the
 selected player's array entries when the canonical restore path finishes and

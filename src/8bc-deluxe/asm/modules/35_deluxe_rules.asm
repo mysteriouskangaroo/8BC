@@ -150,6 +150,10 @@ DELUXE_INITIALIZE_BALL:
         CLR DELUXE_SPINNER_PREVIEW_TIMER
         CLR DELUXE_ORBIT_PREVIEW_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
+        LDAA #$01
+        STAA DELUXE_HOLE_BONUS_MULTIPLIER
+        STAA DELUXE_HOLE_NEXT_BONUS_MULTIPLIER
+        CLR DELUXE_BONUS_MULTIPLIER_PASSES_REMAINING
 ; Permit the first new C or P return-lane letter of each ball. H/A/M top-lane
 ; letters never use this latch.
         LDAA #DELUXE_CHAMP_INLANE_ARMED
@@ -915,6 +919,37 @@ DELUXE_RUN_BALL_BONUS_AND_RESTORE_CREDITS:
         STAA CREDIT_DISPLAY_TENS
         RTS
 
+DELUXE_RUN_RACK_BONUS_MULTIPLIER:
+; C776 enters after the canonical rack/ball state snapshots are complete.
+; Run the entire pool-rack bonus once per authoritative numeric multiplier
+; unit. C7A6 reloads the completed-rack count for every pass and returns at
+; C84A. RTS then returns directly to C765's original caller.
+        LDAA DELUXE_HOLE_BONUS_MULTIPLIER
+        STAA DELUXE_BONUS_MULTIPLIER_PASSES_REMAINING
+DELUXE_RUN_RACK_BONUS_PASS:
+        LDAA #$0b
+        JSR $c7a6
+        DEC DELUXE_BONUS_MULTIPLIER_PASSES_REMAINING
+        BNE DELUXE_RUN_RACK_BONUS_PASS
+        LDAA #$ff
+        STAA HOLE_BONUS_LAMP_SHADOW
+        RTS
+
+DELUXE_RUN_BALL_BONUS_MULTIPLIER:
+; C869 enters after the B-A-L-L/E-I-G-H-T snapshots are complete. C893
+; reloads the completed B-A-L-L count for each pass, then returns after the
+; complete partial-word bonus. Use the same authoritative multiplier as the
+; rack phase, and leave the saucer lamps dark when end-of-ball bonus finishes.
+        LDAA DELUXE_HOLE_BONUS_MULTIPLIER
+        STAA DELUXE_BONUS_MULTIPLIER_PASSES_REMAINING
+DELUXE_RUN_BALL_BONUS_PASS:
+        JSR $c893
+        DEC DELUXE_BONUS_MULTIPLIER_PASSES_REMAINING
+        BNE DELUXE_RUN_BALL_BONUS_PASS
+        LDAA #$ff
+        STAA HOLE_BONUS_LAMP_SHADOW
+        RTS
+
 DELUXE_AFTER_EIGHT_WORD_COMPLETION:
 ; CCD4 is reached exactly once after all five E-I-G-H-T targets have completed
 ; and the original animation is about to award the next B-A-L-L lamp. Count
@@ -1136,10 +1171,10 @@ DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
 
 DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION:
 ; Called only after either orbit collect or spinner inactivity has changed from
-; active to the following inactive location. Relight 100,000 only after 5x has
-; already
-; been collected. The post-5x waiting bit is set while 100,000 is dark; if it is
-; clear, the award is already lit and this transition deliberately does nothing.
+; active to the following inactive location. The waiting bit means the previous
+; saucer award was collected and the top lamps are dark. A qualifying transition
+; authorizes the saucer and makes the whole next award blink: 7x+100K, 8x+100K,
+; 10x+100K, then 100K alone after 10x has been earned.
         LDAA $10c1
         BITA #HOLE_100000_STATE
         BEQ DELUXE_COLLECT_DEACTIVATION_100000_DONE
@@ -1149,6 +1184,32 @@ DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION:
         ANDA #$bf
         ORAA #DELUXE_COLLECT_DEACTIVATION_AUTHORIZED
         STAA DELUXE_COLLECT_STATE
+; Once 10x has been earned, every later qualification relights only 100K.
+; Before then, blink the physical lamp combination for the next multiplier
+; together with 100K. Scoring continues to use the numeric bytes at 1149/114B.
+        LDAA DELUXE_HOLE_BONUS_MULTIPLIER
+        CMPA #$0a
+        BEQ DELUXE_RELIGHT_HOLE_100000_ONLY
+        LDAA DELUXE_HOLE_NEXT_BONUS_MULTIPLIER
+        CMPA #$07
+        BEQ DELUXE_RELIGHT_HOLE_7X_100000
+        CMPA #$08
+        BEQ DELUXE_RELIGHT_HOLE_8X_100000
+        CMPA #$0a
+        BEQ DELUXE_RELIGHT_HOLE_10X_100000
+DELUXE_RELIGHT_HOLE_100000_ONLY:
+        LDAA #HOLE_100000_STATE
+        BRA DELUXE_STORE_RELIT_HOLE_FLASH_MASK
+DELUXE_RELIGHT_HOLE_7X_100000:
+        LDAA #HOLE_NEXT_7X_100000_FLASH_MASK
+        BRA DELUXE_STORE_RELIT_HOLE_FLASH_MASK
+DELUXE_RELIGHT_HOLE_8X_100000:
+        LDAA #HOLE_NEXT_8X_100000_FLASH_MASK
+        BRA DELUXE_STORE_RELIT_HOLE_FLASH_MASK
+DELUXE_RELIGHT_HOLE_10X_100000:
+        LDAA #HOLE_NEXT_10X_100000_FLASH_MASK
+DELUXE_STORE_RELIT_HOLE_FLASH_MASK:
+        STAA $10c1
 DELUXE_COLLECT_DEACTIVATION_100000_DONE:
         RTS
 
@@ -1233,14 +1294,37 @@ DELUXE_NEW_EIGHT_LETTER_DONE:
 
 DELUXE_HANDLE_HOLE_STATE:
 ; D069 jumps here after canonical sound/effect setup. The low nibble progresses
-; independently through 2x ($01), 3x ($02), and 5x ($04). A hit while 5x is
-; showing collects 5x, reaches terminal 100,000 ($08), and lights its first
-; award immediately. Only later relights require active-to-inactive transitions.
+; independently through 2x ($01), 3x ($02), and 5x ($04). Those collections
+; update the numeric bonus multiplier to 2, 3, and 5. A hit while 5x is showing
+; reaches terminal 100,000 ($08) and lights its first award immediately. Each
+; authorized terminal collection earns the currently displayed stage and then
+; reveals the next 5x -> 7x -> 8x -> 10x stage; 10x is retained thereafter.
+; Every later 100K still requires the existing collect active-to-inactive
+; relight transition.
         LDAA $10c1
         BITA #HOLE_100000_STATE
         BNE DELUXE_HOLE_TERMINAL_STATE
         BITA #HOLE_BONUS_5X_STATE
-        BEQ DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH
+        BNE DELUXE_HOLE_COLLECT_5X
+        BITA #HOLE_BONUS_3X_STATE
+        BNE DELUXE_HOLE_COLLECT_3X
+        BITA #HOLE_BONUS_2X_STATE
+        BNE DELUXE_HOLE_COLLECT_2X
+        BRA DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH
+DELUXE_HOLE_COLLECT_2X:
+        LDAB #$02
+        STAB DELUXE_HOLE_BONUS_MULTIPLIER
+        STAB DELUXE_HOLE_NEXT_BONUS_MULTIPLIER
+        BRA DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH
+DELUXE_HOLE_COLLECT_3X:
+        LDAB #$03
+        STAB DELUXE_HOLE_BONUS_MULTIPLIER
+        STAB DELUXE_HOLE_NEXT_BONUS_MULTIPLIER
+        BRA DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH
+DELUXE_HOLE_COLLECT_5X:
+        LDAB #$05
+        STAB DELUXE_HOLE_BONUS_MULTIPLIER
+        STAB DELUXE_HOLE_NEXT_BONUS_MULTIPLIER
 ; Let the original state dispatch advance 5x to 100,000. Clear any stale
 ; waiting state and authorize this initial 100,000 independently of the collect
 ; feature; transitions are required only after this award has been collected.
@@ -1254,41 +1338,44 @@ DELUXE_HOLE_TERMINAL_STATE:
         LDAB DELUXE_COLLECT_STATE
         BITB #DELUXE_COLLECT_DEACTIVATION_AUTHORIZED
         BNE DELUXE_HOLE_AWARD_ARMED_100000
-; At the post-5x state without authorization, retain $08 so the bonus remains
-; 5x, keep 100K hidden, and award only the ordinary saucer value.
+; At the terminal state without authorization, retain $08 as the dormant 100K
+; state, preserve the authoritative earned multiplier, keep every next-award
+; lamp dark, and award only the ordinary saucer value. Bypass D08C because its
+; original terminal-state dispatch would announce 5x even though nothing is lit.
         LDAA DELUXE_COLLECT_STATE
         ORAA #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
         STAA DELUXE_COLLECT_STATE
         JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER
-        LDAA $10c1
-        JMP $d08c
+        LDAA #HOLE_100000_STATE
+        STAA $10c1
+        JMP $d0b4
 
 DELUXE_HOLE_AWARD_ARMED_100000:
 ; Reproduce the canonical D070-D078 terminal award, then consume this collect-
-; deactivation authorization. Keep $10C1 at $08 so the bonus remains 5x, store the
-; unarmed condition in the separate waiting flag, and force the 100K flash
-; phase off. A later active-to-inactive collect transition can reveal one more.
+; deactivation authorization. Collect the currently blinking bonus stage, then
+; advance the numeric next stage. Store the dormant $08 state and the waiting
+; condition so all next-award lamps remain dark until a collect transition.
         JSR $c96c
         LDAA #$36
         JSR $c27e
+        JSR DELUXE_ADVANCE_HOLE_BONUS_MULTIPLIER
         LDAA DELUXE_COLLECT_STATE
         ANDA #$7f
         ORAA #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
         STAA DELUXE_COLLECT_STATE
-        LDAA HOLE_BONUS_LAMP_SHADOW
-        ORAA #HOLE_100000_STATE
-        STAA HOLE_BONUS_LAMP_SHADOW
+        LDAA #HOLE_100000_STATE
+        STAA $10c1
         JMP $d0b4
 
 DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH:
         JMP $d06c
 
 DELUXE_APPLY_HOLE_FLASH_MASK:
-; C1BC originally XORed $10C1 directly into the hole lamp shadow. State $08
-; must remain set after 5x is collected because drain bonus reads that state,
-; but its low bit also flashes 100K. Suppress only that XOR while the post-5x
-; award is waiting for another collect deactivation. Preserve B for the periodic
-; lamp-refresh caller.
+; C1BC originally XORed $10C1 directly into the hole lamp shadow. Deluxe uses
+; the same path for a complete blinking next-award mask ($0D/$0E/$0F), while
+; the separate numeric bytes remain authoritative for drain bonus. Suppress the
+; XOR while waiting so no top award is advertised before qualification.
+; Preserve B for the periodic lamp-refresh caller.
         PSHB
         LDAB DELUXE_COLLECT_STATE
         BITB #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
@@ -1296,6 +1383,65 @@ DELUXE_APPLY_HOLE_FLASH_MASK:
         EORA $10c1
 DELUXE_HOLE_FLASH_DONE:
         PULB
+        RTS
+
+DELUXE_ADVANCE_HOLE_BONUS_MULTIPLIER:
+; Collect the stage that was visible with 100K. The first standalone 100K has
+; next=5, so it keeps the earned multiplier at 5 while making 7x pending. The
+; next qualified hit collects 7x+100K, stores earned=7, and makes 8x pending.
+        LDAA DELUXE_HOLE_NEXT_BONUS_MULTIPLIER
+        STAA DELUXE_HOLE_BONUS_MULTIPLIER
+        CMPA #$05
+        BEQ DELUXE_HOLE_SET_7X
+        CMPA #$07
+        BEQ DELUXE_HOLE_SET_8X
+        CMPA #$08
+        BEQ DELUXE_HOLE_SET_10X
+; Ten is terminal. A defensive unexpected value also normalizes to 10 so a
+; corrupt stage cannot wrap or create a zero-pass end-of-ball bonus.
+        LDAA #$0a
+        BRA DELUXE_HOLE_STORE_EXTENDED_MULTIPLIER
+DELUXE_HOLE_SET_7X:
+        LDAA #$07
+        BRA DELUXE_HOLE_STORE_EXTENDED_MULTIPLIER
+DELUXE_HOLE_SET_8X:
+        LDAA #$08
+        BRA DELUXE_HOLE_STORE_EXTENDED_MULTIPLIER
+DELUXE_HOLE_SET_10X:
+        LDAA #$0a
+DELUXE_HOLE_STORE_EXTENDED_MULTIPLIER:
+        STAA DELUXE_HOLE_NEXT_BONUS_MULTIPLIER
+        RTS
+
+DELUXE_FINISH_HOLE_ANIMATION:
+; Reproduce D0B4's displaced delay, then restore the active-low steady lamps
+; for the multiplier actually earned. The low nibble stays $F; periodic refresh
+; alone overlays the relit next-award mask from $10C1. This keeps the next award
+; dark while waiting and prevents the future multiplier from appearing steady.
+        LDAB #$3c
+        JSR $c919
+        LDAA DELUXE_HOLE_BONUS_MULTIPLIER
+        CMPA #$05
+        BEQ DELUXE_HOLE_SHOW_5X
+        CMPA #$07
+        BEQ DELUXE_HOLE_SHOW_7X
+        CMPA #$08
+        BEQ DELUXE_HOLE_SHOW_8X
+        CMPA #$0a
+        BNE DELUXE_FINISH_HOLE_ANIMATION_DONE
+        LDAA #HOLE_BONUS_10X_LAMP_SHADOW
+        BRA DELUXE_HOLE_STORE_LAMP_SHADOW
+DELUXE_HOLE_SHOW_5X:
+        LDAA #HOLE_BONUS_5X_LAMP_SHADOW
+        BRA DELUXE_HOLE_STORE_LAMP_SHADOW
+DELUXE_HOLE_SHOW_7X:
+        LDAA #HOLE_BONUS_7X_LAMP_SHADOW
+        BRA DELUXE_HOLE_STORE_LAMP_SHADOW
+DELUXE_HOLE_SHOW_8X:
+        LDAA #HOLE_BONUS_8X_LAMP_SHADOW
+DELUXE_HOLE_STORE_LAMP_SHADOW:
+        STAA HOLE_BONUS_LAMP_SHADOW
+DELUXE_FINISH_HOLE_ANIMATION_DONE:
         RTS
 
 DELUXE_LOAD_ORBIT_STATE_FOR_SAVE:

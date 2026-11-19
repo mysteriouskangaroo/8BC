@@ -94,6 +94,11 @@ DELUXE_MORE_LAMPS_FLASH_PHASE                 equ $1147
 ; Per-ball anti-shatz latch for the C/P return lanes only. A newly awarded
 ; inlane letter locks C/P progress until a whitelisted shot rearms it.
 DELUXE_CHAMP_INLANE_REARMED                    equ $1148
+; Keep the earned saucer multiplier separate from the pending terminal stage
+; that will blink after qualification and from the active-low lamp combinations.
+DELUXE_HOLE_BONUS_MULTIPLIER                    equ $1149
+DELUXE_BONUS_MULTIPLIER_PASSES_REMAINING        equ $114A
+DELUXE_HOLE_NEXT_BONUS_MULTIPLIER               equ $114B
 
 PLAYER_SCORE_DISPLAY_START                    equ $1046
 PLAYER_SCORE_DISPLAY_END                      equ $1062
@@ -122,6 +127,18 @@ HOLE_BONUS_2X_STATE                          equ $01
 HOLE_BONUS_3X_STATE                          equ $02
 HOLE_BONUS_5X_STATE                          equ $04
 HOLE_100000_STATE                            equ $08
+; Active-low steady earned-multiplier lamps in HOLE_BONUS_LAMP_SHADOW. The
+; low nibble remains off until the periodic refresh XORs in the relit next-award
+; mask from $10C1.
+HOLE_BONUS_5X_LAMP_SHADOW                    equ $BF
+HOLE_BONUS_7X_LAMP_SHADOW                    equ $AF
+HOLE_BONUS_8X_LAMP_SHADOW                    equ $9F
+HOLE_BONUS_10X_LAMP_SHADOW                   equ $8F
+; Blinking next-award combinations. Physical 7x/8x/10x are represented by
+; combinations of the original 2x, 3x, and 5x lamps plus the 100K lamp.
+HOLE_NEXT_7X_100000_FLASH_MASK                equ $0D
+HOLE_NEXT_8X_100000_FLASH_MASK                equ $0E
+HOLE_NEXT_10X_100000_FLASH_MASK               equ $0F
 
 DELUXE_SPINNER_1000_LAMP                     equ $20
 DELUXE_SPINNER_3000_LAMP                     equ $40

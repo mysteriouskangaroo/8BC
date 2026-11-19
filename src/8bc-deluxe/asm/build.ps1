@@ -116,7 +116,7 @@ $canonicalPlayerRecordCount = 4
 $canonicalPlayerRecordEnd = $canonicalPlayerRecordStart +
     ($canonicalPlayerRecordStride * $canonicalPlayerRecordCount) - 1
 $deluxeRamStart = Get-DasmSymbolAddress 'DELUXE_COLLECT_STATE'
-$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_CHAMP_INLANE_REARMED'
+$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_HOLE_NEXT_BONUS_MULTIPLIER'
 if ($deluxeRamStart -ne ($canonicalPlayerRecordEnd + 1)) {
     throw "Deluxe RAM must begin at $('$' + ($canonicalPlayerRecordEnd + 1).ToString('X4')) immediately after the four canonical player slots; found $('$' + $deluxeRamStart.ToString('X4'))."
 }
@@ -145,11 +145,13 @@ $deluxeHookChecks = @(
     @{ Address = 0xC75C; Opcode = 0xBD; Target = 'DELUXE_SHOW_BALL_COUNT_AFTER_RACK_BONUS'; Name = 'B-A-L-L-count credit-display transition' }
     @{ Address = 0xC762; Opcode = 0x7E; Target = 'DELUXE_RUN_BALL_BONUS_AND_RESTORE_CREDITS'; Name = 'B-A-L-L bonus and credit-display restore' }
     @{ Address = 0xC765; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BALL_BONUS_DISPLAY'; Name = 'rack-count credit-display override' }
+    @{ Address = 0xC776; Opcode = 0x7E; Target = 'DELUXE_RUN_RACK_BONUS_MULTIPLIER'; Name = 'extended rack-bonus multiplier dispatcher' }
     @{ Address = 0xC7A6; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BONUS_PASS'; Name = 'completed-rack bonus-pass setup' }
     @{ Address = 0xC809; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_RACK_BONUS'; Name = 'completed-rack bonus loop' }
     @{ Address = 0xC893; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BALL_LETTER_BONUS_PASS'; Name = 'completed B-A-L-L bonus-pass setup' }
     @{ Address = 0xC8A0; Bytes = [byte[]](0x10);             Name = 'faster B-A-L-L bonus-pass delay' }
     @{ Address = 0xC8A6; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS'; Name = 'completed B-A-L-L bonus loop' }
+    @{ Address = 0xC869; Opcode = 0x7E; Target = 'DELUXE_RUN_BALL_BONUS_MULTIPLIER'; Name = 'extended B-A-L-L/E-I-G-H-T multiplier dispatcher' }
     @{ Address = 0xC912; Bytes = [byte[]](0x09);             Name = 'faster E-I-G-H-T bonus-letter delay' }
     @{ Address = 0xC9A6; Bytes = [byte[]](0xB6, 0x10, 0xC0, 0x84, 0x30); Name = 'multiplier-aware variable-thousands award entry' }
     @{ Address = 0xCAE4; Opcode = 0x7E; Target = 'DELUXE_ACCEPT_NEW_CHAMP_LETTER'; Name = 'C/P-only anti-shatz CHAMP acceptance gate' }
@@ -165,6 +167,8 @@ $deluxeHookChecks = @(
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
     @{ Address = 0xCFAE; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_BALL'; Name = 'collected 8-ball activation handler' }
     @{ Address = 0xD069; Opcode = 0x7E; Target = 'DELUXE_HANDLE_HOLE_STATE'; Name = 'saucer progression handler' }
+    @{ Address = 0xD0B4; Opcode = 0xBD; Target = 'DELUXE_FINISH_HOLE_ANIMATION'; Name = 'extended saucer multiplier lamp restore' }
+    @{ Address = 0xD0B7; Bytes = [byte[]](0x01, 0x01); Name = 'saucer lamp hook fixed-address padding' }
     @{ Address = 0xF3B2; Bytes = [byte[]](0xCE, 0x00, 0x01); Name = 'canonical 10-point queue maps to displayed 1' }
     @{ Address = 0xF3C4; Bytes = [byte[]](0xCE, 0x00, 0x10); Name = 'canonical 100-point queue maps to displayed 10' }
     @{ Address = 0xF3D6; Bytes = [byte[]](0xCE, 0x01, 0x00); Name = 'canonical 1,000-point queue maps to displayed 100' }

@@ -285,7 +285,9 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         JMP DELUXE_RUN_BALL_BONUS_AND_RESTORE_CREDITS         ; $C762: run the B-A-L-L phase, then restore actual credits
         JSR DELUXE_BEGIN_BALL_BONUS_DISPLAY                   ; $C765: temporarily show completed racks on the credit display
         dc.b $B6,$10,$44,$84,$60                             ; $C768 original bonus-state capture continues
-        dc.b $B7,$10,$BA,$B6,$10,$C3,$B7,$10,$BC,$B6,$10,$43,$85,$40,$26,$0D ; $C76D data/unclassified
+        dc.b $B7,$10,$BA,$B6,$10,$C3,$B7,$10,$BC             ; $C76D original rack-bonus state capture
+        JMP DELUXE_RUN_RACK_BONUS_MULTIPLIER                  ; $C776: run the authoritative 1x/2x/3x/5x/7x/8x/10x pass count
+        dc.b $85,$40,$26,$0D                                  ; $C779 superseded original multiplier dispatch
         dc.b $86,$03,$8D,$25,$86,$05,$8D,$21,$86,$DF,$B7,$10,$43,$85,$20,$26 ; $C77D data/unclassified
         dc.b $09,$86,$07,$8D,$14,$86,$EF,$B7,$10,$43,$85,$10,$26,$04,$86,$09 ; $C78D data/unclassified
         dc.b $8D,$07,$86,$FF,$B7,$10,$43,$86,$0B             ; $C79D original bonus-pass dispatch tail
@@ -322,7 +324,8 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         dc.b $FF,$10,$B7                                     ; $C855 unconfirmed: STX $10b7
         dc.b $39                                             ; $C858 unconfirmed: RTS
         dc.b $B6,$10,$45,$8A,$E0,$B7,$10,$BA,$B6,$10,$41,$8A,$F0,$B7,$10,$BC ; $C859 data/unclassified
-        dc.b $B6,$10,$43,$85,$40,$26,$0B,$BD,$C8,$93,$BD,$C8,$93,$86,$DF,$B7 ; $C869 data/unclassified
+        JMP DELUXE_RUN_BALL_BONUS_MULTIPLIER                  ; $C869: apply the same multiplier to B-A-L-L/E-I-G-H-T bonus
+        dc.b $85,$40,$26,$0B,$BD,$C8,$93,$BD,$C8,$93,$86,$DF,$B7 ; $C86C superseded original multiplier dispatch
         dc.b $10,$43,$85,$20,$26,$08,$BD,$C8,$93,$86,$EF,$B7,$10,$43,$85,$10 ; $C879 data/unclassified
         dc.b $26,$08,$BD,$C8,$93,$86,$FF,$B7,$10,$43         ; $C889 original multiplier dispatch tail
         JSR DELUXE_BEGIN_BALL_LETTER_BONUS_PASS               ; $C893: reload the true B-A-L-L count for this multiplier pass

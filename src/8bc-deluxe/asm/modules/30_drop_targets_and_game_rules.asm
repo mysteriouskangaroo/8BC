@@ -202,7 +202,11 @@ AWARD_LIT_DROP_TARGET_5000:
         dc.b $36,$BD,$C9,$C4,$32,$16,$C4,$80,$F7,$10,$C1,$48,$BA,$10,$C1,$B7 ; $D07A data/unclassified
         dc.b $10,$C1,$C6,$FF,$F7,$10,$43,$48,$48,$48,$43,$B7,$10,$43,$F6,$10 ; $D08A data/unclassified
         dc.b $C1,$58,$58,$58,$58,$CE,$01,$68,$FF,$10,$B3,$86,$7E,$4A,$58,$24 ; $D09A data/unclassified
-        dc.b $FC,$BD,$C2,$7E,$CE,$02,$58,$FF,$10,$B3,$C6,$3C,$BD,$C9,$19,$86 ; $D0AA data/unclassified
+        dc.b $FC,$BD,$C2,$7E,$CE,$02,$58,$FF,$10,$B3         ; $D0AA original saucer animation tail
+        JSR DELUXE_FINISH_HOLE_ANIMATION                      ; $D0B4: preserve extended multiplier lamps after the delay
+        NOP                                                   ; $D0B7 fixed-address padding
+        NOP                                                   ; $D0B8 fixed-address padding
+        dc.b $86                                              ; $D0B9 original LDAA opcode
         dc.b $07,$C6,$06,$BD,$F5,$C2,$B6,$10,$26,$84,$EF,$B7,$10,$26 ; $D0BA data/unclassified
         dc.b $39                                             ; $D0C8 unconfirmed: RTS
         dc.b $7F,$10,$C6,$7F,$10,$AF,$CE,$03,$B6,$FF,$10,$B3 ; $D0C9 data/unclassified
