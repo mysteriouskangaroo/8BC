@@ -398,15 +398,22 @@ DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
 ; DELUXE_RUN_ORIGINAL_LIT_ORBIT. At the terminal value, there is no advance to
 ; announce: use the left orbit's single collect sound instead.
         LDAA DELUXE_ORBIT_VALUE_STATE
-        BEQ DELUXE_SCORE_TERMINAL_RIGHT_ORBIT
+        BEQ DELUXE_RUN_TERMINAL_RIGHT_ORBIT
         LDAA #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
         JSR $c27e
         LDAB #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
-        BRA DELUXE_RUN_ACTIVE_RIGHT_ORBIT
-DELUXE_SCORE_TERMINAL_RIGHT_ORBIT:
-        LDAB #LEFT_ORBIT_ACTIVE_SOUND_COMMAND
-DELUXE_RUN_ACTIVE_RIGHT_ORBIT:
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
+        BRA DELUXE_AFTER_RIGHT_ORBIT_SCORE
+DELUXE_RUN_TERMINAL_RIGHT_ORBIT:
+; The canonical terminal collector independently requests loud Special sound
+; $6F after the normal orbit sound. Suppress only that one request so this hit
+; retains the same ding as the left rollover while all Special award, latch,
+; adjustment, and knocker processing still runs.
+        LDAA #$01
+        STAA DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND
+        BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
+        CLR DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND
+DELUXE_AFTER_RIGHT_ORBIT_SCORE:
         BSR DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_STEP
 DELUXE_FINISH_ACTIVE_ORBIT_WITH_PREVIEW:
         LDAA DELUXE_COLLECT_STATE
@@ -1721,6 +1728,20 @@ DELUXE_PREPEND_STARTUP_SUPER:
         JSR $c27e
         LDAB $161f
         JMP $c470
+
+DELUXE_HANDLE_SPECIAL_COLLECT_SOUND:
+; C1D6 routes every normal Special sound request here. A maxed right-orbit
+; collect sets a one-shot flag immediately around the canonical orbit routine;
+; consume it by skipping only command $6F and continue at the common Special
+; award path. All other collectors reproduce the original sound call.
+        TST DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND
+        BEQ DELUXE_PLAY_NORMAL_SPECIAL_SOUND
+        CLR DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND
+        JMP SPECIAL_COLLECT_COMMON
+DELUXE_PLAY_NORMAL_SPECIAL_SOUND:
+        LDAA #$6f
+        JSR $c27e
+        JMP SPECIAL_COLLECT_COMMON
 
 DELUXE_AWARD_SPECIAL_POINTS:
 ; All original special collectors converge at C1DB. Award an additional

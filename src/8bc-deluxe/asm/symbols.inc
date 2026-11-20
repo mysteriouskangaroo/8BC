@@ -76,6 +76,7 @@ DELUXE_PLAYER_CALLED_BALL_SCORE_500S          equ $110F
 DELUXE_CALLED_BALL_FLASH_APPLIED_ID          equ $1113
 DELUXE_SPINNER_PREVIEW_TIMER                 equ $1114
 DELUXE_ORBIT_PREVIEW_TIMER                   equ $1115
+DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND           equ $1116
 DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1119
 ; Temporary sunk-ball award display. The seven digit bytes use the canonical
 ; player-score layout (ones first, digit in the high nibble). While active,

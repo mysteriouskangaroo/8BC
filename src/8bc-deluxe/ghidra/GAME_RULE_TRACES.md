@@ -251,10 +251,15 @@ which awards the current value and runs the fast upward arrow chase. The right
 path first checks retained value `10FF`. Before the terminal state, it sends
 its existing command `2A` directly through `C27E`, reloads B with `2A` because
 the sender clobbers it, and enters the common helper that sends `2A` again
-immediately before `CB5C`. At terminal value `00`, it instead enters that
-helper once with the left collect's command `29`, which was also substituted
-before the pending command was queued, since no value advance remains to
-announce. The helper accepts the routine's next low-nibble value from `1044`
+immediately before `CB5C`. At terminal value `00`, command `29` is substituted
+before the pending command is queued, but no selector is reloaded after the
+gate. The right path therefore enters the helper once with the same post-gate B
+state as the working left collect sound path. Before entering the canonical
+terminal collector, it sets the one-shot byte at `1116`. The context-aware hook
+at `C1D6` consumes that byte and skips only the otherwise independent `$6F`
+Special sound, then continues at `C1DB`; the Special score, collected latch,
+operator adjustment, and knocker behavior remain intact. Every other Special
+request still sends `$6F`. The helper accepts the routine's next low-nibble value from `1044`
 and copies it to retained Deluxe state `10FF`, advancing the printed value by
 10,000 playfield points. The left path now keeps that one canonical step. The
 right path applies one additional state-only step after the canonical routine,

@@ -127,8 +127,8 @@ FLASH_CHAMP_MULTIPLIER_LAMPS:
 SPECIAL_COLLECT_WITH_SOUND:
 ; Most special collectors enter here: play sound $6F, then fall through to
 ; the common award path. One original caller enters the common path directly.
-        LDAA #$6f                    ; $C1D6
-        JSR $c27e                    ; $C1D8
+        JMP DELUXE_HANDLE_SPECIAL_COLLECT_SOUND ; $C1D6 context-aware sound gate
+        dc.b $01,$01                 ; $C1D9 fixed-address padding
 SPECIAL_COLLECT_COMMON:
 ; Every confirmed original special collection converges at C1DB before the
 ; adjustment-controlled award/knocker processing. Deluxe adds points once,

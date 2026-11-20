@@ -199,8 +199,11 @@ completion milestones, or the C/P anti-shatz latch.
   collect animation. Before the value is maxed, its existing sound command
   `$2A` is sent twice back-to-back before scoring and the chase, distinguishing
   an advance-plus-collect from an ordinary right-orbit hit. At the terminal
-  value, `$29` replaces `$2A` before the switch sound is queued, and the path
-  uses the same single collect sound as the left orbit.
+  value, `$29` replaces `$2A` before the switch sound is queued; after the gate,
+  the path preserves the same B state used by the working left-orbit collect
+  sound instead of forcing another selector. It also suppresses the canonical
+  terminal collector's separate loud `$6F` request for this hit only; the
+  Special award, latch, adjustment, and knocker still run normally.
   Only after that animation finishes does it advance the printed value by
   20,000 (2,000 Deluxe points) and move to
   **spinner inactive**. The newly advanced arrow value then blinks for
