@@ -11,9 +11,10 @@ digit and makes the formerly unused ones digit meaningful. The end-of-ball
 bonus bypasses those queues and is scaled separately at its two direct BCD
 score-adder call sites. Thus original 10 scores 1, original 4,500 scores 450,
 original 15,000 bonus scores 1,500, and original 250,000 scores 25,000.
-Relative values, playfield multipliers, bonus multipliers, score sounds, and
-award timing are unchanged. The seven-digit display can represent the
-equivalent of 99,999,990 original points as a Deluxe score of 9,999,999.
+Relative values, playfield multipliers, bonus multipliers, and score sounds are
+unchanged. End-of-ball countdown timing is faster as documented below. The
+seven-digit display can represent the equivalent of 99,999,990 original points
+as a Deluxe score of 9,999,999.
 
 ## Startup speech
 
@@ -358,9 +359,10 @@ completion milestones, or the C/P anti-shatz latch.
   Each player's counter carries across their later balls, saturates at 255,
   and resets only with a new game. The two-digit display caps at 99 without
   changing the scored count.
-- The B-A-L-L/E-I-G-H-T bonus animation uses approximately 20% shorter pass,
-  completed-letter, and individual-target delays than the original routine.
-  Scoring, sounds, lamp order, and multiplier passes are otherwise unchanged.
+- The complete drain-bonus animation runs about 33% faster than the preceding
+  Deluxe cadence. Sunk-ball/rack steps, completed B-A-L-L chunks, and individual
+  E-I-G-H-T letters all use delays nearest to 75% of their prior values. Scoring,
+  sounds, lamp order, and multiplier passes are otherwise unchanged.
 
 ## CHAMP
 
@@ -594,6 +596,10 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
 - During that drain bonus, verify the credit display shows `06` for six
   completed racks, remains stable through every multiplier pass, and restores
   the exact prior credit count after the following B-A-L-L bonus finishes.
+- Time representative partial-rack and B-A-L-L/E-I-G-H-T drain bonuses against
+  the preceding Deluxe ROM. Verify both visible countdown phases finish in
+  approximately 75% of their prior time while awarding identical totals and
+  retaining every multiplier pass, sound, and lamp step.
 - Complete E-I-G-H-T at least five times in one ball. Verify all four physical
   B-A-L-L inserts are lit after the fourth completion, begin blinking together
   with the fifth completion, the fifth completion is retained in RAM, and the

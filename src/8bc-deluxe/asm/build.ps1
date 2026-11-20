@@ -163,10 +163,10 @@ $deluxeHookChecks = @(
     @{ Address = 0xC7A6; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BONUS_PASS'; Name = 'completed-rack bonus-pass setup' }
     @{ Address = 0xC809; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_RACK_BONUS'; Name = 'completed-rack bonus loop' }
     @{ Address = 0xC893; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BALL_LETTER_BONUS_PASS'; Name = 'completed B-A-L-L bonus-pass setup' }
-    @{ Address = 0xC8A0; Bytes = [byte[]](0x10);             Name = 'faster B-A-L-L bonus-pass delay' }
+    @{ Address = 0xC8A0; Bytes = [byte[]](0x0C);             Name = '33-percent-faster B-A-L-L bonus-pass delay' }
     @{ Address = 0xC8A6; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS'; Name = 'completed B-A-L-L bonus loop' }
     @{ Address = 0xC869; Opcode = 0x7E; Target = 'DELUXE_RUN_BALL_BONUS_MULTIPLIER'; Name = 'extended B-A-L-L/E-I-G-H-T multiplier dispatcher' }
-    @{ Address = 0xC912; Bytes = [byte[]](0x09);             Name = 'faster E-I-G-H-T bonus-letter delay' }
+    @{ Address = 0xC912; Bytes = [byte[]](0x07);             Name = 'approximately 33-percent-faster E-I-G-H-T bonus-letter delay' }
     @{ Address = 0xC96C; Bytes = [byte[]](0xB6, 0x10, 0xC0, 0x84, 0x30); Name = 'multiplier-aware scaled 100,000-point award entry' }
     @{ Address = 0xC97E; Bytes = [byte[]](0x7C, 0x00, 0x98, 0x7E, 0xFA, 0x1A); Name = 'fixed scaled 100,000-point award unit' }
     @{ Address = 0xC9A6; Bytes = [byte[]](0xB6, 0x10, 0xC0, 0x84, 0x30); Name = 'multiplier-aware variable-thousands award entry' }
@@ -179,6 +179,8 @@ $deluxeHookChecks = @(
     @{ Address = 0xCCD4; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_WORD_COMPLETION'; Name = 'completed E-I-G-H-T word B-A-L-L counter' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
     @{ Address = 0xD553; Bytes = [byte[]](0xC6, 0x03, 0x7E, 0xC9, 0xA6); Name = 'CHAMP 30,000 base through playfield multiplier' }
+    @{ Address = 0xD936; Bytes = [byte[]](0x86, 0x08);       Name = 'approximately 33-percent-faster sunk-ball bonus-step delay' }
+    @{ Address = 0xDA13; Bytes = [byte[]](0xC6, 0x06);       Name = '33-percent-faster completed B-A-L-L bonus-step delay' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
     @{ Address = 0xD57D; Bytes = [byte[]](0xC1, 0x2A, 0x26, 0x0C, 0xB6, 0x10, 0xFF, 0x26, 0x07, 0xC6, 0x29, 0xBD, 0xCA, 0xAA, 0x20, 0x0A); Name = 'terminal right orbit substitutes left-orbit sound before queueing' }
     @{ Address = 0xD5BD; Bytes = [byte[]](0x8D, 0x5D, 0x20, 0x1C); Name = 'left orbit original collect-sound pass-through and next-value preview' }

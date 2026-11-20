@@ -350,6 +350,13 @@ Each loads the authoritative `1149` value, runs the complete bonus pass that
 many times, and uses `114A` only as a temporary countdown. This applies the
 same 1x/2x/3x/5x/7x/8x/10x multiplier to both bonus phases.
 
+Deluxe shortens only the selectors consumed by the existing delay calls. The
+sunk-ball/rack selector changes from `$0B` to `$08`, the B-A-L-L pass selector
+from `$10` to `$0C`, the completed-letter selector from `$08` to `$06`, and the
+individual E-I-G-H-T selector from `$09` to `$07`. These nearest-integer
+three-quarter delays make both visible bonus phases about 33% faster without
+changing a counter, score addend, lamp transition, sound, or multiplier pass.
+
 ## E-I-G-H-T stand-up targets: scaled 2,500 per hit
 
 Switches 33-37 share the handler at `CC7C`. Its score call at `CC85` occurs

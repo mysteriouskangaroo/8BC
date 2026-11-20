@@ -331,7 +331,7 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         JSR DELUXE_BEGIN_BALL_LETTER_BONUS_PASS               ; $C893: reload the true B-A-L-L count for this multiplier pass
         dc.b $B7,$10,$45                                     ; $C896 original E-I-G-H-T restore continues
         dc.b $B6,$10,$BC,$B7,$10,$41                         ; $C899 original B-A-L-L lamp-state restore
-        LDAB #DELUXE_BALL_BONUS_PASS_DELAY                   ; $C89F: slightly faster than original $14 pass delay
+        LDAB #DELUXE_BALL_BONUS_PASS_DELAY                   ; $C89F: 12/16 of prior Deluxe delay (about 33% faster)
         dc.b $BD,$C9,$19,$8D,$17                             ; $C8A1 original delay call and partial-letter pass
         JMP DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS        ; $C8A6: use RAM count instead of four lamp bits
         dc.b $8A,$F0,$81,$FF,$27,$67,$0D,$46,$B7,$10,$41,$86,$E0,$B7,$10,$45 ; $C8A9 data/unclassified
@@ -343,6 +343,6 @@ PULSE_ONE_DROP_TARGET_RESET_COIL:
         LDX #$1000                                          ; $C906: scale the direct 10,000-point bonus unit to 1,000
         JSR ADD_LOW_BCD_SCORE                               ; $C909: bonus bypasses APPLY_PENDING_SCORE
         dc.b $86,$38,$BD,$C2,$7E                             ; $C90C original bonus sound
-        LDAB #DELUXE_EIGHT_BONUS_LETTER_DELAY                ; $C911: slightly faster than original $0B letter delay
+        LDAB #DELUXE_EIGHT_BONUS_LETTER_DELAY                ; $C911: nearest integer to 75% of prior Deluxe delay
         dc.b $BD,$C9,$19,$39                                 ; $C913 original delay call and return
         dc.b $C6,$0A                                         ; $C917 unconfirmed: LDAB #$a
