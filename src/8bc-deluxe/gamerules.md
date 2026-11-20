@@ -85,9 +85,9 @@ so. Activating the ones digit does not change Match probability or presentation.
 ## Deluxe collect feature
 
 The collect feature alternates between an **orbit stage** and a **spinner
-stage**, each with inactive and active phases:
+stage**. Spinner has a collecting intermediary phase:
 
-`orbit inactive -> orbit active --either orbit--> spinner inactive -> spinner active -> orbit inactive`
+`orbit inactive -> orbit active --either orbit--> spinner inactive -> spinner active --first pulse--> orbit inactive + spinner collecting overlay`
 
 Internally, the opening and repeating orbit stages retain two legacy location
 encodings, but both accept either physical rollover and behave identically
@@ -110,9 +110,11 @@ does not collect the lit 8-ball is not an activation event.
    it does not change the location. Activating either orbit promotes the
    original 5,000 baseline to the printed 10,000 value so the orbit-value
    arrows visibly indicate the active collect.
-3. Collecting either active orbit or the active spinner clears its active state
-   and advances to the other location's inactive state. The next newly sunk
-   ball is required to activate that location.
+3. Collecting either active orbit advances to spinner inactive. The first
+   active-spinner pulse immediately advances the main location to orbit
+   inactive while starting a separate spinner-collecting overlay. The next
+   newly sunk ball can therefore activate the orbit even while the spinner is
+   still physically spinning and scoring its lit value.
 4. Sinking additional new pool balls while the current location is already
    active has no collect-state effect. They are not queued for later stages.
 5. Hitting an inactive collect location does not advance the sequence.
@@ -174,19 +176,20 @@ completion milestones, or the C/P anti-shatz latch.
   printed sequence 1,000 -> 3,000 -> 4,000 -> 5,000 -> 6,000 -> 8,000 ->
   9,000, awarding 100 -> 300 -> 400 -> 500 -> 600 -> 800 -> 900 Deluxe
   points. It remains at 900 after reaching the top state.
-- While the spinner collect is active, every spin scores its displayed value
-  using the current 1x/2x/3x playfield multiplier.
+- The first registered pulse while spinner collect is active scores its
+  displayed value using the current 1x/2x/3x playfield multiplier and enters
+  **spinner collecting**. At the same time, the main collect location advances
+  to **orbit inactive**, making it available to the next newly sunk pool ball.
 - Spinner sounds follow the highest lit value lamp, matching the original
   sound tiers: unlit 10 uses the original 100 sound; 100 uses the original
   1,000 sound; printed 3,000 and 4,000 use the 3,000 sound; and printed 5,000,
   6,000, 8,000, and 9,000 use the 5,000 sound.
-- The collect remains active while the spinner is producing switch pulses.
-  Every pulse scores and restarts an approximately two-second inactivity timer;
-  another pulse inside that window continues the same collect and can add more
-  score.
-- Only after approximately two seconds with no further spinner pulse is the
-  spinner considered to have stopped. The collect then closes and advances to
-  **orbit inactive**; a later newly sunk pool ball must activate it.
+- While spinner is collecting, every pulse retains the displayed value and
+  playfield multiplier and refreshes the approximately two-second stop timer.
+- When that timer expires with no further pulse, the spinner is considered to
+  have stopped. Expiration ends only the spinner scoring overlay; it does not
+  overwrite the orbit location, which may already have been activated by a
+  newly sunk pool ball.
 - Spinner value lamps are otherwise shown only while spinner is the active
   collect; the temporary E-I-G-H-T preview is the sole inactive exception.
 
@@ -230,8 +233,8 @@ completion milestones, or the C/P anti-shatz latch.
   awards 10x+100,000. The inserts represent 7x as 2x+5x, 8x as 3x+5x, and
   10x as 2x+3x+5x, with the complete combination and 100,000 blinking in phase.
 - After any terminal 100,000 has been collected and turned off, either orbit collect
-  advancing to spinner inactive or spinner active advancing to orbit inactive
-  relights it. A completion before the first
+  advancing to spinner inactive or the first active-spinner pulse advancing
+  the location to orbit inactive relights it. A completion before the first
   100,000 is available cannot advance or skip the 2x, 3x, or 5x saucer steps.
 - If 100,000 is already lit, later active-to-inactive transitions do nothing.
 - Collecting a lit terminal award consumes that transition authorization,
@@ -462,8 +465,9 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
 - Start a new game and verify it begins at orbit inactive and the first
   newly sunk ball activates that same location.
 - Verify the repeating sequence is orbit inactive -> orbit active --either
-  orbit--> spinner inactive -> spinner active -> orbit inactive, with a
-  distinct newly sunk ball required for each activation.
+  orbit--> spinner inactive -> spinner active --first pulse--> orbit inactive
+  plus spinner collecting, with a distinct newly sunk ball required for each
+  activation.
 - Verify additional newly sunk balls while a location is already active do not
   move it and are not queued to activate the following location.
 - After reset, enter replay/extra-ball thresholds and High Score to Date at
@@ -560,17 +564,20 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   the preview.
   Activate spinner during a preview and verify the timer is cancelled and the
   current value becomes steady immediately.
-- Verify every spinner pulse restarts the inactivity window, a pulse inside two
-  seconds continues scoring, and roughly two seconds with no pulse closes the
-  collect and advances it to the inactive orbit stage.
+- Verify the first active-spinner pulse enters spinner collecting and scores
+  the displayed value while immediately making the orbit location inactive.
+  Before the spinner stops, sink a new pool ball and verify the orbit collect
+  lights. Verify every continuing spinner pulse retains its lit value and
+  multiplier and refreshes the stop timer. Roughly two seconds with no pulse
+  must end only spinner scoring without clearing or moving the orbit state.
 - Verify the saucer displays and collects 2x, then 3x, then 5x without any
   collect transition changing or skipping those steps. Verify collecting 5x
   immediately lights the first 100,000 regardless of the current collect state.
   While it is already lit, complete another active collect and verify nothing
   changes. Collect 100,000, verify it awards 10,000 at 1x and every next-award
   lamp turns off, then
-  verify either active orbit -> spinner inactive and spinner active -> orbit
-  inactive can each relight it. Verify the first qualifying transition blinks
+  verify either active orbit -> spinner inactive or the first active-spinner
+  pulse -> orbit inactive can each relight it. Verify the first qualifying transition blinks
   7x+100,000 (2x+5x+100,000 lamps) while bonus remains 5x. Its collection earns
   7x and darkens the combination; the next transition blinks 8x+100,000
   (3x+5x+100,000), and the following one blinks 10x+100,000

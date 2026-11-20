@@ -140,7 +140,12 @@ $deluxeHookChecks = @(
     @{ Address = 0xC1D6; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPECIAL_COLLECT_SOUND'; Name = 'context-aware Special sound gate' }
     @{ Address = 0xC1D9; Bytes = [byte[]](0x01, 0x01); Name = 'Special sound gate fixed-address padding' }
     @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
-    @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic inactivity timer' }
+    @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic spinner-collecting and display timers' }
+    @{ Address = 0xD3B3; Bytes = [byte[]](0xB6, 0x10, 0xFC); Name = 'independent spinner collecting overlay timer' }
+    @{ Address = 0xD4C7; Opcode = 0xBD; Target = 'DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE'; Name = 'spinner sound accepts active or collecting overlay' }
+    @{ Address = 0xD4F8; Opcode = 0xBD; Target = 'DELUXE_BEGIN_SPINNER_COLLECTING'; Name = 'first spinner pulse releases orbit location immediately' }
+    @{ Address = 0xD4FB; Bytes = [byte[]](0x86, 0x78, 0xB7, 0x10, 0xFC); Name = 'first and continuing spinner pulse collecting timer refresh' }
+    @{ Address = 0xD515; Opcode = 0x7E; Target = 'AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER'; Name = 'spinner collecting retains lit multiplied scoring' }
     @{ Address = 0xC1AC; Opcode = 0xBD; Target = 'DELUXE_FLASH_DROP_TARGET_LAMPS'; Name = 'canonical-cadence called drop-target lamp flash' }
     @{ Address = 0xE63A; Opcode = 0xBD; Target = 'DELUXE_PREPARE_PLAYFIELD_SWITCH_HANDLER_TABLE'; Name = 'first scoring switch starts called-ball selection' }
     @{ Address = 0xE111; Opcode = 0xBD; Target = 'DELUXE_SELECT_PHASE_B_LAMP_OUTPUT'; Name = 'output-only extended rack/B-A-L-L indicators' }

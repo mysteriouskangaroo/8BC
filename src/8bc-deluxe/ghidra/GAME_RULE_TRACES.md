@@ -320,7 +320,13 @@ or a combined/blinking lamp mask, controls bonus scoring.
 The three physical paths that end an active collect call
 `DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION` only after storing the next
 inactive state: either orbit chase advances to spinner inactive, and spinner
-inactivity advances to orbit inactive. The helper requires both `10C1` bit `08`
+first-pulse collection advances the main location to orbit inactive. That same
+pulse loads `10FC`, creating a separate spinner-collecting scoring overlay;
+every continuing pulse retains the lit value and refreshes that timer. Because
+the location is already orbit inactive, a newly sunk pool ball can activate it
+before the spinner stops. Timer expiration ends only the overlay and never
+overwrites the possibly reactivated orbit state. The helper requires both
+`10C1` bit `08`
 and the waiting flag, then clears waiting, sets the generic
 collect-deactivation authorization, and installs the next full blinking mask.
 Consequently, every active collect can reveal exactly one pending award after

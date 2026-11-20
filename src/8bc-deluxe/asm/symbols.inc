@@ -57,7 +57,9 @@ CALLED_BALL_SPEECH_DELAY_TIMER                equ $10B3
 ; parallel persistent values for players 1-4; the other bytes hold active-
 ; player, per-ball, and temporary bonus/display state.
 DELUXE_COLLECT_STATE                         equ $10FB
-DELUXE_SPINNER_IDLE_TIMER                    equ $10FC
+; Zero means spinner active but not yet hit. The first registered pulse loads
+; this timer and therefore enters spinner collecting; later pulses refresh it.
+DELUXE_SPINNER_COLLECTING_TIMER              equ $10FC
 DELUXE_CHAMP_COMPLETION_COUNT                equ $10FD
 DELUXE_SPINNER_VALUE_MASK                    equ $10FE
 DELUXE_ORBIT_VALUE_STATE                     equ $10FF
@@ -145,7 +147,7 @@ DELUXE_SPINNER_1000_LAMP                     equ $20
 DELUXE_SPINNER_3000_LAMP                     equ $40
 DELUXE_SPINNER_5000_LAMP                     equ $80
 DELUXE_SPINNER_ALL_VALUE_LAMPS               equ $E0
-DELUXE_SPINNER_INACTIVITY_TICKS              equ $78
+DELUXE_SPINNER_COLLECTING_TICKS              equ $78
 ; $BF is about 3.2 seconds at this tick rate and begins bit 4 at the start of
 ; a complete visible blink phase instead of entering halfway through one.
 DELUXE_SPINNER_PREVIEW_TICKS                 equ $BF

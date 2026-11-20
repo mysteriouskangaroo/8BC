@@ -7,30 +7,27 @@
 
 DELUXE_PERIODIC_TICK:
 ; C14E calls this in place of its original LDX $10B3. Preserve A, process the
-; spinner inactivity and value-preview timers, then execute that displaced
+; spinner-collecting overlay and value-preview timers, then execute that displaced
 ; load last so C151 sees the same X value and condition codes as canonical.
         PSHA
-        LDAA DELUXE_SPINNER_IDLE_TIMER
+        LDAA DELUXE_SPINNER_COLLECTING_TIMER
         BEQ DELUXE_SPINNER_PREVIEW_TICK
         DECA
-        STAA DELUXE_SPINNER_IDLE_TIMER
+        STAA DELUXE_SPINNER_COLLECTING_TIMER
         BNE DELUXE_SPINNER_PREVIEW_TICK
+; Spinner collecting is independent of the current collect location. The first
+; pulse already advanced that location to orbit inactive, and a new pool ball
+; may since have activated the orbit. Expiration ends only the spinner scoring
+; overlay and must not overwrite that newer location state. If another spinner
+; stage has already become active, retain its newly displayed value lamps.
         LDAA DELUXE_COLLECT_STATE
         ANDA #DELUXE_COLLECT_STATE_MASK
         CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
-        BNE DELUXE_SPINNER_PREVIEW_TICK
-; Each active spinner pulse restarts this inactivity timer.  A pulse inside
-; the window continues the same collect; only about two seconds with no
-; further pulse closes it and advances to dual-orbit inactive. Preserve the
-; two saucer-qualification flags while clearing active and selecting both
-; orbits.
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #$C0
-        ORAA #DELUXE_COLLECT_DUAL_ORBIT
-        STAA DELUXE_COLLECT_STATE
-        JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
+        BEQ DELUXE_SPINNER_PREVIEW_TICK
         CLR $10b1
         CLR $10b2
+; Keep the following routines at their established addresses.
+        dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01
 DELUXE_SPINNER_PREVIEW_TICK:
 ; A newly collected E-I-G-H-T letter starts this roughly 3.2-second lamp-only
 ; preview while the spinner collect is inactive. Bit 4 supplies a roughly
@@ -146,7 +143,7 @@ DELUXE_INITIALIZE_BALL:
         JSR DELUXE_CANCEL_SUNK_BALL_SCORE_DISPLAY
         LDAA #DELUXE_COLLECT_OPENING_ORBIT
         STAA DELUXE_COLLECT_STATE
-        CLR DELUXE_SPINNER_IDLE_TIMER
+        CLR DELUXE_SPINNER_COLLECTING_TIMER
         CLR DELUXE_SPINNER_PREVIEW_TIMER
         CLR DELUXE_ORBIT_PREVIEW_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
@@ -188,9 +185,7 @@ DELUXE_HANDLE_SPINNER:
 ; Switch 32. Select the original sound for the current value tier before the
 ; common gameplay/tilt gate queues it. Combined binary values use the sound of
 ; their highest lit value: 3K/4K use the 3K sound and 5K/6K/8K/9K use 5K.
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
+        JSR DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE
         BNE DELUXE_SPINNER_SELECT_100_SOUND
         LDAA DELUXE_SPINNER_VALUE_MASK
         BITA #DELUXE_SPINNER_5000_LAMP
@@ -209,17 +204,21 @@ DELUXE_SPINNER_SELECT_100_SOUND:
         LDAB #$2b
 DELUXE_SPINNER_QUEUE_SOUND:
         JSR QUEUE_SOUND_AND_CHECK_SCORE_GATE
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
+        JSR DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE
         BNE DELUXE_SCORE_UNLIT_SPINNER
 
-; Keep the value lamps live and restart the inactivity countdown on every
-; pulse. The weighted bits are worth 1k, 3k, and 5k respectively.
+; The first pulse advances the main location to orbit inactive and starts the
+; independent spinner-collecting overlay. Every subsequent pulse retains the
+; same lit value and refreshes the timer, even if a new pool ball has activated
+; the orbit in the meantime. The weighted bits are worth 1k, 3k, and 5k.
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
-        LDAA #DELUXE_SPINNER_INACTIVITY_TICKS
-        STAA DELUXE_SPINNER_IDLE_TIMER
+        TST DELUXE_SPINNER_COLLECTING_TIMER
+        BNE DELUXE_REFRESH_SPINNER_COLLECTING_TIMER
+        JSR DELUXE_BEGIN_SPINNER_COLLECTING
+DELUXE_REFRESH_SPINNER_COLLECTING_TIMER:
+        LDAA #DELUXE_SPINNER_COLLECTING_TICKS
+        STAA DELUXE_SPINNER_COLLECTING_TIMER
         CLRB
         LDAA DELUXE_SPINNER_VALUE_MASK
         BITA #DELUXE_SPINNER_1000_LAMP
@@ -1264,8 +1263,8 @@ DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
         BRA DELUXE_FIRST_SINK_ACTIVATE_ORBIT
 
 DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION:
-; Called only after either orbit collect or spinner inactivity has changed from
-; active to the following inactive location. The waiting bit means the previous
+; Called only after either orbit collect or the first active-spinner pulse has
+; changed to the following inactive location. The waiting bit means the previous
 ; saucer award was collected and the top lamps are dark. A qualifying transition
 ; authorizes the saucer and makes the whole next award blink: 7x+100K, 8x+100K,
 ; 10x+100K, then 100K alone after 10x has been earned.
@@ -1368,10 +1367,12 @@ DELUXE_RECORD_NEW_EIGHT_LETTER:
 ; While spinner is inactive, preview the new value by blinking its lamps for
 ; about three seconds. This changes only the lamp mask; scoring continues to use
 ; DELUXE_COLLECT_STATE and therefore cannot collect the previewed value.
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #DELUXE_COLLECT_STATE_MASK
-        CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
+        JSR DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE
         BEQ DELUXE_NEW_EIGHT_LETTER_SHOW_ACTIVE_VALUE
+        NOP
+        NOP
+        NOP
+        NOP
         LDAA #DELUXE_SPINNER_PREVIEW_TICKS
         STAA DELUXE_SPINNER_PREVIEW_TIMER
         LDAA DELUXE_SPINNER_VALUE_MASK
@@ -1742,6 +1743,33 @@ DELUXE_PLAY_NORMAL_SPECIAL_SOUND:
         LDAA #$6f
         JSR $c27e
         JMP SPECIAL_COLLECT_COMMON
+
+DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE:
+; Return Z set while either the main state is spinner active or the independent
+; post-hit collecting timer is running. This keeps sound, scoring, and E-I-G-H-T
+; lamp updates on the lit spinner path while allowing the orbit location to
+; advance and reactivate concurrently.
+        LDAA DELUXE_SPINNER_COLLECTING_TIMER
+        BNE DELUXE_SPINNER_COLLECT_TEST_TRUE
+        LDAA DELUXE_COLLECT_STATE
+        ANDA #DELUXE_COLLECT_STATE_MASK
+        CMPA #DELUXE_COLLECT_SPINNER+DELUXE_COLLECT_ACTIVE
+        RTS
+DELUXE_SPINNER_COLLECT_TEST_TRUE:
+        CLRA
+        RTS
+
+DELUXE_BEGIN_SPINNER_COLLECTING:
+; The first pulse consumes spinner active immediately, making orbit inactive
+; and available to the next newly sunk pool ball. The timer preserves spinner
+; value scoring independently until physical rotation stops. This is the one
+; active-to-inactive transition that may qualify the next saucer 100K stage.
+        LDAA DELUXE_COLLECT_STATE
+        ANDA #$c0
+        ORAA #DELUXE_COLLECT_DUAL_ORBIT
+        STAA DELUXE_COLLECT_STATE
+        JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
+        RTS
 
 DELUXE_AWARD_SPECIAL_POINTS:
 ; All original special collectors converge at C1DB. Award an additional
