@@ -243,9 +243,14 @@ DELUXE_SCORE_UNLIT_SPINNER:
         JMP $c9e0
 
 DELUXE_ADVANCE_CHAMP:
-; Called after each completed C-H-A-M-P word. Low milestones intentionally do
-; nothing: completion 2 selects double, 4 selects triple, and 6 adds both
-; outlane-special bits while retaining triple.
+; Called after each completed C-H-A-M-P word. Completion 1 raises the right
+; thumper to a manual/playfield 3,000 (300 displayed); completion 2 selects
+; double; completion 3 raises the left thumper to the same 3,000; completion
+; 4 selects triple; completion 5 lights both outlane specials and awards a
+; base manual/playfield 30,000 (3,000 displayed) through the playfield
+; multiplier. Every later completion repeats that multiplier-aware base award.
+; The thumper handlers read this per-ball counter and run their elevated values
+; through the same authoritative multiplier.
 ; Completing the word also rearms the C/P anti-shatz latch, irrespective of
 ; which of the five letters completed it.
         LDAA #DELUXE_CHAMP_INLANE_ARMED
@@ -256,10 +261,12 @@ DELUXE_ADVANCE_CHAMP:
         BEQ DELUXE_CHAMP_SET_DOUBLE
         CMPA #$04
         BEQ DELUXE_CHAMP_SET_TRIPLE
-        CMPA #$06
-        BNE DELUXE_CHAMP_DONE
+        CMPA #$05
+        BCS DELUXE_CHAMP_DONE
+        BNE DELUXE_CHAMP_AWARD_REPEAT_30000
         LDAA #$e0
-        BRA DELUXE_CHAMP_STORE_STATE
+        BSR DELUXE_CHAMP_STORE_STATE
+        BRA DELUXE_CHAMP_AWARD_30000
 DELUXE_CHAMP_SET_DOUBLE:
         LDAA #$10
         BRA DELUXE_CHAMP_STORE_STATE
@@ -272,8 +279,47 @@ DELUXE_CHAMP_STORE_STATE:
         LDAA CHAMP_MULTIPLIER_LAMP_SHADOW
         ORAA #$f0
         STAA CHAMP_MULTIPLIER_LAMP_SHADOW
+        RTS
+DELUXE_CHAMP_AWARD_REPEAT_30000:
+; Saturate the milestone count after completion 5 so the pop upgrades cannot
+; wrap back to their base values during an exceptionally long ball.
+        LDAA #$05
+        STAA DELUXE_CHAMP_COMPLETION_COUNT
+DELUXE_CHAMP_AWARD_30000:
+; B=3 is one Deluxe-scaled 30K playfield/manual base (3K displayed). Send that
+; single base value through the common multiplier path; at the fifth and later
+; completions the already-earned 3x state makes the milestone award 90K.
+        LDAB #$03
+        JMP AWARD_B_THOUSAND_WITH_PLAYFIELD_MULTIPLIER
 DELUXE_CHAMP_DONE:
         RTS
+
+DELUXE_HANDLE_LEFT_THUMPER:
+; Switch 02. Preserve the stock sound and score/tilt gate. Beginning with the
+; third CHAMP completion this pop scores manual/playfield 3,000 (300 displayed)
+; through the current 1x/2x/3x playfield multiplier; before that it retains
+; the stock 1,000 (100 displayed) value.
+        LDAB #$20
+        JSR QUEUE_SOUND_AND_CHECK_SCORE_GATE
+        LDAA DELUXE_CHAMP_COMPLETION_COUNT
+        CMPA #$03
+        BCC DELUXE_SCORE_THUMPER_3000
+        BRA DELUXE_SCORE_THUMPER_BASE
+
+DELUXE_HANDLE_RIGHT_THUMPER:
+; Switch 01. The right pop reaches the same multiplier-aware 3,000 value after
+; the first CHAMP completion and otherwise retains the stock value.
+        LDAB #$20
+        JSR QUEUE_SOUND_AND_CHECK_SCORE_GATE
+        LDAA DELUXE_CHAMP_COMPLETION_COUNT
+        CMPA #$01
+        BCC DELUXE_SCORE_THUMPER_3000
+DELUXE_SCORE_THUMPER_BASE:
+        LDAB #$01
+        JMP AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER
+DELUXE_SCORE_THUMPER_3000:
+        LDAB #$03
+        JMP AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER
 
 DELUXE_HANDLE_ORBIT:
 ; CB4F/CB53 select sound $2A/$29 for right/left before reaching this routine.

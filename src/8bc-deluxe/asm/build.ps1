@@ -130,6 +130,8 @@ if ($deluxeRamStart -le $canonicalPlayerRecordEnd -or $deluxeRamEnd -gt 0x17FF) 
 # divide-by-ten score mapping. An omitted, displaced, or misdirected change
 # still fails executable-image validation.
 $deluxeHookChecks = @(
+    @{ Address = 0xC01D; PointerTarget = 'DELUXE_HANDLE_LEFT_THUMPER'; Name = 'left thumper CHAMP-value handler' }
+    @{ Address = 0xC01F; PointerTarget = 'DELUXE_HANDLE_RIGHT_THUMPER'; Name = 'right thumper CHAMP-value handler' }
     @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
     @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic inactivity timer' }
     @{ Address = 0xC1AC; Opcode = 0xBD; Target = 'DELUXE_FLASH_DROP_TARGET_LAMPS'; Name = 'canonical-cadence called drop-target lamp flash' }
@@ -153,6 +155,8 @@ $deluxeHookChecks = @(
     @{ Address = 0xC8A6; Opcode = 0x7E; Target = 'DELUXE_PROCESS_COMPLETED_BALL_LETTER_BONUS'; Name = 'completed B-A-L-L bonus loop' }
     @{ Address = 0xC869; Opcode = 0x7E; Target = 'DELUXE_RUN_BALL_BONUS_MULTIPLIER'; Name = 'extended B-A-L-L/E-I-G-H-T multiplier dispatcher' }
     @{ Address = 0xC912; Bytes = [byte[]](0x09);             Name = 'faster E-I-G-H-T bonus-letter delay' }
+    @{ Address = 0xC96C; Bytes = [byte[]](0xB6, 0x10, 0xC0, 0x84, 0x30); Name = 'multiplier-aware scaled 100,000-point award entry' }
+    @{ Address = 0xC97E; Bytes = [byte[]](0x7C, 0x00, 0x98, 0x7E, 0xFA, 0x1A); Name = 'fixed scaled 100,000-point award unit' }
     @{ Address = 0xC9A6; Bytes = [byte[]](0xB6, 0x10, 0xC0, 0x84, 0x30); Name = 'multiplier-aware variable-thousands award entry' }
     @{ Address = 0xCAE4; Opcode = 0x7E; Target = 'DELUXE_ACCEPT_NEW_CHAMP_LETTER'; Name = 'C/P-only anti-shatz CHAMP acceptance gate' }
     @{ Address = 0xC7F0; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11, 0xCE, 0x05, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,500-point pool-ball drain bonus' }
@@ -162,6 +166,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xCC91; Opcode = 0x7E; Target = 'DELUXE_RECORD_NEW_EIGHT_LETTER'; Name = 'new E-I-G-H-T letter spinner advancement' }
     @{ Address = 0xCCD4; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_WORD_COMPLETION'; Name = 'completed E-I-G-H-T word B-A-L-L counter' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
+    @{ Address = 0xD553; Bytes = [byte[]](0xC6, 0x03, 0x7E, 0xC9, 0xA6); Name = 'CHAMP 30,000 base through playfield multiplier' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
     @{ Address = 0xCE08; Opcode = 0xBD; Target = 'DELUXE_AWARD_POOL_BALL_FIRST_SINK'; Name = 'normal/called-ball first-sink award' }
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
@@ -178,7 +183,11 @@ $deluxeHookChecks = @(
     @{ Address = 0xF40C; Bytes = [byte[]](0xCE, 0x00, 0x10); Name = 'canonical 1,000,000-point queue maps to displayed 100,000' }
 )
 foreach ($check in $deluxeHookChecks) {
-    if ($check.Target) {
+    if ($check.PointerTarget) {
+        $targetAddress = Get-DasmSymbolAddress $check.PointerTarget
+        $check.Bytes = [byte[]]((($targetAddress -shr 8) -band 0xFF), ($targetAddress -band 0xFF))
+    }
+    elseif ($check.Target) {
         $targetAddress = Get-DasmSymbolAddress $check.Target
         $check.Bytes = [byte[]]($check.Opcode, (($targetAddress -shr 8) -band 0xFF), ($targetAddress -band 0xFF))
     }

@@ -28,8 +28,23 @@
         dc.b $39                                             ; $C944 unconfirmed: RTS
         dc.b $B6,$10,$27,$85,$20,$27,$08,$86,$1B,$BD,$C2,$7E,$7E,$F3,$4F,$48 ; $C945 data/unclassified
         dc.b $2A,$12,$B6,$10,$3A,$2A,$0D,$BD,$F5,$F7,$86,$63,$BD,$C2,$7E,$86 ; $C955 data/unclassified
-        dc.b $17,$BD,$C2,$7E,$7E,$F4,$DF,$B6,$10,$C0,$84,$30,$27,$0B,$8D,$09 ; $C965 data/unclassified
-        dc.b $B6,$10,$C0,$85,$10,$26,$02,$8D,$00,$7C,$00,$98,$7E,$FA,$1A,$C6 ; $C975 data/unclassified
+        dc.b $17,$BD,$C2,$7E,$7E,$F4,$DF                     ; $C965 data/unclassified
+AWARD_100000_POINTS_WITH_PLAYFIELD_MULTIPLIER:
+        LDAA CHAMP_COMPLETION_STATE                           ; $C96C
+        ANDA #$30                                             ; $C96F
+        BEQ ADD_FIXED_100000_POINTS                           ; $C971
+        BSR ADD_FIXED_100000_POINTS                           ; $C973
+        LDAA CHAMP_COMPLETION_STATE                           ; $C975
+        BITA #$10                                             ; $C978
+        BNE ADD_FIXED_100000_POINTS                           ; $C97A
+        BSR ADD_FIXED_100000_POINTS                           ; $C97C
+ADD_FIXED_100000_POINTS:
+; Add one Deluxe-scaled manual/playfield 100,000-point unit (10,000 displayed)
+; without applying the playfield multiplier. The entry above reaches this
+; helper once, twice, or three times for normal, double, or triple scoring.
+        INC PENDING_SCORE_10000S                              ; $C97E
+        JMP NORMALIZE_PENDING_SCORE_DIGITS                   ; $C981
+        dc.b $C6                                             ; $C984 data/unclassified
         dc.b $09,$20,$1E,$C6,$08,$20,$1A,$C6,$07,$20,$16,$C6,$06,$20,$12,$C6 ; $C985 data/unclassified
         dc.b $05,$20,$0E,$C6,$04,$20,$0A,$C6,$03,$20,$06,$C6,$02,$20,$02,$C6 ; $C995 data/unclassified
         dc.b $01,$B6,$10,$C0,$84,$30,$27,$0B,$8D,$09,$B6,$10,$C0,$85,$10,$26 ; $C9A5 data/unclassified
@@ -139,7 +154,7 @@ HANDLE_CHAMP_LANE_SWITCH:
 ; Shared handler for switches 17-21 (C, H, A, M, P lanes). It scores the lane
 ; first, then Deluxe's CAE4 gate applies anti-shatz only to the C/P return-lane
 ; masks; H/A/M remain unconditional. Completed words reach the per-ball
-; milestones at completions 2, 4, and 6.
+; progressive awards at completions 1 through 5 and the repeatable 30K award.
         LDAB #$25                    ; $CAD4: $C6,$25
         BSR QUEUE_SOUND_AND_CHECK_SCORE_GATE ; $CAD6: $8D,$D2
         PSHA                         ; $CAD8: $36
@@ -169,7 +184,7 @@ RECORD_NEW_CHAMP_LANE:
         DECA                         ; $CB04: $4A
         BNE $caf7                    ; $CB05: $26,$F0
 ADVANCE_CHAMP_COMPLETION_STATE:
-        JMP DELUXE_ADVANCE_CHAMP     ; $CB07: completion milestones 2/4/6
+        JMP DELUXE_ADVANCE_CHAMP     ; $CB07: Deluxe progressive CHAMP awards
 ; CHAMP state: inspect the current completion state before advancing it.
         BITA #$20                    ; $CB0A: $85,$20
         BNE RECORD_LATER_CHAMP_COMPLETION ; $CB0C: $26,$0A

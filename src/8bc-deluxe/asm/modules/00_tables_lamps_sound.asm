@@ -12,7 +12,12 @@ ROM_ADDITIVE_CHECKSUM_COMPENSATION_BYTE:
 PLAYFIELD_SWITCH_HANDLER_TABLE:
         dc.b $F8,$A8                                         ; $C011 data/unclassified
 SWITCH_07_REBOUND_HANDLER_ENTRY:
-        dc.b $CA,$95,$F8,$54,$D0,$4A,$CA,$72,$CA,$72,$CA,$9C,$CA,$9C,$C2,$7D ; $C013 data/unclassified
+        dc.b $CA,$95,$F8,$54,$D0,$4A,$CA,$72,$CA,$72         ; $C013 switches 07-03
+SWITCH_02_LEFT_THUMPER_HANDLER_ENTRY:
+        dc.w DELUXE_HANDLE_LEFT_THUMPER                       ; $C01D per-ball CHAMP value
+SWITCH_01_RIGHT_THUMPER_HANDLER_ENTRY:
+        dc.w DELUXE_HANDLE_RIGHT_THUMPER                      ; $C01F per-ball CHAMP value
+        dc.b $C2,$7D                                          ; $C021 data/unclassified
         dc.b $C9,$57,$C9,$4C,$CB,$4F,$CB,$53,$F0,$6D,$F0,$79,$F0,$85,$CC,$4C ; $C023 data/unclassified
         dc.b $CC,$48,$C2,$7D,$CA,$D4,$CA,$D4,$CA,$D4,$CA,$D4,$CA,$D4,$CA,$3B ; $C033 data/unclassified
 SWITCH_31_DROP_TARGET_7_15_HANDLER_ENTRY:

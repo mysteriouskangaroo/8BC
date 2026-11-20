@@ -363,15 +363,19 @@ completion milestones, or the C/P anti-shatz latch.
 - Completing the full C-H-A-M-P word rearms the C/P latch, regardless of which
   letter completed the word. The next new C or P is therefore immediately
   available, after which the normal qualifying-shot requirement resumes.
-- First completion: no playfield multiplier change.
+- First completion: raise the right thumper/pop bumper from 1,000 to 3,000.
 - Second completion: light/award 2x playfield.
-- Third completion: retain 2x.
+- Third completion: raise the left thumper/pop bumper from 1,000 to 3,000.
 - Fourth completion: light/award 3x playfield.
-- Fifth completion: retain 3x.
-- Sixth completion: retain 3x and light both outlane specials.
+- Fifth completion: retain 3x, light both outlane specials, and award 30,000.
+- Every later completion: award another 30,000.
+- Both upgraded 3,000 thumper values use the current 1x/2x/3x playfield
+  multiplier. The 30,000 completion award is also a base value and uses that
+  multiplier, so the fifth and later completions award 90,000 while 3x is
+  active.
 - CHAMP letters retain their original operator-setting behavior between balls,
-  but the completion counter, multiplier, and special milestones reset at the
-  start of every ball.
+  but the completion counter, thumper values, multiplier, and special
+  milestones reset at the start of every ball.
 - CHAMP completion no longer changes the spinner value.
 
 ## Specials
@@ -580,8 +584,18 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   indications only on Player 1's turn, and leaves every other player's lamps
   steady according to only their own totals. Start a new game and verify all
   eight per-player totals return to zero.
-- Verify CHAMP completions 2, 4, and 6 produce 2x, 3x, and both specials, and
-  that CHAMP no longer changes spinner value.
+- Verify CHAMP completions 1-5 produce right thumper 3K, 2x playfield, left
+  thumper 3K, 3x playfield, then both outlane specials plus 30K. Verify each
+  later completion awards another 30K base through the playfield multiplier
+  and CHAMP does not change spinner value. At the fifth and later completions,
+  verify the milestone portion is 90K at 3x; including the completing CHAMP
+  lane's normal 9K, the full switch-event score movement is 99K.
+- Verify lighting the outlane specials on completion 5 does not enter the
+  Special-collection path: no separate Special points, sound, knocker, or
+  adjustment-controlled award may occur until an outlane Special is collected.
+- Verify the upgraded left and right thumpers score 3K/6K/9K at 1x/2x/3x,
+  return to their stock 1K value after a drain, and preserve their original
+  sound, score gate, and momentary-solenoid behavior.
 - Collect each available special at 1x, 2x, and 3x and verify its additional
   score is respectively 25,000, 50,000, and 75,000 while the original
   special award and knocker behavior still occur exactly once.

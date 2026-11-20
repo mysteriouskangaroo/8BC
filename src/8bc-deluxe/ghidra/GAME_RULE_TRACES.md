@@ -370,7 +370,7 @@ only the scoring states below to `10C0`:
 | `00` | Normal playfield value; fewer than two CHAMP completions this ball |
 | `10` | **Double**; reached on the second CHAMP completion |
 | `20` | **Triple**; reached on the fourth CHAMP completion |
-| `E0` | **Triple** remains active; reached on the sixth completion and lights both outlane specials |
+| `E0` | **Triple** remains active; reached on the fifth completion and lights both outlane specials |
 
 Switches 17 through 21 share the CHAMP-lane handler at `CAD4`. Each lane first
 receives its scaled 300-point award (original 3,000) through `C9F3`, using the multiplier that was
@@ -394,16 +394,34 @@ qualifying shot permits one new C/P. H/A/M neither test nor consume this state.
 When all five accepted letters are complete, the hook at `CB07` calls
 `DELUXE_ADVANCE_CHAMP`. Its first action rearms the C/P latch at `1148`, so a
 completed word makes the next new C or P immediately available irrespective
-of which letter completed that word. Completions 2, 4, and 6 then select
-double, triple, and the two outlane specials respectively. Consequently, the
-lane that reaches a milestone still scores at the pre-milestone multiplier,
-and the new multiplier begins with the next scoring event.
+of which letter completed that word. Completion 1 raises switch 01 Right
+Thumper Bumper to the scaled 3,000 path, completion 2 selects double,
+completion 3 raises switch 02 Left Thumper Bumper to the same 3,000 path,
+completion 4 selects triple, and completion 5 selects `E0`, lights both
+outlane specials, and sends a 30,000 base through the authoritative playfield
+multiplier. Every later completion repeats that multiplier-aware base award.
+Because 3x was earned on completion 4, completion 5 and later award 90,000 for
+the milestone. The CHAMP lane itself scores first, so its normal 3,000 base at
+3x adds another 9,000 and makes the complete switch-event movement 99,000.
+The qualification path has no call or branch to the Special collectors at
+`C1D6/C1DB`; it does not add the separate Special-collection award, sound,
+knocker, or adjustment behavior.
+
+The two thumper pointers at `C01D` and `C01F` lead to separate Deluxe
+handlers. Each preserves sound command `20` and the common score/tilt gate,
+then chooses the stock scaled 1,000 or upgraded scaled 3,000 value from
+`DELUXE_CHAMP_COMPLETION_COUNT`. Both values pass through the authoritative
+`10C0` multiplier helper, producing 3,000/6,000/9,000 after qualification.
+The counter saturates at completion 5 and is cleared by the per-ball
+initialization path, preventing an overflow from removing the pop upgrades.
 
 The periodic lamp-animation code at `C1B3-C1B8` XORs `10C0` into `1041`,
 making the corresponding Double/Triple and later-completion lamps blink.
 Because `1041` alternates as part of that animation, it is only an output
 shadow and is not a safe rule condition. `10C0` is the stable source of truth.
 
-The per-ball initialization entry at `C4F6` clears `10C0` at `C507`. Double,
-triple, and the later-completion flags therefore last only for the current
-ball; they are not a persistent per-player state restored on a later ball.
+The per-ball initialization entry at `C4F6` clears `10C0` at `C507`, while
+`DELUXE_INITIALIZE_BALL` clears `DELUXE_CHAMP_COMPLETION_COUNT`. Double,
+triple, outlane qualification, and the upgraded thumper values therefore last
+only for the current ball; they are not persistent per-player state restored
+on a later ball.

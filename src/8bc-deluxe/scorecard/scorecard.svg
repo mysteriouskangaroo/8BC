@@ -74,21 +74,29 @@
   <circle cx="99" cy="376" r="6" fill="#ffffff" opacity="0.5"/>
   <text class="number" x="111" y="390">1</text>
   <text class="rule-title" x="165" y="398">C-H-A-M-P</text>
+  <!-- Match the Bonus X Saucer's connected rounded progression nodes. -->
   <g>
-    <text class="indicator-count" x="145" y="438">2 TIMES</text>
-    <text class="indicator-count" x="315" y="438">4 TIMES</text>
-    <text class="indicator-count" x="485" y="438">6 TIMES</text>
-    <rect x="80" y="445" width="130" height="62" rx="31" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
-    <rect x="250" y="445" width="130" height="62" rx="31" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
-    <rect x="420" y="445" width="130" height="62" rx="31" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
-    <text class="value" x="145" y="468">2X</text>
-    <text class="indicator-label" x="145" y="493">PLAYFIELD</text>
-    <text class="value-arrow" x="230" y="477">&#8594;</text>
-    <text class="value" x="315" y="468">3X</text>
-    <text class="indicator-label" x="315" y="493">PLAYFIELD</text>
-    <text class="value-arrow" x="400" y="477">&#8594;</text>
-    <text class="value" x="485" y="468">OUTLANE</text>
-    <text class="indicator-label gold" x="485" y="493">SPECIALS</text>
+    <rect x="90" y="425" width="140" height="36" rx="18" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="260" y="425" width="140" height="36" rx="18" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="430" y="425" width="140" height="36" rx="18" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <text class="saucer-value" x="160" y="444">RIGHT POP 3K</text>
+    <text class="saucer-arrow" x="245" y="444">&#8594;</text>
+    <text class="saucer-value" x="330" y="444">2X PLAYFIELD</text>
+    <text class="saucer-arrow" x="415" y="444">&#8594;</text>
+    <text class="saucer-value" x="500" y="444">LEFT POP 3K</text>
+  </g>
+  <g>
+    <rect x="90" y="467" width="140" height="36" rx="18" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="260" y="467" width="140" height="36" rx="18" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="430" y="467" width="140" height="36" rx="18" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <text class="saucer-value" x="160" y="486">3X PLAYFIELD</text>
+    <text class="saucer-arrow" x="245" y="486">&#8594;</text>
+    <text class="saucer-value" x="330" y="478" style="font-size:10px">
+      <tspan x="330">LIGHT OUTLANE</tspan>
+      <tspan x="330" dy="12">SPECIALS + 30K</tspan>
+    </text>
+    <text class="saucer-arrow" x="415" y="486">&#8594;</text>
+    <text class="saucer-value" x="500" y="486" style="font-size:18px">30K &#8635;</text>
   </g>
   </g>
 
