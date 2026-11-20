@@ -142,8 +142,12 @@ completion milestones, or the C/P anti-shatz latch.
 - During any active orbit stage, switch 12 awards the current shared
   orbit value using the original handler and runs the original fast upward
   arrow-chase collect animation. It then hides the orbit-value arrows and moves
-  the feature to **spinner inactive**. It retains the collected arrow value;
-  only the right rollover advances that value by 10,000 (1,000 Deluxe points).
+  the feature to **spinner inactive**. The canonical chase advances the retained
+  arrow value by 10,000 (1,000 Deluxe points), stopping at the original
+  100,000/Special terminal state. Its original single collect-sound path is
+  unchanged; it does not use the right orbit's double `$2A` advance sound. The
+  newly advanced value blinks for approximately three seconds before the orbit
+  arrows turn off.
 ### Spinner
 
 - An unlit spinner scores 10 points per spin and does not use the playfield
@@ -192,13 +196,17 @@ completion milestones, or the C/P anti-shatz latch.
   the printed 10,000 value. A higher retained orbit value is preserved.
 - During any active orbit stage, switch 13 awards the same shared
   orbit value as the left side and runs the original fast upward arrow-chase
-  collect animation. Its existing sound command `$2A` is sent twice
-  back-to-back before scoring and the chase, distinguishing the active right
-  collect from an ordinary right-orbit hit. Only after that animation finishes
-  does it advance the printed value by 10,000 (1,000 Deluxe points) and move to
+  collect animation. Before the value is maxed, its existing sound command
+  `$2A` is sent twice back-to-back before scoring and the chase, distinguishing
+  an advance-plus-collect from an ordinary right-orbit hit. At the terminal
+  value, `$29` replaces `$2A` before the switch sound is queued, and the path
+  uses the same single collect sound as the left orbit.
+  Only after that animation finishes does it advance the printed value by
+  20,000 (2,000 Deluxe points) and move to
   **spinner inactive**. The newly advanced arrow value then blinks for
   approximately three seconds before the orbit-value arrows turn off. This is
-  a lamp-only preview and does not reactivate either orbit collect.
+  a lamp-only preview and does not reactivate either orbit collect. The combined
+  advance saturates at 100,000/Special and cannot wrap past it.
 - When it is not active, switch 13 awards 500 and does not advance the shared
   orbit value. It uses the same `$31` center-rollover sound as an inactive left
   orbit, instead of the active right-orbit sound.
@@ -502,16 +510,20 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
 - Verify unlit left/right orbit shots score 500 without advancing their value
   and use the same sound as the playfield's 500-point center rollover. Verify
   the active left collect retains its original side-specific sound and the
-  active right collect sends its original `$2A` sound twice back-to-back.
+  active right collect sends its original `$2A` sound twice back-to-back before
+  the terminal value, then uses the left orbit's single `$29` collect sound once
+  the value is maxed.
 - Verify either rollover can collect during both the opening and repeating
   active orbit stages. Both sides must score the current value, finish the
   original fast upward arrow chase, hide the active orbit indication, and move
   to spinner inactive.
-- Verify the right rollover advances the shared printed value by 10,000 /
-  Deluxe value by 1,000 and blinks that new value for approximately three
-  seconds. Verify the left rollover retains the value it just awarded and does
-  not show a false next-value preview. A later orbit activation must restore
-  the appropriate retained value in either case.
+- Verify the left rollover advances the shared printed value by 10,000 / Deluxe
+  value by 1,000, uses only its normal single collect sound, and blinks the
+  new value for approximately three seconds. Verify the right rollover advances
+  it by 20,000 / Deluxe value by 2,000 and also blinks that new value. Starting
+  the right rollover at 90,000 or 100,000 must leave it at 100,000/Special with
+  no wrap. A later orbit activation must restore the appropriate retained value
+  in either case.
 - During the right-orbit value preview, activate the spinner with a newly sunk
   pool ball and verify the orbit preview is canceled immediately while the
   spinner's accumulated value is shown. Also trigger an E-I-G-H-T spinner

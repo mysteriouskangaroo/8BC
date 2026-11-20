@@ -129,7 +129,8 @@
   <text class="section-title" x="1250" y="545">ORBITS</text>
   <line x1="1250" y1="555" x2="1690" y2="555" stroke="#d8871b" stroke-width="3"/>
   <text class="rule-copy" x="1250" y="574">
-    <tspan class="gold">LEFT:</tspan><tspan> COLLECT</tspan><tspan x="1430" class="gold">RIGHT:</tspan><tspan> COLLECT + ADV. 10K</tspan>
+    <tspan class="gold">LEFT:</tspan><tspan> COLLECT + ADV. 10K</tspan>
+    <tspan x="1250" dy="30" class="gold">RIGHT:</tspan><tspan> COLLECT + ADV. 20K</tspan>
     <tspan x="1250" dy="30">REACH </tspan><tspan class="gold">100K</tspan><tspan> TO LIGHT </tspan><tspan class="accent">SPECIAL</tspan>
     <tspan x="1250" dy="30">VALUE CARRIES BETWEEN DRAINS</tspan>
   </text>

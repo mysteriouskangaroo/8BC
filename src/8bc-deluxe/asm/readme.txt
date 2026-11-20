@@ -55,6 +55,9 @@ The script performs the structural build checks and records comparison data:
      hashes plus the number and first differences.
   8. Packages the rebuilt CPU ROM with the three immutable sound ROMs as
      VisualPinballX/VPinMAME/roms/eballchp.zip.
+  9. Generates and verifies a 2 MiB Weebly M27C160 programmer image containing
+     64 identical 32 KiB slots. Each slot is a 16 KiB FF-filled U2 half
+     followed by the rebuilt 16 KiB U3 ROM.
 
 Generated files are written to ../build/:
 
@@ -62,6 +65,8 @@ Generated files are written to ../build/:
   u3_cpu.rebuilt.lst  assembler listing
   u3_cpu.rebuilt.sym  symbol table
   rom_checksum.inc    generated second-pass checksum value
+  eballchp-weebly-m27c160.bin
+                      2 MiB Weebly programmer image (64 x [FF U2 + rebuilt U3])
   verification.txt   size, hash, and byte-comparison result
 
 The packaged PinMAME set contains exactly these archive entries:

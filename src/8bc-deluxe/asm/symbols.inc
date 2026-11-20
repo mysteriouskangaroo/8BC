@@ -169,6 +169,7 @@ DELUXE_RACK_MORE_LAMP_MASK                    equ $60
 DELUXE_BALL_MORE_LAMP_MASK                    equ $0F
 SQUAWK_TALK_SUPER_COMMAND                    equ $6F
 CENTER_ROLLOVER_500_SOUND_COMMAND            equ $31
+LEFT_ORBIT_ACTIVE_SOUND_COMMAND              equ $29
 RIGHT_ORBIT_ACTIVE_SOUND_COMMAND             equ $2A
 ORBIT_SPECIAL_LAMP_BIT                       equ $10
 ORBIT_SPECIAL_ALREADY_COLLECTED_BIT          equ $20

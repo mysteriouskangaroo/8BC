@@ -17,6 +17,8 @@ $listing = Join-Path $buildDirectory 'u3_cpu.rebuilt.lst'
 $symbols = Join-Path $buildDirectory 'u3_cpu.rebuilt.sym'
 $verification = Join-Path $buildDirectory 'verification.txt'
 $checksumInclude = Join-Path $buildDirectory 'rom_checksum.inc'
+$weeblyBuilder = Join-Path $repositoryRoot 'tools\New-WeeblyM27C160Image.ps1'
+$weeblyRom = Join-Path $buildDirectory 'eballchp-weebly-m27c160.bin'
 $pinmameRomDirectory = Join-Path $repositoryRoot 'VisualPinballX\VPinMAME\roms'
 $pinmameArchive = Join-Path $pinmameRomDirectory 'eballchp.zip'
 $packageBackupDirectory = Join-Path $buildDirectory 'visual-pinball-package-backup'
@@ -34,6 +36,9 @@ if (-not (Test-Path -LiteralPath $assembler -PathType Leaf)) {
 }
 if (-not (Test-Path -LiteralPath $originalRom -PathType Leaf)) {
     throw "The immutable reference ROM was not found at $originalRom"
+}
+if (-not (Test-Path -LiteralPath $weeblyBuilder -PathType Leaf)) {
+    throw "The Weebly image builder was not found at $weeblyBuilder"
 }
 foreach ($soundRom in $soundRoms) {
     if (-not (Test-Path -LiteralPath $soundRom -PathType Leaf)) {
@@ -168,6 +173,10 @@ $deluxeHookChecks = @(
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
     @{ Address = 0xD553; Bytes = [byte[]](0xC6, 0x03, 0x7E, 0xC9, 0xA6); Name = 'CHAMP 30,000 base through playfield multiplier' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
+    @{ Address = 0xD57D; Bytes = [byte[]](0xC1, 0x2A, 0x26, 0x0C, 0xB6, 0x10, 0xFF, 0x26, 0x07, 0xC6, 0x29, 0xBD, 0xCA, 0xAA, 0x20, 0x0A); Name = 'terminal right orbit substitutes left-orbit sound before queueing' }
+    @{ Address = 0xD5BD; Bytes = [byte[]](0x8D, 0x55, 0x20, 0x14); Name = 'left orbit original collect-sound pass-through and next-value preview' }
+    @{ Address = 0xD5C1; Bytes = [byte[]](0xB6, 0x10, 0xFF, 0x27, 0x09, 0x86, 0x2A, 0xBD, 0xC2, 0x7E, 0xC6, 0x2A, 0x20, 0x02, 0xC6, 0x29); Name = 'terminal right orbit uses single left-orbit collect sound' }
+    @{ Address = 0xD5F2; Bytes = [byte[]](0xB6, 0x10, 0xFF, 0x27, 0x1C, 0x81, 0x0D, 0x27, 0x0B, 0x81, 0x0B, 0x27, 0x0B, 0x81, 0x05, 0x27, 0x0B, 0x4A, 0x20, 0x0A, 0x86, 0x0B, 0x20, 0x06, 0x86, 0x07, 0x20, 0x02, 0x86, 0x03, 0xB7, 0x10, 0xFF, 0x39); Name = 'right orbit extra 10K step saturates at terminal state' }
     @{ Address = 0xCE08; Opcode = 0xBD; Target = 'DELUXE_AWARD_POOL_BALL_FIRST_SINK'; Name = 'normal/called-ball first-sink award' }
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
     @{ Address = 0xCFAE; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_BALL'; Name = 'collected 8-ball activation handler' }
@@ -253,6 +262,12 @@ if ($RequireByteIdentical -and -not $isByteIdentical) {
     $report
     throw "The build is structurally valid but differs from the reference in $differenceCount byte(s)."
 }
+
+$weeblyResult = & $weeblyBuilder -U3Rom $rebuiltRom -OutputPath $weeblyRom
+$report += "Weebly M27C160 image: $($weeblyResult.Path)"
+$report += "Weebly image size: $($weeblyResult.Size) bytes (64 x 32768-byte U2/U3 slots)"
+$report += "Weebly slot layout: 16384 x FF followed by rebuilt 16384-byte U3 (PASS)"
+$report += "Weebly image SHA-1: $($weeblyResult.Sha1)"
 
 New-Item -ItemType Directory -Path $pinmameRomDirectory -Force | Out-Null
 if ((Test-Path -LiteralPath $pinmameArchive -PathType Leaf) -and

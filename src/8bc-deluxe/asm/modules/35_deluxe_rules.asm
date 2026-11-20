@@ -323,10 +323,20 @@ DELUXE_SCORE_THUMPER_3000:
 
 DELUXE_HANDLE_ORBIT:
 ; CB4F/CB53 select sound $2A/$29 for right/left before reaching this routine.
-; The common gate stores that selector at 1024, then overwrites B while testing
-; the score-enable lamp bits. Read the stored command to identify the side; B
-; is no longer a valid discriminator after the call. A failed gate still
-; unwinds this call exactly as it did in the original.
+; A maxed right orbit must use the left orbit's collect-only sound. Substitute
+; $29 before the common gate can queue $2A, then branch explicitly back to the
+; right-side rule path after the gate. Otherwise, the common gate stores the
+; original selector at 1024 and overwrites B while testing the score-enable
+; lamp bits, so use that stored command to identify the side. A failed gate
+; still unwinds this call exactly as it did in the original.
+        CMPB #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
+        BNE DELUXE_QUEUE_ORBIT_SOUND
+        LDAA DELUXE_ORBIT_VALUE_STATE
+        BNE DELUXE_QUEUE_ORBIT_SOUND
+        LDAB #LEFT_ORBIT_ACTIVE_SOUND_COMMAND
+        JSR QUEUE_SOUND_AND_CHECK_SCORE_GATE
+        BRA DELUXE_HANDLE_RIGHT_ORBIT
+DELUXE_QUEUE_ORBIT_SOUND:
         JSR QUEUE_SOUND_AND_CHECK_SCORE_GATE
         LDAA PENDING_SOUND_COMMAND
         CMPA #$29
@@ -338,8 +348,8 @@ DELUXE_HANDLE_RIGHT_ORBIT:
         CMPA #DELUXE_COLLECT_OPENING_ORBIT+DELUXE_COLLECT_ACTIVE
         BEQ DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT
 ; Both encoded orbit stages accept either physical rollover. Either rollover
-; advances the collect to spinner inactive; only the right advances the shared
-; arrow value.
+; advances the collect to spinner inactive. The left advances the shared arrow
+; value once; the right applies a second, saturating value step.
         CMPA #DELUXE_COLLECT_DUAL_ORBIT+DELUXE_COLLECT_ACTIVE
         BEQ DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT
         JMP DELUXE_SCORE_UNLIT_ORBIT
@@ -366,21 +376,13 @@ DELUXE_HANDLE_ACTIVE_LEFT_ORBIT:
         JMP DELUXE_SCORE_ACTIVE_LEFT_ORBIT
 
 DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
-; Score the lit value and finish the original chase, but restore the value that
-; was current before the canonical routine advanced it. The stack keeps this
-; side-specific snapshot out of persistent player RAM. Then advance the collect
-; to spinner inactive without advancing the retained arrow value.
-        LDAA DELUXE_ORBIT_VALUE_STATE
-        PSHA
+; Score the lit value and let the canonical chase advance the retained arrow
+; value by one 10,000 step. Preserve the original left collect's post-gate B
+; value exactly as the earlier working ding path did; do not force a new sound
+; selector here. Then share the right path's next-value preview finish without
+; its extra value step or double $2A sound.
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
-        PULA
-        STAA DELUXE_ORBIT_VALUE_STATE
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #$c0
-        ORAA #DELUXE_COLLECT_SPINNER
-        STAA DELUXE_COLLECT_STATE
-        JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
-        JMP DELUXE_HIDE_INACTIVE_ORBIT_LAMPS
+        BRA DELUXE_FINISH_ACTIVE_ORBIT_WITH_PREVIEW
 
 DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
 ; Finish the original chase before moving the sequence to spinner inactive.
@@ -388,13 +390,25 @@ DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
 ; a newly sunk ball activates that location; sunk balls are never queued. Once
 ; the chase advances the orbit value, preview that new value with the same
 ; roughly three-second blink cadence used by the E-I-G-H-T spinner preview.
+; The canonical routine advances one 10,000 step. Advance the retained encoding
+; one more step afterward for a 20,000 total increase, saturating at the
+; 100,000/Special terminal state.
 ; Send the existing right-orbit command twice back-to-back before scoring and
 ; the chase. C27E clobbers B, so reload the selector for the second send inside
-; DELUXE_RUN_ORIGINAL_LIT_ORBIT.
+; DELUXE_RUN_ORIGINAL_LIT_ORBIT. At the terminal value, there is no advance to
+; announce: use the left orbit's single collect sound instead.
+        LDAA DELUXE_ORBIT_VALUE_STATE
+        BEQ DELUXE_SCORE_TERMINAL_RIGHT_ORBIT
         LDAA #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
         JSR $c27e
         LDAB #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
+        BRA DELUXE_RUN_ACTIVE_RIGHT_ORBIT
+DELUXE_SCORE_TERMINAL_RIGHT_ORBIT:
+        LDAB #LEFT_ORBIT_ACTIVE_SOUND_COMMAND
+DELUXE_RUN_ACTIVE_RIGHT_ORBIT:
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
+        BSR DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_STEP
+DELUXE_FINISH_ACTIVE_ORBIT_WITH_PREVIEW:
         LDAA DELUXE_COLLECT_STATE
         ANDA #$c0
         ORAA #DELUXE_COLLECT_SPINNER
@@ -408,6 +422,33 @@ DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
 ; advanced numeric arrow value is being previewed.
         JSR DELUXE_UPDATE_ORBIT_SPECIAL_VISIBILITY
         BRA DELUXE_SHOW_ORBIT_PREVIEW_VALUE
+
+DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_STEP:
+; Valid retained states encode 10K through 100K as E,D,B,7,6,5,3,2,1,0.
+; Most steps decrement; D->B, B->7, and 5->3 skip unused bit patterns. Zero is
+; terminal and must never wrap, so a right-orbit +20K advance clamps at 100K.
+        LDAA DELUXE_ORBIT_VALUE_STATE
+        BEQ DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_DONE
+        CMPA #$0d
+        BEQ DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_TO_30K
+        CMPA #$0b
+        BEQ DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_TO_40K
+        CMPA #$05
+        BEQ DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_TO_70K
+        DECA
+        BRA DELUXE_STORE_EXTRA_ORBIT_ADVANCE
+DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_TO_30K:
+        LDAA #$0b
+        BRA DELUXE_STORE_EXTRA_ORBIT_ADVANCE
+DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_TO_40K:
+        LDAA #$07
+        BRA DELUXE_STORE_EXTRA_ORBIT_ADVANCE
+DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_TO_70K:
+        LDAA #$03
+DELUXE_STORE_EXTRA_ORBIT_ADVANCE:
+        STAA DELUXE_ORBIT_VALUE_STATE
+DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_DONE:
+        RTS
 
 DELUXE_RUN_ORIGINAL_LIT_ORBIT:
         TBA

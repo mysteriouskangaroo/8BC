@@ -232,35 +232,51 @@ sunk.
 
 Switch 13 (right rollover) enters at `CB4F` with sound selector `2A`; switch 12
 (left rollover) enters at `CB53` with selector `29`. Both reach the Deluxe hook
-at `CB55`. The common score gate stores that selector in `1024`, so
-`DELUXE_HANDLE_ORBIT` uses the stored command to recover the side after the gate
-has overwritten B. Inactive orbit hits still take the unlit 500-point path and
+at `CB55`. Before calling the common score gate, `DELUXE_HANDLE_ORBIT` detects a
+right rollover with terminal retained value `10FF = 00` and replaces B with
+`29`, preventing `2A` from ever being stored in the pending command at `1024`.
+That exceptional path branches explicitly to the right-side rules after the
+gate. All other hits use the selector stored at `1024` to recover the side after
+the gate has overwritten B. Inactive orbit hits still take the unlit 500-point path and
 do not change the retained value. Before sending sound through `C27E`, that
 inactive path substitutes command `31`, the command loaded by switch 29's
-500-point center-rollover handler at `CAA3`. Active orbit hits keep their
-original side-specific `29`/`2A` commands.
+500-point center-rollover handler at `CAA3`. Active orbit hits normally keep
+their original side-specific `29`/`2A` commands; a right-side collect at the
+terminal orbit value deliberately substitutes the left collect's `29`.
 
 Both the opening (`03`) and repeating (`01`) active orbit encodings accept
 either physical rollover. An active hit on either side calls the canonical
 lit-orbit routine at `CB5C`,
 which awards the current value and runs the fast upward arrow chase. The right
-path first sends its existing command `2A` directly through `C27E`, reloads B
-with `2A` because the sender clobbers it, and enters the common helper that
-sends `2A` again immediately before `CB5C`. It then accepts the routine's next
-low-nibble value from `1044` and copies it to the retained Deluxe state at
-`10FF`, advancing the printed value by 10,000 playfield points. The left path
-snapshots `10FF` on the CPU stack before the call and restores it afterward.
-Its score, single side-specific sound, chase, and collect-location transition
-therefore still occur, but its arrow value does not advance.
+path first checks retained value `10FF`. Before the terminal state, it sends
+its existing command `2A` directly through `C27E`, reloads B with `2A` because
+the sender clobbers it, and enters the common helper that sends `2A` again
+immediately before `CB5C`. At terminal value `00`, it instead enters that
+helper once with the left collect's command `29`, which was also substituted
+before the pending command was queued, since no value advance remains to
+announce. The helper accepts the routine's next low-nibble value from `1044`
+and copies it to retained Deluxe state `10FF`, advancing the printed value by
+10,000 playfield points. The left path now keeps that one canonical step. The
+right path applies one additional state-only step after the canonical routine,
+so it advances 20,000 without scoring or replaying the chase twice.
 
-Both paths move to spinner inactive and hide the shared physical arrow lamps by
-setting the low nibble of `1044`. The right path additionally loads timer `1115`
-with `BF`. `DELUXE_PERIODIC_TICK` uses
+The retained encodings for 10K through 100K are
+`E,D,B,7,6,5,3,2,1,0`. `DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_STEP` handles the
+three nonconsecutive transitions (`D->B`, `B->7`, and `5->3`) explicitly and
+otherwise decrements once. It returns immediately at `00`, which clamps every
+right-side advance at the 100,000/Special state instead of wrapping.
+
+Both paths move to spinner inactive and load timer `1115` with `BF`.
+`DELUXE_PERIODIC_TICK` uses
 timer bit 4 to alternate `1044`'s low nibble between the retained value at
 `10FF` and all-off for roughly 3.2 seconds, matching the E-I-G-H-T spinner
 preview cadence. The preview changes only lamp output; scoring and collect
 location continue to use the retained value and `10FB`. Activating either an
 orbit or the spinner cancels the preview before showing that collect's lamps.
+The left path preserves the original post-gate B value and enters the canonical
+helper without forcing another selector, matching the earlier working collect
+sound path. It does not execute the right path's extra `2A` send or its second
+value step.
 
 At the terminal 100,000 state, the orbit Special remains hidden while the
 numeric arrow value is previewed because the collect has already moved to the
