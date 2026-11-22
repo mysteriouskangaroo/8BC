@@ -4,16 +4,19 @@ param(
     [string]$Root
 )
 
-# Reports paths named in tracked Markdown files that do not exist.
+# Reports paths named in tracked Markdown and .txt files that do not exist.
 #   - Markdown links [text](target) resolve relative to the file.
-#   - A backticked span is treated as a path when it contains '/' and its first
-#     segment names an existing top-level repository entry, or an entry next to
-#     the file. It must exist from the root or from the file's folder. A span
-#     followed by arguments ("tools/x.ps1 -Flag") is checked up to the first
-#     space when the whole span is not a path. '*' is a glob.
-# Local-only, gitignored tool and build paths are exempt. Fenced code blocks
-# are skipped, as are implementation plans under docs/superpowers/plans/.
-# Exit 0 when clean, 1 when anything is missing.
+#   - In Markdown, a backticked span is a candidate path; in .txt files every
+#     whitespace-separated word is. A candidate counts as a path when it
+#     contains '/' or '\' and its first segment names an existing top-level
+#     repository entry, an entry next to the file, or '..'. Backslashes are
+#     read as '/', and a leading '/' means the repository root. It must exist
+#     from the root or from the file's folder. A span followed by arguments
+#     ("tools/x.ps1 -Flag") is checked up to the first space when the whole
+#     span is not a path. '*' is a glob.
+# Local-only, gitignored tool and build paths are exempt wherever a path
+# resolves to them. Fenced code blocks are skipped, as are implementation plans
+# under docs/superpowers/plans/. Exit 0 when clean, 1 when anything is missing.
 
 $ErrorActionPreference = 'Stop'
 
@@ -22,6 +25,15 @@ $Root = (Resolve-Path -LiteralPath $Root).Path
 
 $exemptPrefixes = @('VisualPinballX/', 'dasm-', 'ghidra_', 'pinmame/', 'libpinmame-',
     'other-examples/', 'temp/', '.superpowers/')
+
+# Repository-relative form of $Path read from a file in $Folder, or $null when
+# it points outside the repository.
+function Get-RepositoryRelative([string]$Folder, [string]$Path) {
+    $full = [System.IO.Path]::GetFullPath((Join-Path $Folder $Path))
+    $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd('/', '\')
+    if (-not $full.StartsWith($rootFull)) { return $null }
+    return $full.Substring($rootFull.Length).TrimStart('/', '\').Replace('\', '/')
+}
 
 function Test-Exempt([string]$Path) {
     $normalized = $Path -replace '^\./', ''
@@ -37,12 +49,35 @@ function Test-PathFrom([string]$Base, [string]$Path) {
     return (Test-Path -LiteralPath $candidate)
 }
 
+# Returns $null when $Text is not a path or exists; otherwise the text to report.
+function Test-Candidate([string]$Text, [string]$Folder, [string[]]$Siblings) {
+    $span = $Text.Trim()
+    if (-not ($span.Contains('/') -or $span.Contains('\'))) { return $null }
+    if ($span -match '[<>{}]|\.\.\.|://|^\$') { return $null }
+    $path = $span.Replace('\', '/')
+    $fromRootOnly = $path.StartsWith('/')
+    $path = $path.TrimStart('/') -replace '^\./', ''
+    $first = ($path -split '/')[0]
+    if ($topLevel -notcontains $first -and ($fromRootOnly -or ($Siblings -notcontains $first -and $first -ne '..'))) {
+        return $null
+    }
+    $bases = if ($fromRootOnly) { @($Root) } else { @($Root, $Folder) }
+    foreach ($base in $bases) {
+        $relative = Get-RepositoryRelative $base $path
+        if ($relative -and (Test-Exempt $relative)) { return $null }
+    }
+    foreach ($candidate in @($path, ($path -split '\s+')[0]) | Select-Object -Unique) {
+        foreach ($base in $bases) { if (Test-PathFrom $base $candidate) { return $null } }
+    }
+    return $span
+}
+
 $topLevel = @(Get-ChildItem -LiteralPath $Root -Force | ForEach-Object { $_.Name })
 
 Push-Location $Root
 try {
     # Implementation plans quote example and fixture paths on purpose.
-    $files = @(& git ls-files -- '*.md' | Where-Object { -not $_.StartsWith('docs/superpowers/plans/') })
+    $files = @(& git ls-files -- '*.md' '*.txt' | Where-Object { -not $_.StartsWith('docs/superpowers/plans/') })
     if ($LASTEXITCODE -ne 0) { throw "git ls-files failed in $Root" }
 }
 finally { Pop-Location }
@@ -52,8 +87,19 @@ foreach ($relative in $files) {
     $file = Join-Path $Root $relative
     $folder = Split-Path -Parent $file
     $siblings = @(Get-ChildItem -LiteralPath $folder -Force | ForEach-Object { $_.Name })
+    $isMarkdown = $relative.EndsWith('.md')
     $inFence = $false
     foreach ($line in [System.IO.File]::ReadAllLines($file)) {
+        if (-not $isMarkdown) {
+            foreach ($word in ($line -split '\s+')) {
+                $word = $word -replace '^["''()\[\]`]+|["''()\[\]`.,;:]+$', ''
+                if (-not $word) { continue }
+                $problem = Test-Candidate $word $folder $siblings
+                if ($problem) { $problems.Add("${relative}: $problem") }
+            }
+            continue
+        }
+
         if ($line -match '^\s*(```|~~~)') { $inFence = -not $inFence; continue }
         if ($inFence) { continue }
 
@@ -61,26 +107,21 @@ foreach ($relative in $files) {
             $target = $match.Groups[1].Value.Trim('<', '>')
             if ($target -match '^(https?:|mailto:|#)') { continue }
             $target = [System.Uri]::UnescapeDataString(($target -split '#')[0])
-            if (-not $target -or (Test-Exempt $target)) { continue }
+            if (-not $target) { continue }
+            $resolved = Get-RepositoryRelative $folder $target
+            if (($resolved -and (Test-Exempt $resolved)) -or (Test-Exempt $target)) { continue }
             if (-not (Test-PathFrom $folder $target)) { $problems.Add("${relative}: $target") }
         }
 
         foreach ($match in [regex]::Matches($line, '`([^`]+)`')) {
-            $span = $match.Groups[1].Value.Trim()
-            if (-not $span.Contains('/') -or $span -match '[<>{}]|\.\.\.|://|^\$') { continue }
-            $first = (($span -replace '^\./', '') -split '/')[0]
-            if ($topLevel -notcontains $first -and $siblings -notcontains $first -and $first -ne '..') { continue }
-            if (Test-Exempt $span) { continue }
-            if ((Test-PathFrom $Root $span) -or (Test-PathFrom $folder $span)) { continue }
-            $head = ($span -split '\s+')[0]
-            if ($head -ne $span -and ((Test-PathFrom $Root $head) -or (Test-PathFrom $folder $head))) { continue }
-            $problems.Add("${relative}: $span")
+            $problem = Test-Candidate $match.Groups[1].Value $folder $siblings
+            if ($problem) { $problems.Add("${relative}: $problem") }
         }
     }
 }
 
 if ($problems.Count -eq 0) {
-    "Documentation paths: PASS ($($files.Count) Markdown files)"
+    "Documentation paths: PASS ($($files.Count) Markdown and text files)"
     exit 0
 }
 $problems | ForEach-Object { "missing: $_" }
