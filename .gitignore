@@ -16,6 +16,7 @@
 !/tools/Get-LibPinmame.ps1
 !/tools/LibPinmameBoot.ps1
 !/tools/Compare-RomHashes.ps1
+!/tools/Test-BootNegativeControl.ps1
 !/tools/ghidra_scripts/
 !/tools/ghidra_scripts/*.java
 
