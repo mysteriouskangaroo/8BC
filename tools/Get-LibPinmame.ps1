@@ -45,8 +45,8 @@ if (Test-Path -LiteralPath $libraryPath -PathType Leaf) {
 
 $download = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName() + '-' + $asset)
 $url = "https://github.com/vpinball/pinmame/releases/download/$tag/$asset"
+$previousProgress = $ProgressPreference
 try {
-    $previousProgress = $ProgressPreference
     $ProgressPreference = 'SilentlyContinue'
     Invoke-WebRequest -Uri $url -OutFile $download -UseBasicParsing
     $ProgressPreference = $previousProgress
@@ -66,6 +66,7 @@ try {
     }
 }
 finally {
+    $ProgressPreference = $previousProgress
     if (Test-Path -LiteralPath $download) { Remove-Item -LiteralPath $download -Force }
 }
 

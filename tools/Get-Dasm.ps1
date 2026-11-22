@@ -47,8 +47,8 @@ if (Test-Path -LiteralPath $binary -PathType Leaf) {
 
 $download = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName() + '-' + $asset)
 $url = "https://github.com/dasm-assembler/dasm/releases/download/$version/$asset"
+$previousProgress = $ProgressPreference
 try {
-    $previousProgress = $ProgressPreference
     $ProgressPreference = 'SilentlyContinue'
     Invoke-WebRequest -Uri $url -OutFile $download -UseBasicParsing
     $ProgressPreference = $previousProgress
@@ -69,6 +69,7 @@ try {
     }
 }
 finally {
+    $ProgressPreference = $previousProgress
     if (Test-Path -LiteralPath $download) { Remove-Item -LiteralPath $download -Force }
 }
 
