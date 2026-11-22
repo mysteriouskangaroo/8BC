@@ -97,6 +97,28 @@ MC6801/6803 disassembler; it is not a separate disassembler.
   known-good ROM archive is also present at
   `VisualPinballX/VPinMAME/roms/eballchp.zip`.
 
+### Game tests
+
+`tools/Invoke-GameTests.ps1` (PowerShell 7) plays each tree's ROM in
+libpinmame and checks what it does against the tree's documents. It builds
+each tree once, boots that tree's own packaged zip in a private folder, runs
+every `tests/**/*.tests.ps1` file in its own `pwsh`, prints one `PASS` or
+`FAIL` line per test, and writes `build/game-tests/report.txt`. A pass shows
+the emulated ROM followed those rules; it says nothing about physical
+hardware.
+
+```
+pwsh tools/Invoke-GameTests.ps1                 # all trees
+pwsh tools/Invoke-GameTests.ps1 -Tree originals -Path tests/kit
+pwsh tools/Test-GameTestRunner.ps1              # checks the runner itself
+```
+
+`tests/kit/` runs on every tree, `tests/<tree>/` on that tree
+(`tests/<tree>/long/` only with `-Long`), and a comparison file when both of
+the trees it names are selected. A file that crashes, hangs or prints no
+result counts as a failure. A test marked `[seeded]` wrote RAM to reach its
+starting state instead of playing there; the summary line counts them.
+
 The `temp/` and `other-examples/` directories are older Bally examples and use
 different hardware/toolchains; they are reference material, not build inputs
 for this machine.

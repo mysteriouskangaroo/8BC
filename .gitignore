@@ -19,11 +19,17 @@
 !/tools/Compare-RomHashes.ps1
 !/tools/Test-BootNegativeControl.ps1
 !/tools/GameNames.psd1
+!/tools/GameTest.psm1
+!/tools/Invoke-GameTests.ps1
+!/tools/Test-GameTestRunner.ps1
+!/tools/tests/
 !/tools/ghidra_scripts/
 !/tools/ghidra_scripts/*.java
 
 # Reproducible assembler products; canonical source remains tracked.
 /src/**/build/*
+# Game-test reports and build logs (tools/Invoke-GameTests.ps1).
+/build/
 
 # Plan-execution scratch
 /.superpowers/

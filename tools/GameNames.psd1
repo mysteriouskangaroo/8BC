@@ -63,11 +63,27 @@
     # "KP: 0", "KP: Clear" and "KP: Cancel". Measured: "Solenoid test order is
     # page 1-18" (Zero held + self-test reaches 94, self-test then 90, Enter
     # twice reaches 92, Cancel returns to attract).
+    #
+    # The digit keys 1-9 sit on strobes 1-3, returns 0-2 (pinmame by6803.h
+    # port 3 "KP: 3/2/1/6/5/4/9/8/7" and by6803.c SWITCH_UPDATE, which puts
+    # port 3 nibbles 1-3 in matrix columns 2-4), sharing page 1-18 switches
+    # 9-11, 17-19 and 25-27. Measured: "Set-EbcAdjustment changes a setting"
+    # (keys 2, 3 and 5 select register 23 and store 5; the other digits
+    # rest on the pinmame source only).
     ServiceKeys = @{
         Enter  = 1
         Zero   = 2
         Clear  = 3
         Cancel = 4
+        Three  = 9
+        Two    = 10
+        One    = 11
+        Six    = 17
+        Five   = 18
+        Four   = 19
+        Nine   = 25
+        Eight  = 26
+        Seven  = 27
     }
 
     # Page 1-18 solenoid test name -> libpinmame solenoid number. The ROM's
@@ -190,6 +206,11 @@
         ScoreBuffer2  = 0x104D
         ScoreBuffer3  = 0x1054
         ScoreBuffer4  = 0x105B
+        # Balls per game (operator register 23, manual p. 1-4): high nibble of
+        # NVRAM 161F (adjustment table EB45: 17 16 1F; factory value from
+        # C14B at EAB3). Measured: "Set-EbcAdjustment changes a setting"
+        # (30 fresh, 50 after storing 5).
+        BallsPerGame  = 0x161F
     }
 
     # Bit masks for the RAM entries that share a byte (see Ram comments).
@@ -198,6 +219,7 @@
         PlayerCount = 0x0F
         GameOver    = 0x20
         MatchDigit  = 0xF0
+        BallsPerGame = 0xF0
     }
 
     # Emulated frames per second, derived, not measured directly. Measured
