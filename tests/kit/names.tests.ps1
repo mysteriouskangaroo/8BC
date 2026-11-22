@@ -55,6 +55,10 @@ $ExpectedLaneCScore = if ($Tree -eq '8bc-deluxe') { '300' } else { '3000' }
 $ExpectedServiceEntryPresses = if ($Tree -eq '8bc-deluxe') { 1 } else { 2 }
 $ExpectedDiagnosticPresses = if ($Tree -eq '8bc-deluxe') { @(1, 2) } else { @(1, 1) }   # to reach 94, then 90
 $ExpectedSolenoidCancelPresses = 3
+# OPS manual lamp driver locations (PDF p. 61): BONUS 120,000 is J13-13 and
+# BONUS 240,000 is J13-5, both phase B. pinmame src/wpc/by6803.c header:
+# J13-13 = 29, J13-05 = 45, phase B = x + 48.
+$ExpectedBonusLamps = [ordered]@{ 'Bonus 120,000' = 29 + 48; 'Bonus 240,000' = 45 + 48 }
 # Zero-cross service ticks per second (E0FB: 1C20 = 7,200 per minute).
 $TicksPerSecond = 120
 
@@ -64,6 +68,8 @@ $badSw = @(); foreach ($k in $ExpectedSwitches.Keys) { if ($N.Switches[$k] -ne $
 Test-EbcItem -Name 'Switch numbers are page 1-18' -Doc 'HARDWARE_MAP.md page 1-18 switch table' -Body { Assert-EbcTrue ($badSw.Count -eq 0 -and $N.Switches.Count -eq 37) ("{0} entries; wrong: {1}" -f $N.Switches.Count, ($badSw -join '; ')) }
 $badBuf = @(); for ($p = 1; $p -le 4; $p++) { if ($N.Ram["ScoreBuffer$p"] -ne $ExpectedScoreBuffers[$p - 1]) { $badBuf += "ScoreBuffer$p" } }
 Test-EbcItem -Name 'Score buffers are HARDWARE_MAP addresses' -Doc 'HARDWARE_MAP.md score-display buffers' -Body { Assert-EbcTrue ($badBuf.Count -eq 0) ("wrong: " + ($badBuf -join ', ')) }
+$badLamp = @(); foreach ($k in $ExpectedBonusLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedBonusLamps[$k]) { $badLamp += "$k=$($N.Lamps[$k]) (expected $($ExpectedBonusLamps[$k]))" } }
+Test-EbcItem -Name 'Bonus lamps are J13-13 and J13-5 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badLamp.Count -eq 0) ("wrong: " + ($badLamp -join '; ')) }
 Test-EbcItem -Name 'Rebound sound is 0x22' -Doc 'GAME_RULE_TRACES.md Switch 07: Rebound' -Body { Assert-EbcEqual -Expected $ExpectedReboundSound -Actual $N.Sounds.Rebound -What 'Sounds.Rebound' }
 
 # ---- Play checks (one boot). ----

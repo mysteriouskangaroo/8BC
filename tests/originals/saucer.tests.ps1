@@ -7,19 +7,22 @@ Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 $Doc = 'src/8bc-deluxe/gamerules.md "Existing rules established in the original ROM"'
 $Champ = 'src/originals/ghidra/GAME_RULE_TRACES.md "Playfield Scores Double and Triple"'
 # gamerules.md: 10C1 runs through 2x, 3x and 5x (brief: 01 -> 02 -> 04 -> 08).
-# D07F-D089 shifts the low bits and keeps bit 80, which the E-I-G-H-T path
-# sets (CD0D), so the progression is read through mask 0F.
+# D07F-D089 shifts the low bits and keeps bit 80. At game start C4D4-C4DD
+# stores 80 there when NVRAM 168B bit 40 is set (a fresh NVRAM holds FF), and
+# CD0D also sets it, so the progression is read through mask 0F.
 $Progression = @('01', '02', '04', '08')
 $ProgressionMask = 0x0F
 # gamerules.md: bit 08 selects the repeatable 100,000 award (C96C), through
 # the current playfield multiplier.
 $TerminalAward = 100000
-# gamerules.md: the 8-ball collection (CEDC) advances the pool-bonus lamps in
-# 1044 through 120K, 240K and 120K+240K and clears 10C3. The lamps are bits
-# 20 and 40, lit when clear (CFD9-CFF0 clears 20 first): 120K is 1044 & 60 = 40.
-$PoolLampMask = 0x60
-$PoolLampsUnlit = '60'
-$PoolLamps120K = '40'
+# gamerules.md: the 8-ball collection (CEDC) advances the pool-bonus lamps
+# through 120K, 240K and 120K+240K and clears 10C3. The first collection
+# lights the physical BONUS 120,000 lamp and leaves BONUS 240,000 dark
+# (lamp numbers from the manual's lamp driver table; GameNames.psd1 Lamps).
+$Lamp120K = Get-EbcLampNumber 'Bonus 120,000'
+$Lamp240K = Get-EbcLampNumber 'Bonus 240,000'
+# Frames sampled for a lamp's state (covers the 16-frame blink cycle twice).
+$LampSampleFrames = 32
 
 # Drop targets for balls 1-7 in sink order; a group re-arms when the
 # E-I-G-H-T target behind it is hit (CDAA, CD4C; see drop-targets.tests.ps1).
@@ -30,7 +33,16 @@ $Sinks = @(
     @{ Drop = 'Drop Target 6,14' }, @{ Drop = 'Drop Target 7,15' })
 
 function Get-Progression { '{0:X2}' -f ((Read-EbcByte 0x10C1) -band $ProgressionMask) }
-function Get-PoolLamps { '{0:X2}' -f ((Read-EbcByte 0x1044) -band $PoolLampMask) }
+# '<frames lit>/<frames sampled>' for each bonus lamp, e.g. '0/32 0/32'.
+function Get-BonusLamps {
+    $lit = @(0, 0)
+    for ($k = 0; $k -lt $LampSampleFrames; $k++) {
+        Step-EbcFrames -Frames 1
+        if (Get-EbcLamp -Number $Lamp120K) { $lit[0]++ }
+        if (Get-EbcLamp -Number $Lamp240K) { $lit[1]++ }
+    }
+    '120K {0}/{2} 240K {1}/{2}' -f $lit[0], $lit[1], $LampSampleFrames
+}
 # The saucer handler ends with the kick (D0B9-D0BD).
 function Invoke-Saucer { Invoke-EbcScoredHit 'Saucer' -AfterSolenoid 'Saucer' }
 
@@ -58,9 +70,9 @@ Test-EbcItem -Name 'With 10C3 = 7F the next saucer hit runs the 8-ball collectio
         Invoke-EbcScoredHit $s.Drop | Out-Null
     }
     Assert-EbcEqual -Expected '7F' -Actual ('{0:X2}' -f (Get-EbcSunkBalls)) -What '10C3 after sinking balls 1-7'
-    Assert-EbcEqual -Expected $PoolLampsUnlit -Actual (Get-PoolLamps) -What '1044 pool-bonus lamps before the collection'
+    Assert-EbcEqual -Expected "120K 0/$LampSampleFrames 240K 0/$LampSampleFrames" -Actual (Get-BonusLamps) -What 'bonus lamps lit before the collection'
     Invoke-Saucer | Out-Null
-    Assert-EbcEqual -Expected $PoolLamps120K -Actual (Get-PoolLamps) -What '1044 pool-bonus lamps after the collection (120K)'
+    Assert-EbcEqual -Expected "120K $LampSampleFrames/$LampSampleFrames 240K 0/$LampSampleFrames" -Actual (Get-BonusLamps) -What 'bonus lamps lit after the collection'
     Assert-EbcEqual -Expected '00' -Actual ('{0:X2}' -f (Get-EbcSunkBalls)) -What '10C3 after the collection (new rack)'
 }
 Complete-EbcTests

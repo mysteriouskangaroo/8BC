@@ -109,8 +109,17 @@
         'K1 Relay (Flipper Enable)' = 19
     }
 
-    # Lamps used by a test. No test uses one yet.
-    Lamps = @{}
+    # Lamps used by a test, as libpinmame numbers. OPS manual "Eight Ball Champ
+    # lamp driver locations" (PDF p. 61) puts BONUS 120,000 on J13-13 and
+    # BONUS 240,000 on J13-5, both phase B; the pinmame src/wpc/by6803.c header
+    # table converts J13-13 to 29 and J13-05 to 45 and numbers phase B x+48.
+    # Measured: tests/originals/saucer.tests.ps1 (77 lights at the first
+    # 8-ball collection, 93 stays dark). Checked in names.tests.ps1 "Bonus
+    # lamps are J13-13 and J13-5 phase B".
+    Lamps = @{
+        'Bonus 120,000' = 77
+        'Bonus 240,000' = 93
+    }
 
     # Sound command bytes. libpinmame reports each command as two sound events:
     # the whole byte, then the byte shifted right four (C26D writes both).
