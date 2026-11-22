@@ -177,7 +177,7 @@
         CurrentPlayer = 0x008F
         # Game over: 009A bit 5 (RamMasks.GameOver); F829-F835 sets it at the
         # end of a game, F85E-F86A clears it at a start. Measured: "Start sets
-        # players".
+        # players" (set in attract before the Credit press, clear after it).
         GameOver      = 0x009A
         # Match number: high nibble of 106A is its tens digit, which F7F8-F804
         # compares with each score's tens digit. It comes from the free-running
@@ -200,11 +200,14 @@
         MatchDigit  = 0xF0
     }
 
-    # Emulated frames per second. The zero-cross service (E05C) runs 120 times
-    # a second (E0FB reloads 1C20 = 7,200 ticks per minute for the audit at
-    # 1666) and decrements 100C once per tick; pinmame core.c sets
-    # MDRV_FRAMES_PER_SECOND(60). Measured: "Frames per second" (100C falls by
-    # 1,200 over 600 frames).
+    # Emulated frames per second, derived, not measured directly. Measured
+    # ("Frames per second"): 100C falls by exactly 1,200 over 600 frames, 2
+    # ticks per frame. 100C is decremented at E06F, reached from the timer
+    # input-capture service (E05C) and from the PIA0 CB1 path of the IRQ
+    # service (E032-E041, BRA E06B). Derived: the ROM counts 7,200 of these
+    # ticks per minute (E0FB reloads 1C20 for the audit at 1666), so 120 a
+    # second, giving 60 frames a second; pinmame core.c also sets
+    # MDRV_FRAMES_PER_SECOND(60).
     FramesPerSecond = 60
 
     # Shortest switch closure and gap the ROM's debounce accepts, in frames.

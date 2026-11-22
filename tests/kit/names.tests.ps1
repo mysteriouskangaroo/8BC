@@ -64,6 +64,11 @@ $ExpectedFirstServiceTest = '00'
 $ExpectedSolenoidTestNumber = '92'
 # GAME_RULE_TRACES.md "Playfield Scores Double and Triple": each CHAMP lane (CAD4) awards 3,000.
 $ExpectedLaneCScore = '3000'
+# Self-test and Cancel presses this test's fixed schedule needs (measured;
+# each press lands on a frame where the ROM accepts it, see Invoke-SelfTestPress).
+$ExpectedServiceEntryPresses = 2   # the press at frame 2100 misses (probe10: 1015 never set); the next one enters
+$ExpectedDiagnosticPresses = @(1, 1)   # to reach 94, then 90
+$ExpectedSolenoidCancelPresses = 3
 # Zero-cross service ticks per second (E0FB: 1C20 = 7,200 per minute).
 $TicksPerSecond = 120
 
@@ -89,11 +94,14 @@ function BufferText([int]$addr) {
     $s = ''; for ($k = 6; $k -ge 0; $k--) { $d = $b[$k] -shr 4; $s += $(if ($d -gt 9) { ' ' } else { [string]$d }) }
     $s.Trim()
 }
-# The ROM can miss a self-test press: the CA1 edge flag is cleared by the
-# port-A read in the I/O refresh (E28F) when the IRQ service takes the CB1
-# path first (E032-E041). Measured: 1 of 40 presses missed, so press again
-# (at most 5 times) until $Done holds, waiting up to 400 frames each time.
-# Returns the number of presses, or -1.
+# The ROM can miss a self-test press. The miss is deterministic per press
+# frame: in probe12 (40 presses at varied frames) only the press at frame 4757
+# missed, and a rerun gave identical output; this test's first press, at
+# frame 2100, also misses every run (probe10: 1015 is never set). Cause suspected, not proven: the
+# IRQ service takes the PIA0 CB1 path first (E032-E041) and the port-A read in
+# the I/O refresh (E28F) then clears the CA1 flag. Presses again (at most 5
+# times, 400 frames each) until $Done holds, and returns the number of presses
+# (-1 if none worked). Callers assert the exact count their schedule needs.
 function Invoke-SelfTestPress([scriptblock]$Done) {
     for ($try = 1; $try -le 5; $try++) {
         Hold $N.SelfTestSwitch 4
@@ -103,8 +111,9 @@ function Invoke-SelfTestPress([scriptblock]$Done) {
 }
 # Leaves the solenoid test. Cancel is read only between pulses, and the test
 # clears the strobe-0 events after each pulse's delay (ED6A-ED6D), so a press
-# during the delay is lost: press again (at most 5 times) until 200 frames
-# pass with no momentary pulse. Returns the number of presses, or -1.
+# during the delay is lost. Deterministic for a fixed schedule: this boot
+# needs 3 presses. Presses again (at most 5 times) until 200 frames pass with
+# no momentary pulse; returns the number of presses, or -1.
 function Exit-SolenoidTest {
     for ($try = 1; $try -le 5; $try++) {
         Hold $N.ServiceKeys.Cancel 4
@@ -137,7 +146,7 @@ try {
         $before = Get-EbcDisplay -Index $N.Displays.Status
         $presses = Invoke-SelfTestPress { (Shown $N.Displays.Status) -eq $ExpectedFirstServiceTest }
         $testNo = Shown $N.Displays.Status
-        Write-Result 'Self-test switch enters service mode' ($presses -gt 0 -and $testNo -eq $ExpectedFirstServiceTest) ("display {0} '{1}' (was '{2}') after {3} presses, expected '{4}'" -f $N.Displays.Status, $testNo, $before, $presses, $ExpectedFirstServiceTest)
+        Write-Result 'Self-test switch enters service mode' ($presses -eq $ExpectedServiceEntryPresses -and $testNo -eq $ExpectedFirstServiceTest) ("display {0} '{1}' (was '{2}') after {3} presses (expected {5}), expected '{4}'" -f $N.Displays.Status, $testNo, $before, $presses, $ExpectedFirstServiceTest, $ExpectedServiceEntryPresses)
         Press $N.ServiceKeys.Cancel 300
 
         # Solenoid test order is page 1-18: hold Zero and press self-test (94),
@@ -155,11 +164,11 @@ try {
         $names = @($ExpectedSolenoidTests | ForEach-Object { $_[0] }) + $ExpectedK1Name
         $expectedOrder = @($names | ForEach-Object { $N.Solenoids[$_] })
         $firstCycle = @($order | Select-Object -First $expectedOrder.Count)
-        Write-Result 'Solenoid test order is page 1-18' (($solTest -split '/') -contains $ExpectedSolenoidTestNumber -and ($firstCycle -join ',') -eq ($expectedOrder -join ',') -and $null -notin $expectedOrder) ("status display showed '{0}' (expected '{1}' among them; reached 94 in {4} and 90 in {5} self-test presses); pulsed {2}; expected {3}" -f $solTest, $ExpectedSolenoidTestNumber, ($order -join ','), ($expectedOrder -join ','), $p94, $p90)
+        Write-Result 'Solenoid test order is page 1-18' (($solTest -split '/') -contains $ExpectedSolenoidTestNumber -and $p94 -eq $ExpectedDiagnosticPresses[0] -and $p90 -eq $ExpectedDiagnosticPresses[1] -and ($firstCycle -join ',') -eq ($expectedOrder -join ',') -and $null -notin $expectedOrder) ("status display showed '{0}' (expected '{1}' among them; reached 94 in {4} and 90 in {5} self-test presses, expected {6} and {7}); pulsed {2}; expected {3}" -f $solTest, $ExpectedSolenoidTestNumber, ($order -join ','), ($expectedOrder -join ','), $p94, $p90, $ExpectedDiagnosticPresses[0], $ExpectedDiagnosticPresses[1])
         $badOff = @($ExpectedSolenoidTests | Where-Object { $N.Solenoids[$_[0]] -ne $_[1] + 1 } | ForEach-Object { "$($_[0])=$($N.Solenoids[$_[0]]) (M$($_[1]))" })
         Write-Result 'libpinmame solenoid is M+1' ($badOff.Count -eq 0) ("not M+1: " + ($badOff -join '; '))
         $cancels = Exit-SolenoidTest
-        Write-Output "INFO kit/names :: left the solenoid test after $cancels Cancel presses"
+        Write-Result 'Cancel leaves the solenoid test' ($cancels -eq $ExpectedSolenoidCancelPresses) ("left after {0} Cancel presses (-1 = never), expected {1}" -f $cancels, $ExpectedSolenoidCancelPresses)
         Step-EbcFrames -Frames 300
 
         # Coin adds a credit: closing Coin I (Left) for 4 frames adds the factory coinage.
@@ -169,6 +178,7 @@ try {
         Write-Result 'Coin adds a credit' ($c1 - $c0 -eq $ExpectedCreditsPerCoinI -and (Shown $N.Displays.Credits) -eq ('{0:D2}' -f $c1)) ("Credits {0} -> {1}, expected +{2}; credit display '{3}'" -f $c0, $c1, $ExpectedCreditsPerCoinI, (Shown $N.Displays.Credits))
 
         # Start sets players: Credit with credits > 0 gives one player on ball 1.
+        $overAttract = (RamByte $N.Ram.GameOver) -band $N.RamMasks.GameOver
         $seen = [EightBallChampMachine]::EventCount
         Press $N.Switches.Credit 300
         $b8e = RamByte $N.Ram.PlayerCount
@@ -177,7 +187,7 @@ try {
         $cur = RamByte $N.Ram.CurrentPlayer
         $over = (RamByte $N.Ram.GameOver) -band $N.RamMasks.GameOver
         $snd = SoundsSince $seen
-        Write-Result 'Start sets players' ($pc -eq 1 -and $bip -eq 1 -and $cur -eq 1 -and $over -eq 0 -and ($snd -contains $N.Sounds.RackTheBalls) -and (Shown $N.Displays.Status) -eq '1') ("PlayerCount {0}, BallInPlay {1}, CurrentPlayer {2}, GameOver bit {3:X2}, status display '{4}', sounds {5}; expected 1, 1, 1, 00, '1', with {6:X2} among the sounds" -f $pc, $bip, $cur, $over, (Shown $N.Displays.Status), (Hex $snd), $N.Sounds.RackTheBalls)
+        Write-Result 'Start sets players' ($pc -eq 1 -and $bip -eq 1 -and $cur -eq 1 -and $overAttract -ne 0 -and $over -eq 0 -and ($snd -contains $N.Sounds.RackTheBalls) -and (Shown $N.Displays.Status) -eq '1') ("PlayerCount {0}, BallInPlay {1}, CurrentPlayer {2}, GameOver bit {3:X2} (attract {7:X2}), status display '{4}', sounds {5}; expected 1, 1, 1, 00 (attract nonzero), '1', with {6:X2} among the sounds" -f $pc, $bip, $cur, $over, (Shown $N.Displays.Status), (Hex $snd), $N.Sounds.RackTheBalls, $overAttract)
 
         # Score buffers match display: after a scored switch, ScoreBuffer1 reads as display 1's text.
         Press $N.Switches['"C" Return Lane'] 120
