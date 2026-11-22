@@ -11,6 +11,7 @@
 !/tools/New-WeeblyM27C160Image.ps1
 !/tools/Get-Dasm.ps1
 !/tools/rom-hashes.sha1
+!/tools/Test-DocPaths.ps1
 !/tools/ghidra_scripts/
 !/tools/ghidra_scripts/*.java
 

@@ -1,6 +1,6 @@
 # Eight Ball Champ Deluxe game rules
 
-This document translates `new-games-design-ideas/8 Ball Champ New Rules.pptx` into an implementation contract. The original ROM trace is used to resolve its descriptions of the existing rules and uncertain base values.
+This document translates `new-games-design-ideas/8 Ball Champ Deluxe Initial Design.pptx` into an implementation contract. The original ROM trace is used to resolve its descriptions of the existing rules and uncertain base values.
 
 ## Deluxe score scale
 
