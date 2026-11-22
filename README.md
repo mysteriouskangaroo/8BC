@@ -84,9 +84,12 @@ MC6801/6803 disassembler; it is not a separate disassembler.
 
 ## Local tools
 
-- `dasm-2.20.14.1-win-x64/dasm.exe` is the local 6803-capable assembler used
-  by `src/originals/asm/build.ps1`. Full recompilation instructions are in
+- DASM 2.20.14.1 is the 6803-capable assembler used by every `build.ps1`;
+  `tools/Get-Dasm.ps1` downloads and verifies the build for the host OS. Full
+  recompilation instructions are in
   `src/originals/asm/readme.txt`.
+- libpinmame runs each tree's `asm/test-pinmame.ps1` boot test (PowerShell 7);
+  `tools/Get-LibPinmame.ps1` downloads and verifies it.
 - Ghidra is installed with the GhidraMC6800 extension. Use
   `MC6801:BE:16:default` for this ROM; do **not** decode it as Ghidra's
   built-in 6809 language.

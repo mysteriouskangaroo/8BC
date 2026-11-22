@@ -31,7 +31,7 @@ As part of a successful build, package the rebuilt CPU image together with
 the three unchanged sound ROMs from `src/originals/roms/` as
 `VisualPinballX/VPinMAME/roms/eballchp.zip`. Never source the sound ROMs from
 an existing ZIP, and never alter the immutable copies. Preserve the first
-pre-build archive as a recoverable backup. The PinMAME smoke test must
+pre-build archive as a recoverable backup. The PinMAME boot test must
 exercise the exact complete archive produced by the build, not construct a
 different test-only ROM set.
 
@@ -49,14 +49,14 @@ check. Assemble in two passes: generate the compensation byte at `C000`,
 reassemble so the listing and ROM agree, and require the eight-bit sum of all
 16 KiB from `C000-FFFF` to equal `FF` before comparing, packaging, or testing.
 Never bypass the check in a hardware-targeted image. The canonical value is
-`88`; variations will usually generate another value. A finite-frame PinMAME
-run can falsely pass while the CPU spins in the checksum-failure loop at
-`E3E0`, so process survival is not a substitute for this build-time check.
+`88`; variations will usually generate another value. The PinMAME boot test
+fails an image stuck in the checksum-failure loop at `E3E0`, but it does not
+replace this build-time check.
 
-Do not overstate the automated PinMAME smoke test. A successful finite-frame
-run proves only that PinMAME loaded the ROM, executed the CPU, and exited
-cleanly; it can even pass while startup is stuck in a tight loop. It does not
-validate boot completion, game rules, or physical outputs. Interactive
+Do not overstate the automated PinMAME boot test. A pass proves only that the
+packaged ROM set booted past the startup checksum, wrote RAM and drove the
+displays within the frame limit. It does not validate game rules or physical
+outputs. Interactive
 gameplay and service-mode testing are still required
 before calling an image gameplay-ready, and timing/safety review of hardware
 I/O is required before calling it suitable to burn and install in a machine.

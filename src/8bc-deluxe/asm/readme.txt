@@ -24,9 +24,15 @@ code-level rule trace.
 Prerequisites
 -------------
 
-From the repository root, the build expects:
+From the repository root, the build expects DASM 2.20.14.1 for the host OS,
+which tools/Get-Dasm.ps1 downloads and verifies:
 
-  dasm-2.20.14.1-win-x64/dasm.exe
+  dasm-2.20.14.1-win-x64/dasm.exe   Windows
+  dasm-2.20.14.1-osx-x64/dasm       macOS (runs under Rosetta on Apple silicon)
+  dasm-2.20.14.1-linux-x64/dasm     Linux
+
+It also reads:
+
   src/originals/roms/u3_cpu.128
   src/originals/roms/u3_snd.532
   src/originals/roms/u4_snd.532
@@ -37,8 +43,10 @@ The reference CPU and sound ROMs are read but never modified.
 Recompilation process
 ---------------------
 
-From a PowerShell prompt at the repository root, run:
+From the repository root, run it with PowerShell 7 on any OS, or with Windows
+PowerShell 5.1:
 
+  pwsh -File src/8bc-deluxe/asm/build.ps1
   powershell -ExecutionPolicy Bypass -File .\src\8bc-deluxe\asm\build.ps1
 
 The script performs the structural build checks and records comparison data:
@@ -95,27 +103,31 @@ variation. PinMAME validation and targeted gameplay/service tests are still
 required before treating a changed image as runnable. Timing-sensitive I/O and
 solenoid paths require additional care before burning a physical EPROM.
 
-PinMAME smoke test
-------------------
+PinMAME boot test
+-----------------
 
-After a successful build, run the automated smoke test from the repository
-root:
+Run the automated boot test from the repository root with PowerShell 7 on any
+OS:
 
-  powershell -ExecutionPolicy Bypass -File .\src\8bc-deluxe\asm\test-pinmame.ps1
+  pwsh -File src/8bc-deluxe/asm/test-pinmame.ps1
 
-By default it runs 600 unthrottled frames. Use -Frames to request a longer
+It uses libpinmame, which tools/Get-LibPinmame.ps1 downloads and verifies.
+
+By default it runs 1500 unthrottled frames. Use -Frames to request a longer
 run. The script:
 
   1. Runs build.ps1 and all structural ROM checks.
   2. Copies the complete package emitted by build.ps1 into an isolated test
      directory without changing any of its entries.
-  3. Uses isolated config, NVRAM, snapshot, and wave directories.
-  4. Runs PinMAME for the requested frame count and requires exit code zero.
+  3. Boots that package in libpinmame, headless and unthrottled, with fresh
+     config and NVRAM, for the requested frame count.
+  4. Passes only if the displays update, U4 RAM is written, and the stack
+     does not hold the return address into the E3E0 checksum-failure loop.
 
 The build deliberately changes VisualPinballX/VPinMAME/roms/eballchp.zip; the
-smoke test does not change that package or any other Visual Pinball files. The
-smoke test proves that PinMAME can load, reset, and continue executing the
-complete packaged ROM set. It does not prove the rules or physical outputs.
+boot test does not change that package or any other Visual Pinball files. The
+boot test proves that the complete packaged ROM set boots past the startup
+checksum and drives the displays. It does not prove the rules or physical outputs.
 Before a ROM is considered gameplay-ready, exercise attract mode, game start,
 drain and ball transitions, scoring, tilt, switches, lamps, displays, sounds,
 and all service tests. Before burning an EPROM, review timing-sensitive
@@ -149,5 +161,5 @@ Variation boundary
 Make Deluxe rule changes here, not in `src/originals/`. Keep the canonical
 analysis/source and every file in `src/originals/roms/` unchanged. Preserve
 fixed addresses unless all incoming references and timing consequences have
-been traced, then rerun both the build and PinMAME smoke test after each
+been traced, then rerun both the build and PinMAME boot test after each
 executable change.

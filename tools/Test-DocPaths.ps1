@@ -12,7 +12,8 @@ param(
 #     followed by arguments ("tools/x.ps1 -Flag") is checked up to the first
 #     space when the whole span is not a path. '*' is a glob.
 # Local-only, gitignored tool and build paths are exempt. Fenced code blocks
-# are skipped. Exit 0 when clean, 1 when anything is missing.
+# are skipped, as are implementation plans under docs/superpowers/plans/.
+# Exit 0 when clean, 1 when anything is missing.
 
 $ErrorActionPreference = 'Stop'
 
@@ -40,7 +41,8 @@ $topLevel = @(Get-ChildItem -LiteralPath $Root -Force | ForEach-Object { $_.Name
 
 Push-Location $Root
 try {
-    $files = @(& git ls-files -- '*.md')
+    # Implementation plans quote example and fixture paths on purpose.
+    $files = @(& git ls-files -- '*.md' | Where-Object { -not $_.StartsWith('docs/superpowers/plans/') })
     if ($LASTEXITCODE -ne 0) { throw "git ls-files failed in $Root" }
 }
 finally { Pop-Location }
