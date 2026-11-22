@@ -1,0 +1,212 @@
+# Tests for tools/GameNames.psd1, the switch, solenoid, lamp, sound and RAM
+# name table the game tests use. Each test checks a table entry by play.
+# Usage: pwsh tests/kit/names.tests.ps1 -Tree originals [-VpmZip <path>]
+# Boots a private copy of the tree's packaged eballchp.zip; never writes src/*/roms/.
+
+param(
+    [Parameter(Mandatory = $true)][string]$Tree,
+    [string]$VpmZip
+)
+$ErrorActionPreference = 'Stop'
+$repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+if (-not $VpmZip) { $VpmZip = Join-Path $repo 'VisualPinballX/VPinMAME/roms/eballchp.zip' }
+$VpmZip = (Resolve-Path -LiteralPath $VpmZip).Path
+
+# Temporary result printer, until the helper module provides one.
+$script:failed = 0
+function Write-Result([string]$Name, [bool]$Ok, [string]$Detail = '') {
+    if ($Ok) { Write-Output "PASS kit/names :: $Name" }
+    else { $script:failed++; Write-Output "FAIL kit/names :: $Name :: $Detail" }
+}
+
+$namesFile = Join-Path $repo 'tools/GameNames.psd1'
+if (-not (Test-Path -LiteralPath $namesFile)) {
+    Write-Result 'setup' $false 'tools/GameNames.psd1 does not exist'
+    exit 1
+}
+$N = Import-PowerShellDataFile -LiteralPath $namesFile
+. (Join-Path $repo 'tools/LibPinmameMachine.ps1')
+$library = & (Join-Path $repo 'tools/Get-LibPinmame.ps1')
+
+# ---- Expected values, copied from the documents they cite. ----
+
+# HARDWARE_MAP.md "Page 1-18 switch assembly identification": all 37 numbers.
+$ExpectedSwitches = [ordered]@{
+    'Right Thumper Bumper' = 1; 'Left Thumper Bumper' = 2; 'Right Slingshot' = 3; 'Left Slingshot' = 4
+    'Saucer' = 5; 'Credit' = 6; 'Rebound' = 7; 'Outhole' = 8
+    'Coin III (Right)' = 9; 'Coin I (Left)' = 10; 'Coin II (Middle)' = 11; 'Left Rollover Button' = 12
+    'Right Rollover Button' = 13; 'Not Used 14' = 14; 'Tilt' = 15; 'Slam' = 16
+    '"C" Return Lane' = 17; '"H" Top Lane' = 18; '"A" Top Lane' = 19; '"M" Top Lane' = 20
+    '"P" Return Lane' = 21; 'Not Used 22' = 22; 'Left Outlane' = 23; 'Right Outlane' = 24
+    'Drop Target 1,2,9,10' = 25; 'Lane Change (Cabinet)' = 26; 'Drop Target 3,11' = 27; 'Drop Target 4,5,12,13' = 28
+    'Center Rollover Button' = 29; 'Drop Target 6,14' = 30; 'Drop Target 7,15' = 31; 'Spinner' = 32
+    'Drop Target "E"' = 33; 'Drop Target "I"' = 34; 'Drop Target "G"' = 35; 'Drop Target "H"' = 36; 'Drop Target "T"' = 37
+}
+# HARDWARE_MAP.md "Solenoid self-test outputs": tests 01-12 in page 1-18 order,
+# with the U14 driver output M<n> of each.
+$ExpectedSolenoidTests = @(
+    @('Drop Target 1,2,9,10', 0), @('Drop Target 3,11', 1), @('Drop Target 4,5,12,13', 2), @('Drop Target 6,14', 3),
+    @('Drop Target 7,15', 4), @('Saucer', 7), @('Right Thumper Bumper', 8), @('Left Thumper Bumper', 9),
+    @('Right Slingshot', 10), @('Left Slingshot', 11), @('Outhole', 13), @('Knocker', 14))
+# GAME_RULE_TRACES.md "Switch 07: Rebound": CA95 queues sound command 0x22.
+$ExpectedReboundSound = 0x22
+# HARDWARE_MAP.md "U4 RAM: dedicated player-score display buffers".
+$ExpectedScoreBuffers = @(0x1046, 0x104D, 0x1054, 0x105B)
+# HARDWARE_MAP.md "Solenoid self-test outputs": test 13 is K1, driven by the
+# continuous output BF rather than U14.
+$ExpectedK1Name = 'K1 Relay (Flipper Enable)'
+# Factory settings (fresh NVRAM): Coin I gives 1 credit (F079 -> F08F with the
+# Coin I setting at 1676, read FF FF from a fresh NVRAM; measured).
+$ExpectedCreditsPerCoinI = 1
+# The service entry shows test 00 on the status display (EBA3/EBB1 show 008D,
+# which entry leaves at 00); the solenoid test is 92 (service table at EB70: 5C -> ED40).
+$ExpectedFirstServiceTest = '00'
+$ExpectedSolenoidTestNumber = '92'
+# GAME_RULE_TRACES.md "Playfield Scores Double and Triple": each CHAMP lane (CAD4) awards 3,000.
+$ExpectedLaneCScore = '3000'
+# Zero-cross service ticks per second (E0FB: 1C20 = 7,200 per minute).
+$TicksPerSecond = 120
+
+# ---- Pure table checks (no emulator). ----
+
+$badSw = @(); foreach ($k in $ExpectedSwitches.Keys) { if ($N.Switches[$k] -ne $ExpectedSwitches[$k]) { $badSw += "$k=$($N.Switches[$k]) (expected $($ExpectedSwitches[$k]))" } }
+Write-Result 'Switch numbers are page 1-18' ($badSw.Count -eq 0 -and $N.Switches.Count -eq 37) ("{0} entries; wrong: {1}" -f $N.Switches.Count, ($badSw -join '; '))
+$badBuf = @(); for ($p = 1; $p -le 4; $p++) { if ($N.Ram["ScoreBuffer$p"] -ne $ExpectedScoreBuffers[$p - 1]) { $badBuf += "ScoreBuffer$p" } }
+Write-Result 'Score buffers are HARDWARE_MAP addresses' ($badBuf.Count -eq 0) ("wrong: " + ($badBuf -join ', '))
+Write-Result 'Rebound sound is 0x22' ($N.Sounds.Rebound -eq $ExpectedReboundSound) ("Sounds.Rebound = {0}" -f $N.Sounds.Rebound)
+
+# ---- Play checks (one boot). ----
+
+$AttractFrames = 1500   # coin, credit and self-test all respond by frame 1500 (measured)
+function RamByte([int]$a) { (Read-EbcRam -Address $a -Count 1)[0] }
+function Hold([int]$n, [int]$frames) { Set-EbcSwitch -Number $n -Closed $true; Step-EbcFrames -Frames $frames; Set-EbcSwitch -Number $n -Closed $false }
+function Press([int]$n, [int]$settle) { Hold $n 4; Step-EbcFrames -Frames $settle }
+function Digit([byte]$b) { $d = $b -shr 4; if ($d -gt 9) { 0 } else { $d } }
+function CreditCount { $b = Read-EbcRam -Address $N.Ram.Credits -Count 2; 10 * (Digit $b[1]) + (Digit $b[0]) }
+# Ones-first, displayed digit in the high nibble, F = blank.
+function BufferText([int]$addr) {
+    $b = Read-EbcRam -Address $addr -Count 7
+    $s = ''; for ($k = 6; $k -ge 0; $k--) { $d = $b[$k] -shr 4; $s += $(if ($d -gt 9) { ' ' } else { [string]$d }) }
+    $s.Trim()
+}
+# The ROM can miss a self-test press: the CA1 edge flag is cleared by the
+# port-A read in the I/O refresh (E28F) when the IRQ service takes the CB1
+# path first (E032-E041). Measured: 1 of 40 presses missed, so press again
+# (at most 5 times) until $Done holds, waiting up to 400 frames each time.
+# Returns the number of presses, or -1.
+function Invoke-SelfTestPress([scriptblock]$Done) {
+    for ($try = 1; $try -le 5; $try++) {
+        Hold $N.SelfTestSwitch 4
+        for ($w = 0; $w -lt 400; $w++) { if (& $Done) { return $try }; Step-EbcFrames -Frames 1 }
+    }
+    -1
+}
+# Leaves the solenoid test. Cancel is read only between pulses, and the test
+# clears the strobe-0 events after each pulse's delay (ED6A-ED6D), so a press
+# during the delay is lost: press again (at most 5 times) until 200 frames
+# pass with no momentary pulse. Returns the number of presses, or -1.
+function Exit-SolenoidTest {
+    for ($try = 1; $try -le 5; $try++) {
+        Hold $N.ServiceKeys.Cancel 4
+        $seen = [EightBallChampMachine]::EventCount
+        Step-EbcFrames -Frames 200
+        if (@(Get-EbcEvents -Since $seen | Where-Object { $_ -match '^\d+ sol ([1-9]|1[0-5]) 1$' }).Count -eq 0) { return $try }
+    }
+    -1
+}
+function Shown([int]$index) { ((Get-EbcDisplay -Index $index) -replace '[ ,]', '') }
+function SoundsSince([int]$seen) { @(Get-EbcEvents -Since $seen | Where-Object { ($_ -split ' ')[1] -eq 'snd' } | ForEach-Object { [int]($_ -split ' ')[3] }) }
+function Hex($list) { ($list | ForEach-Object { '{0:X2}' -f $_ }) -join ',' }
+
+$vpm = Join-Path $repo ("src/$Tree/build/game-tests-scratch/" + [guid]::NewGuid().ToString('N'))
+try {
+    New-Item -ItemType Directory -Path (Join-Path $vpm 'roms') -Force | Out-Null
+    Copy-Item -LiteralPath $VpmZip -Destination (Join-Path $vpm 'roms/eballchp.zip')
+    try {
+        Start-EbcMachine -LibraryPath $library -VpmPath $vpm
+        Step-EbcFrames -Frames $AttractFrames
+
+        # Frames per second: the zero-cross counter 100C falls once per tick.
+        # Summed one frame at a time, so the byte's wraps are counted.
+        $ticks = 0; $prev = RamByte 0x100C
+        for ($k = 0; $k -lt 600; $k++) { Step-EbcFrames -Frames 1; $now = RamByte 0x100C; $ticks += (($prev - $now) % 256 + 256) % 256; $prev = $now }
+        $expectTicks = 600 * $TicksPerSecond / $N.FramesPerSecond
+        Write-Result 'Frames per second' ($ticks -eq $expectTicks) ("100C fell {0} ticks over 600 frames, expected {1} for {2} frames/s" -f $ticks, $expectTicks, $N.FramesPerSecond)
+
+        # Self-test switch enters service mode: the status display shows test 00.
+        $before = Get-EbcDisplay -Index $N.Displays.Status
+        $presses = Invoke-SelfTestPress { (Shown $N.Displays.Status) -eq $ExpectedFirstServiceTest }
+        $testNo = Shown $N.Displays.Status
+        Write-Result 'Self-test switch enters service mode' ($presses -gt 0 -and $testNo -eq $ExpectedFirstServiceTest) ("display {0} '{1}' (was '{2}') after {3} presses, expected '{4}'" -f $N.Displays.Status, $testNo, $before, $presses, $ExpectedFirstServiceTest)
+        Press $N.ServiceKeys.Cancel 300
+
+        # Solenoid test order is page 1-18: hold Zero and press self-test (94),
+        # self-test (90), Enter twice (92), then record 'sol <n> 1' events.
+        Set-EbcSwitch -Number $N.ServiceKeys.Zero -Closed $true; Step-EbcFrames -Frames 4
+        $p94 = Invoke-SelfTestPress { (Shown $N.Displays.Status) -eq '94' }
+        Set-EbcSwitch -Number $N.ServiceKeys.Zero -Closed $false; Step-EbcFrames -Frames 60
+        $p90 = Invoke-SelfTestPress { (Shown $N.Displays.Status) -eq '90' }
+        Press $N.ServiceKeys.Enter 60
+        $seen = [EightBallChampMachine]::EventCount
+        Press $N.ServiceKeys.Enter 1000
+        # The test number blinks, so look for it among the display events.
+        $solTest = @(Get-EbcEvents -Since $seen | Where-Object { $_ -match "^\d+ disp $($N.Displays.Status) " } | ForEach-Object { ($_ -split ' ', 4)[3] -replace '[ ,]', '' } | Where-Object { $_ -ne '' } | Select-Object -Unique) -join '/'
+        $order = @(Get-EbcEvents -Since $seen | Where-Object { $_ -match '^\d+ sol \d+ 1$' } | ForEach-Object { [int]($_ -split ' ')[2] })
+        $names = @($ExpectedSolenoidTests | ForEach-Object { $_[0] }) + $ExpectedK1Name
+        $expectedOrder = @($names | ForEach-Object { $N.Solenoids[$_] })
+        $firstCycle = @($order | Select-Object -First $expectedOrder.Count)
+        Write-Result 'Solenoid test order is page 1-18' (($solTest -split '/') -contains $ExpectedSolenoidTestNumber -and ($firstCycle -join ',') -eq ($expectedOrder -join ',') -and $null -notin $expectedOrder) ("status display showed '{0}' (expected '{1}' among them; reached 94 in {4} and 90 in {5} self-test presses); pulsed {2}; expected {3}" -f $solTest, $ExpectedSolenoidTestNumber, ($order -join ','), ($expectedOrder -join ','), $p94, $p90)
+        $badOff = @($ExpectedSolenoidTests | Where-Object { $N.Solenoids[$_[0]] -ne $_[1] + 1 } | ForEach-Object { "$($_[0])=$($N.Solenoids[$_[0]]) (M$($_[1]))" })
+        Write-Result 'libpinmame solenoid is M+1' ($badOff.Count -eq 0) ("not M+1: " + ($badOff -join '; '))
+        $cancels = Exit-SolenoidTest
+        Write-Output "INFO kit/names :: left the solenoid test after $cancels Cancel presses"
+        Step-EbcFrames -Frames 300
+
+        # Coin adds a credit: closing Coin I (Left) for 4 frames adds the factory coinage.
+        $c0 = CreditCount
+        Press $N.Switches['Coin I (Left)'] 120
+        $c1 = CreditCount
+        Write-Result 'Coin adds a credit' ($c1 - $c0 -eq $ExpectedCreditsPerCoinI -and (Shown $N.Displays.Credits) -eq ('{0:D2}' -f $c1)) ("Credits {0} -> {1}, expected +{2}; credit display '{3}'" -f $c0, $c1, $ExpectedCreditsPerCoinI, (Shown $N.Displays.Credits))
+
+        # Start sets players: Credit with credits > 0 gives one player on ball 1.
+        $seen = [EightBallChampMachine]::EventCount
+        Press $N.Switches.Credit 300
+        $b8e = RamByte $N.Ram.PlayerCount
+        $pc = $b8e -band $N.RamMasks.PlayerCount
+        $bip = ((RamByte $N.Ram.BallInPlay) -band $N.RamMasks.BallInPlay) -shr 4
+        $cur = RamByte $N.Ram.CurrentPlayer
+        $over = (RamByte $N.Ram.GameOver) -band $N.RamMasks.GameOver
+        $snd = SoundsSince $seen
+        Write-Result 'Start sets players' ($pc -eq 1 -and $bip -eq 1 -and $cur -eq 1 -and $over -eq 0 -and ($snd -contains $N.Sounds.RackTheBalls) -and (Shown $N.Displays.Status) -eq '1') ("PlayerCount {0}, BallInPlay {1}, CurrentPlayer {2}, GameOver bit {3:X2}, status display '{4}', sounds {5}; expected 1, 1, 1, 00, '1', with {6:X2} among the sounds" -f $pc, $bip, $cur, $over, (Shown $N.Displays.Status), (Hex $snd), $N.Sounds.RackTheBalls)
+
+        # Score buffers match display: after a scored switch, ScoreBuffer1 reads as display 1's text.
+        Press $N.Switches['"C" Return Lane'] 120
+        $buf = BufferText $N.Ram.ScoreBuffer1
+        $shown = Shown $N.Displays.Player1
+        Write-Result 'Score buffers match display' ($buf -eq $ExpectedLaneCScore -and $shown -eq $ExpectedLaneCScore) ("ScoreBuffer1 '{0}', display {1} '{2}', expected '{3}'" -f $buf, $N.Displays.Player1, $shown, $ExpectedLaneCScore)
+
+        # Rebound queues its sound command.
+        $seen = [EightBallChampMachine]::EventCount
+        Press $N.Switches.Rebound 30
+        $snd = SoundsSince $seen
+        Write-Result 'Rebound sound reaches the sound board' (@($snd | Where-Object { $_ -eq $ExpectedReboundSound }).Count -eq 1) ("sound events after Rebound: " + (Hex $snd))
+
+        # Switch debounce: the shortest closure and gap each register.
+        $seen = [EightBallChampMachine]::EventCount
+        Hold $N.Switches.Rebound $N.SwitchMinCloseFrames
+        Step-EbcFrames -Frames $N.SwitchMinOpenFrames
+        Hold $N.Switches.Rebound $N.SwitchMinCloseFrames
+        Step-EbcFrames -Frames 30
+        $snd = SoundsSince $seen
+        $hits = @($snd | Where-Object { $_ -eq $ExpectedReboundSound }).Count
+        Write-Result 'Switch debounce' ($hits -eq 2) ("Rebound closed {0}, open {1}, closed {0}: {2} x {3:X2}, expected 2; sounds {4}" -f $N.SwitchMinCloseFrames, $N.SwitchMinOpenFrames, $hits, $ExpectedReboundSound, (Hex $snd))
+    }
+    finally {
+        if ('EightBallChampMachine' -as [type]) { Stop-EbcMachine }
+    }
+}
+finally {
+    Remove-Item -LiteralPath $vpm -Recurse -Force -ErrorAction SilentlyContinue
+}
+if ($script:failed -gt 0) { exit 1 }
+exit 0
