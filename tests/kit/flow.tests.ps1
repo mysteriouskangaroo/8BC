@@ -49,6 +49,25 @@ Test-EbcItem -Name 'Get-EbcSunkBalls records a first sink' -Doc $Rules -Body {
     Assert-EbcEqual -Expected ('{0:X2}' -f $Ball3Bit) -Actual ('{0:X2}' -f ((Get-EbcSunkBalls) -band $Ball3Bit)) -What 'sunk-ball bit for ball 3'
     Assert-EbcTrue ((Get-EbcScore -Player 1) -gt $before) "player 1 score did not rise from $before on the first sink"
 }
+Test-EbcItem -Name 'Invoke-EbcScoredHit returns the settled score change' -Doc $Rules -Body {
+    $before = Get-EbcScore -Player 1
+    $delta = Invoke-EbcScoredHit 'Rebound'
+    Assert-EbcEqual -Expected ((Get-EbcScore -Player 1) - $before) -Actual $delta -What 'returned delta against the score change'
+    Assert-EbcTrue ($delta -gt 0) "Rebound delta $delta is not positive"
+    $bytes = Read-EbcRam -Address (Get-EbcRamAddress 'PENDING_SCORE_10S') -Count 6
+    $pending = -join @($bytes | ForEach-Object { '{0:X2}' -f $_ })
+    Assert-EbcEqual -Expected '000000000000' -Actual $pending -What 'pending score 0094-0099 after the hit'
+}
+Test-EbcItem -Name 'Invoke-EbcScoredHit -AfterSolenoid waits for the pulse' -Doc $Rules -Body {
+    $seen = Get-EbcEventCount
+    $delta = Invoke-EbcScoredHit 'Saucer' -AfterSolenoid 'Saucer'
+    $kicks = @(Get-EbcEvents -Since $seen | Where-Object { $_ -match ('^\d+ sol {0} 1$' -f (Get-EbcSolenoid 'Saucer')) })
+    Assert-EbcEqual -Expected 1 -Actual $kicks.Count -What 'Saucer solenoid pulses during the hit'
+    Assert-EbcTrue ($delta -gt 0) "Saucer delta $delta is not positive"
+    # A Rebound hit never pulses the Knocker: the wait must give up and say so.
+    $msg = try { Invoke-EbcScoredHit 'Rebound' -AfterSolenoid 'Knocker' -MaxFrames 300 | Out-Null; 'no exception' } catch { $_.Exception.Message }
+    Assert-EbcTrue ($msg -match "no 'Knocker' pulse within 300 frames") "Knocker wait after Rebound: $msg"
+}
 Test-EbcItem -Name 'Invoke-EbcDrain passes to player 2' -Doc $Rules -Body {
     Assert-EbcEqual -Expected 'Served' -Actual (Invoke-EbcDrain) -What 'drain outcome'
     Assert-EbcEqual -Expected 2 -Actual (Get-EbcCurrentPlayer) -What 'current player'

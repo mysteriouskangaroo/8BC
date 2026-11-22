@@ -275,6 +275,44 @@ function Get-EbcChampState { Read-EbcByte (Get-EbcRamAddress 'CHAMP_COMPLETION_S
 # Sunk pool balls 1-7 (10C3).
 function Get-EbcSunkBalls { Read-EbcByte (Get-EbcRamAddress 'SUNK_POOL_BALLS_1_TO_7') }
 
+# Hits -Switch and returns the current player's score change once the
+# pending score (0094-0099) is zero and the score has not changed for
+# -SettleFrames frames. A rule handler's lamp animation holds back the score
+# and later switch events (the 8-ball collection runs for well over 150
+# frames), so -AfterSolenoid first waits for that solenoid's pulse (for the
+# Saucer, its kick ends the handler). The score is read from the RAM buffer
+# while waiting and cross-checked with the display at the end (Get-EbcScore).
+function Invoke-EbcScoredHit {
+    param([Parameter(Mandatory = $true, Position = 0)]$Switch,
+          [ValidateRange(1, 1000)][int]$SettleFrames = 150,
+          [string]$AfterSolenoid,
+          [ValidateRange(1, 100000)][int]$MaxFrames = 6000)
+    $player = Get-EbcCurrentPlayer
+    $addr = Get-EbcRamAddress "ScoreBuffer$player"
+    $read = { $t = Get-EbcScoreBufferText $addr; if ($t -eq '') { [long]0 } else { [long]$t } }
+    $before = & $read
+    $seen = Get-EbcEventCount
+    $start = Get-EbcFrame
+    Invoke-EbcSwitchHit $Switch
+    if ($AfterSolenoid) {
+        $pattern = '^\d+ sol {0} 1$' -f (Get-EbcSolenoid $AfterSolenoid)
+        while (-not @(Get-EbcEvents -Since $seen | Where-Object { $_ -match $pattern }).Count) {
+            if ((Get-EbcFrame) - $start -gt $MaxFrames) { throw "Invoke-EbcScoredHit: no '$AfterSolenoid' pulse within $MaxFrames frames of the '$Switch' hit at frame $start." }
+            Step-EbcFrames -Frames 1
+        }
+    }
+    $pendingAt = Get-EbcRamAddress 'PENDING_SCORE_10S'
+    $last = & $read; $stable = 0
+    while ($stable -lt $SettleFrames) {
+        if ((Get-EbcFrame) - $start -gt $MaxFrames) { throw "Invoke-EbcScoredHit: the score did not settle within $MaxFrames frames of the '$Switch' hit at frame $start." }
+        Step-EbcFrames -Frames 1
+        $now = & $read
+        $pending = @(Read-EbcRam -Address $pendingAt -Count 6 | Where-Object { $_ -ne 0 }).Count
+        if ($now -eq $last -and $pending -eq 0) { $stable++ } else { $stable = 0; $last = $now }
+    }
+    (Get-EbcScore -Player $player) - $before
+}
+
 # ---------------------------------------------------------------- game flow
 
 # Drops -Count coins in Coin I (Left); returns the credits afterwards.
@@ -566,7 +604,7 @@ Export-ModuleMember -Function @(
     'Get-EbcNames', 'Get-EbcSwitch', 'Get-EbcSolenoid', 'Get-EbcLampNumber', 'Get-EbcRamAddress', 'Get-EbcServiceKey',
     'Invoke-EbcSwitchHit', 'Read-EbcByte', 'Get-EbcDisplayText', 'Get-EbcScoreBufferText',
     'Get-EbcScore', 'Get-EbcCredits', 'Get-EbcBallInPlay', 'Get-EbcPlayerCount', 'Get-EbcCurrentPlayer', 'Test-EbcGameOver',
-    'Get-EbcChampState', 'Get-EbcSunkBalls',
+    'Get-EbcChampState', 'Get-EbcSunkBalls', 'Invoke-EbcScoredHit',
     'Add-EbcCredit', 'Start-EbcPlay', 'Wait-EbcBallServed', 'Invoke-EbcDrain', 'Complete-EbcGame',
     'Invoke-EbcSelfTestPress', 'Get-EbcStatusText', 'Enter-EbcServiceMode', 'Invoke-EbcKey', 'Set-EbcAdjustment', 'Exit-EbcServiceMode', 'Exit-EbcSolenoidTest',
     'Add-EbcObservation', 'Invoke-EbcComparedScenario',
