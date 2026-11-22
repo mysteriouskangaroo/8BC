@@ -102,23 +102,14 @@ jobs:
     needs: [build, windows-ps51]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: build-*
+          path: artifacts
       - name: Compare hashes.txt across platforms
-        run: |
-          set -eu
-          reference=build-ubuntu-latest/hashes.txt
-          cat "$reference"
-          status=0
-          for file in build-*/hashes.txt; do
-            if ! cmp -s "$reference" "$file"; then
-              echo "::error::$file differs from $reference"
-              diff "$reference" "$file" || true
-              status=1
-            fi
-          done
-          exit $status
+        shell: pwsh
+        run: ./tools/Compare-RomHashes.ps1 -Directory artifacts
 
   baseline:
     name: ROM hashes versus base branch
