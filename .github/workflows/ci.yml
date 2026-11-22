@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The repository is public: artifacts carry reports, listings, symbols and
+# hashes only. Never upload eballchp.zip or a programmer .bin image.
+
+jobs:
+  rom-hashes:
+    name: Immutable ROM hashes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shasum -a 1 -c tools/rom-hashes.sha1
+
+  doc-paths:
+    name: Documentation paths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: pwsh
+        run: ./tools/Test-DocPaths.ps1
+
+  build:
+    name: Build and boot (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rosetta for the x86-64 DASM binary
+        if: runner.os == 'macOS'
+        shell: bash
+        run: /usr/bin/arch -x86_64 /usr/bin/true || sudo softwareupdate --install-rosetta --agree-to-license
+      - name: Fetch pinned DASM and libpinmame
+        run: |
+          ./tools/Get-Dasm.ps1
+          ./tools/Get-LibPinmame.ps1
+      # One step per tree: libpinmame allows one boot per process.
+      - name: Canonical (byte-identical) build and boot
+        run: ./src/originals/asm/test-pinmame.ps1 -RequireByteIdentical
+      - name: loop-score-change build and boot
+        run: ./src/loop-score-change/asm/test-pinmame.ps1
+      - name: Deluxe build and boot
+        run: ./src/8bc-deluxe/asm/test-pinmame.ps1
+      - name: Record ROM hashes
+        run: |
+          'originals', 'loop-score-change', '8bc-deluxe' | ForEach-Object {
+              "$_ $((Get-FileHash -Algorithm SHA1 -LiteralPath "src/$_/build/u3_cpu.rebuilt.128").Hash)"
+          } | Set-Content -LiteralPath hashes.txt -Encoding ascii
+          Get-Content hashes.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-${{ matrix.os }}
+          if-no-files-found: warn
+          path: |
+            hashes.txt
+            src/*/build/verification.txt
+            src/*/build/*.lst
+            src/*/build/*.sym
+            src/*/build/pinmame-smoke/pinmame-boot-test.txt
+
+  windows-ps51:
+    name: Build under Windows PowerShell 5.1
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: pwsh
+        run: ./tools/Get-Dasm.ps1
+      - name: Build all trees with powershell.exe
+        shell: pwsh
+        run: |
+          foreach ($tree in 'originals', 'loop-score-change', '8bc-deluxe') {
+              $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "src/$tree/asm/build.ps1")
+              if ($tree -eq 'originals') { $arguments += '-RequireByteIdentical' }
+              & powershell.exe @arguments
+              if ($LASTEXITCODE -ne 0) { throw "$tree build failed under Windows PowerShell 5.1 (exit $LASTEXITCODE)" }
+          }
+          'originals', 'loop-score-change', '8bc-deluxe' | ForEach-Object {
+              "$_ $((Get-FileHash -Algorithm SHA1 -LiteralPath "src/$_/build/u3_cpu.rebuilt.128").Hash)"
+          } | Set-Content -LiteralPath hashes.txt -Encoding ascii
+          Get-Content hashes.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-ps51
+          path: hashes.txt
+
+  compare:
+    name: Same ROMs on every platform
+    needs: [build, windows-ps51]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-*
+      - name: Compare hashes.txt across platforms
+        run: |
+          set -eu
+          reference=build-ubuntu-latest/hashes.txt
+          cat "$reference"
+          status=0
+          for file in build-*/hashes.txt; do
+            if ! cmp -s "$reference" "$file"; then
+              echo "::error::$file differs from $reference"
+              diff "$reference" "$file" || true
+              status=1
+            fi
+          done
+          exit $status
+
+  baseline:
+    name: ROM hashes versus base branch
+    if: github.event_name == 'pull_request'
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-windows-latest
+          path: head
+      - name: Build base trees with their own scripts
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          ./tools/Get-Dasm.ps1
+          Copy-Item -Recurse dasm-2.20.14.1-win-x64 base/
+          foreach ($tree in 'originals', 'loop-score-change', '8bc-deluxe') {
+              $script = "base/src/$tree/asm/build.ps1"
+              if (Test-Path $script) { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script }
+          }
+      - name: Report (does not fail)
+        shell: pwsh
+        run: |
+          $head = @{}
+          Get-Content head/hashes.txt | ForEach-Object { $t, $h = $_ -split ' '; $head[$t] = $h }
+          $lines = @('| Tree | Base SHA-1 | Head SHA-1 | Same |', '| --- | --- | --- | --- |')
+          foreach ($tree in 'originals', 'loop-score-change', '8bc-deluxe') {
+              $rom = "base/src/$tree/build/u3_cpu.rebuilt.128"
+              $base = if (Test-Path $rom) { (Get-FileHash -Algorithm SHA1 -LiteralPath $rom).Hash } else { '(not built)' }
+              $lines += "| $tree | $base | $($head[$tree]) | $(if ($base -eq $head[$tree]) { 'yes' } else { 'no' }) |"
+          }
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          $lines
