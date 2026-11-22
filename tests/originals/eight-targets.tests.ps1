@@ -18,6 +18,9 @@ $Armed = '1F'
 # "B" in B-A-L-L (lamp number from the manual's lamp driver table;
 # GameNames.psd1 Lamps).
 $LampB = Get-EbcLampNumber 'Ball "B"'
+# gamerules.md "Existing rules" (switches 33-37): every target hit awards a
+# 2,500 playfield value through the current playfield multiplier.
+$StandupAward = 2500
 # Frames sampled for a lamp's state (covers the 16-frame blink cycle twice).
 $LampSampleFrames = 32
 
@@ -28,8 +31,8 @@ function Get-Letters { '{0:X2}' -f ((Read-EbcByte 0x1045) -band $LetterMask) }
 function Invoke-Standup([string]$Name) {
     Invoke-EbcScoredHit $Groups[$Name] | Out-Null
     $before = Get-Letters
-    Invoke-EbcScoredHit $Name -AfterSolenoid $Groups[$Name] | Out-Null
-    [PSCustomObject]@{ Before = $before; After = Get-Letters }
+    $delta = Invoke-EbcScoredHit $Name -AfterSolenoid $Groups[$Name]
+    [PSCustomObject]@{ Before = $before; After = Get-Letters; Delta = $delta }
 }
 # Bits cleared by a hit, as two hex digits.
 function Get-Cleared($r) { '{0:X2}' -f ([Convert]::ToInt32($r.Before, 16) -band -bnot [Convert]::ToInt32($r.After, 16)) }
@@ -70,5 +73,12 @@ Test-EbcItem -Name 'All five collected award a B-A-L-L letter and re-arm the tar
     Assert-EbcEqual -Expected "$LampSampleFrames/$LampSampleFrames" -Actual (Get-LampB) -What 'B-A-L-L "B" lamp after T'
     # Re-armed: E's first hit of the new round clears its bit again.
     Assert-EbcEqual -Expected $script:First[$Letters[0]] -Actual (Get-Cleared (Invoke-Standup $Letters[0])) -What 'bit cleared by E in the new round'
+}
+Test-EbcItem -Name 'An uncollected standup scores 2,500 at 1x' -Doc $Doc -Body {
+    Assert-EbcEqual -Expected '00' -Actual ('{0:X2}' -f (Get-EbcChampState)) -What 'CHAMP completion state (1x)'
+    # I is uncollected in the new round (only E has been hit since the re-arm).
+    $r = Invoke-Standup $Letters[1]
+    Assert-EbcEqual -Expected 1 -Actual @(1, 2, 4, 8, 16 | Where-Object { $_ -eq [Convert]::ToInt32((Get-Cleared $r), 16) }).Count -What 'letters collected by the I hit'
+    Assert-EbcEqual -Expected $StandupAward -Actual $r.Delta -What 'score of the I hit at 1x'
 }
 Complete-EbcTests
