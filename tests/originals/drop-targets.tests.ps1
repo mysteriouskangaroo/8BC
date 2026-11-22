@@ -20,14 +20,11 @@ $AlreadySunk = 5000
 $ExpectedSinks = @('25:01', '27:04', '28:08', '30:20', '25:02', '28:10', '31:40')
 
 # A drop group re-arms (its 10C5 latch clears) only when the E-I-G-H-T target
-# behind it is hit with the group down: CDAA ties E/I/G/H/T (33-37) to groups
-# 30/25/27/28/31, and CD4C pulses that group's reset (C6C9-C6FC).
-$ResetBy = @{
-    'Drop Target 1,2,9,10'  = 'Drop Target "I"'
-    'Drop Target 3,11'      = 'Drop Target "G"'
-    'Drop Target 4,5,12,13' = 'Drop Target "H"'
-    'Drop Target 6,14'      = 'Drop Target "E"'
-}
+# behind it is hit with the group down (GameNames.psd1 StandupDropGroups,
+# inverted here to group -> standup).
+$ResetBy = @{}
+$standups = (Get-EbcNames).StandupDropGroups
+foreach ($s in $standups.Keys) { $ResetBy[$standups[$s]] = $s }
 $script:Sinks = @()
 
 # Hits a drop target; returns the score change and 10C3 before and after,

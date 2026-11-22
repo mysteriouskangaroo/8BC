@@ -59,6 +59,8 @@ $ExpectedSolenoidCancelPresses = 3
 # BONUS 240,000 is J13-5, both phase B. pinmame src/wpc/by6803.c header:
 # J13-13 = 29, J13-05 = 45, phase B = x + 48.
 $ExpectedBonusLamps = [ordered]@{ 'Bonus 120,000' = 29 + 48; 'Bonus 240,000' = 45 + 48 }
+# Same table: the "B" of B-A-L-L is J10-18, phase B; by6803.c: J10-18 = 35.
+$ExpectedBallBLamp = 35 + 48
 # Zero-cross service ticks per second (E0FB: 1C20 = 7,200 per minute).
 $TicksPerSecond = 120
 
@@ -70,6 +72,7 @@ $badBuf = @(); for ($p = 1; $p -le 4; $p++) { if ($N.Ram["ScoreBuffer$p"] -ne $E
 Test-EbcItem -Name 'Score buffers are HARDWARE_MAP addresses' -Doc 'HARDWARE_MAP.md score-display buffers' -Body { Assert-EbcTrue ($badBuf.Count -eq 0) ("wrong: " + ($badBuf -join ', ')) }
 $badLamp = @(); foreach ($k in $ExpectedBonusLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedBonusLamps[$k]) { $badLamp += "$k=$($N.Lamps[$k]) (expected $($ExpectedBonusLamps[$k]))" } }
 Test-EbcItem -Name 'Bonus lamps are J13-13 and J13-5 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badLamp.Count -eq 0) ("wrong: " + ($badLamp -join '; ')) }
+Test-EbcItem -Name 'B-A-L-L B lamp is J10-18 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcEqual -Expected $ExpectedBallBLamp -Actual $N.Lamps['Ball "B"'] -What 'Lamps entry Ball "B"' }
 Test-EbcItem -Name 'Rebound sound is 0x22' -Doc 'GAME_RULE_TRACES.md Switch 07: Rebound' -Body { Assert-EbcEqual -Expected $ExpectedReboundSound -Actual $N.Sounds.Rebound -What 'Sounds.Rebound' }
 
 # ---- Play checks (one boot). ----

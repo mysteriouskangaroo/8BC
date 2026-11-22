@@ -116,9 +116,32 @@
     # Measured: tests/originals/saucer.tests.ps1 (77 lights at the first
     # 8-ball collection, 93 stays dark). Checked in names.tests.ps1 "Bonus
     # lamps are J13-13 and J13-5 phase B".
+    #
+    # The same table puts the "B" of B-A-L-L on J10-18, phase B; by6803.c
+    # converts J10-18 to 35, so it is 35 + 48 = 83. Measured:
+    # tests/originals/eight-targets.tests.ps1 (83 lights when E-I-G-H-T is
+    # first completed). Checked in names.tests.ps1 "B-A-L-L B lamp is J10-18
+    # phase B".
     Lamps = @{
         'Bonus 120,000' = 77
         'Bonus 240,000' = 93
+        'Ball "B"'      = 83
+    }
+
+    # E-I-G-H-T standup -> the pool-ball drop group behind it. A standup's
+    # handler (CC7C) continues only while that group is down: CDAA maps the
+    # standups E, I, G, H, T (33-37) to drop latches 10C5 bits 20, 01, 04, 08,
+    # 40, set by switches 30, 25, 27, 28 and 31. The hit then pulses the
+    # group's reset coil (CD4C, table CDCE). Measured: drop-targets, saucer
+    # and eight-targets.tests.ps1 wait for each standup's hit to pulse the
+    # group's solenoid. Not described in GAME_RULE_TRACES.md or gamerules.md,
+    # so tests use it to reach states, not as an expected rule.
+    StandupDropGroups = @{
+        'Drop Target "E"' = 'Drop Target 6,14'
+        'Drop Target "I"' = 'Drop Target 1,2,9,10'
+        'Drop Target "G"' = 'Drop Target 3,11'
+        'Drop Target "H"' = 'Drop Target 4,5,12,13'
+        'Drop Target "T"' = 'Drop Target 7,15'
     }
 
     # Sound command bytes. libpinmame reports each command as two sound events:
@@ -206,7 +229,10 @@
         GameOver      = 0x009A
         # Match number: high nibble of 106A is its tens digit, which F7F8-F804
         # compares with each score's tens digit. It comes from the free-running
-        # BCD counter 1013 (E08D-E093) through F78F-F7B1.
+        # BCD counter 1013 (E08D-E093) through F78F-F7B1. Measured:
+        # tests/originals/match.tests.ps1 (over 12 games, the status display
+        # shows this digit followed by 0 at game end, and a credit is added
+        # exactly when it equals the score's tens digit).
         MatchDigit    = 0x106A
         # HARDWARE_MAP.md "U4 RAM: dedicated player-score display buffers":
         # seven bytes each, ones first, digit in the high nibble (F = blank).

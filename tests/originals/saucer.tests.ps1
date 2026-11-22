@@ -25,12 +25,14 @@ $Lamp240K = Get-EbcLampNumber 'Bonus 240,000'
 $LampSampleFrames = 32
 
 # Drop targets for balls 1-7 in sink order; a group re-arms when the
-# E-I-G-H-T target behind it is hit (CDAA, CD4C; see drop-targets.tests.ps1).
+# E-I-G-H-T target behind it is hit (GameNames.psd1 StandupDropGroups).
 $Sinks = @(
-    @{ Drop = 'Drop Target 1,2,9,10' }, @{ Drop = 'Drop Target 1,2,9,10'; ResetBy = 'Drop Target "I"' },
+    @{ Drop = 'Drop Target 1,2,9,10' }, @{ Drop = 'Drop Target 1,2,9,10'; Rearm = $true },
     @{ Drop = 'Drop Target 3,11' }, @{ Drop = 'Drop Target 4,5,12,13' },
-    @{ Drop = 'Drop Target 4,5,12,13'; ResetBy = 'Drop Target "H"' },
+    @{ Drop = 'Drop Target 4,5,12,13'; Rearm = $true },
     @{ Drop = 'Drop Target 6,14' }, @{ Drop = 'Drop Target 7,15' })
+$standups = (Get-EbcNames).StandupDropGroups
+$ResetBy = @{}; foreach ($s in $standups.Keys) { $ResetBy[$standups[$s]] = $s }
 
 function Get-Progression { '{0:X2}' -f ((Read-EbcByte 0x10C1) -band $ProgressionMask) }
 # '<frames lit>/<frames sampled>' for each bonus lamp, e.g. '0/32 0/32'.
@@ -66,7 +68,7 @@ Test-EbcItem -Name 'At 08 the saucer awards 100,000 through the playfield multip
 }
 Test-EbcItem -Name 'With 10C3 = 7F the next saucer hit runs the 8-ball collection' -Doc $Doc -Body {
     foreach ($s in $Sinks) {
-        if ($s.ResetBy) { Invoke-EbcScoredHit $s.ResetBy -AfterSolenoid $s.Drop | Out-Null }
+        if ($s.Rearm) { Invoke-EbcScoredHit $ResetBy[$s.Drop] -AfterSolenoid $s.Drop | Out-Null }
         Invoke-EbcScoredHit $s.Drop | Out-Null
     }
     Assert-EbcEqual -Expected '7F' -Actual ('{0:X2}' -f (Get-EbcSunkBalls)) -What '10C3 after sinking balls 1-7'
