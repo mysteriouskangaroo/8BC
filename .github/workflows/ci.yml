@@ -75,6 +75,41 @@ jobs:
             src/*/build/*.sym
             src/*/build/pinmame-smoke/pinmame-boot-test.txt
 
+  game-tests:
+    name: Game tests (${{ matrix.os }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Rosetta for the x86-64 DASM binary
+        if: runner.os == 'macOS'
+        shell: bash
+        run: /usr/bin/arch -x86_64 /usr/bin/true || sudo softwareupdate --install-rosetta --agree-to-license
+      - name: Fetch pinned DASM and libpinmame
+        run: |
+          ./tools/Get-Dasm.ps1
+          ./tools/Get-LibPinmame.ps1
+      # Boot-free check of the runner itself, before it judges any test.
+      - name: Runner checker
+        run: ./tools/Test-GameTestRunner.ps1
+      # Builds the trees it needs; exits 1 on any failure.
+      - name: Game tests
+        run: ./tools/Invoke-GameTests.ps1
+      # Public repo: upload the report only, never zips, .bin files or listings.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: game-tests-${{ matrix.os }}
+          if-no-files-found: warn
+          path: build/game-tests/report.txt
+
   windows-ps51:
     name: Build under Windows PowerShell 5.1
     runs-on: windows-latest
