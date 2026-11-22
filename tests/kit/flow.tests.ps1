@@ -68,6 +68,18 @@ Test-EbcItem -Name 'Invoke-EbcScoredHit -AfterSolenoid waits for the pulse' -Doc
     $msg = try { Invoke-EbcScoredHit 'Rebound' -AfterSolenoid 'Knocker' -MaxFrames 300 | Out-Null; 'no exception' } catch { $_.Exception.Message }
     Assert-EbcTrue ($msg -match "no 'Knocker' pulse within 300 frames") "Knocker wait after Rebound: $msg"
 }
+Test-EbcItem -Name 'Complete-EbcChamp completes C-H-A-M-P once more' -Doc $Rules -Body {
+    # The lanes item above completed CHAMP once on this ball.
+    $before = Get-EbcChampState
+    $deltas = @(Complete-EbcChamp)
+    Assert-EbcEqual -Expected 5 -Actual @($deltas | Where-Object { $_ -gt 0 }).Count -What "lanes that scored ($($deltas -join ', '))"
+    # Deluxe's first completion awards the right thumper instead of double
+    # (src/8bc-deluxe/gamerules.md "CHAMP"); the other trees advance 10C0.
+    if ($Tree -ne '8bc-deluxe') {
+        $after = Get-EbcChampState
+        Assert-EbcTrue ($after -ne 0 -and $after -ne $before) ('CHAMP completion state {0:X2} -> {1:X2}, expected a new nonzero state' -f $before, $after)
+    }
+}
 Test-EbcItem -Name 'Invoke-EbcDrain passes to player 2' -Doc $Rules -Body {
     Assert-EbcEqual -Expected 'Served' -Actual (Invoke-EbcDrain) -What 'drain outcome'
     Assert-EbcEqual -Expected 2 -Actual (Get-EbcCurrentPlayer) -What 'current player'

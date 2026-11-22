@@ -313,6 +313,15 @@ function Invoke-EbcScoredHit {
     (Get-EbcScore -Player $player) - $before
 }
 
+# Completes C-H-A-M-P once by play: hits the five lane switches 17-21 in
+# order, each through Invoke-EbcScoredHit, and returns their five score
+# changes. Each completion advances CHAMP_COMPLETION_STATE (10C0) and clears
+# the lanes (CAD4-CB23, GAME_RULE_TRACES.md "Playfield Scores Double and
+# Triple"), so successive calls reach double, then triple.
+function Complete-EbcChamp {
+    foreach ($lane in @('"C" Return Lane', '"H" Top Lane', '"A" Top Lane', '"M" Top Lane', '"P" Return Lane')) { Invoke-EbcScoredHit $lane }
+}
+
 # ---------------------------------------------------------------- game flow
 
 # Drops -Count coins in Coin I (Left); returns the credits afterwards.
@@ -604,7 +613,7 @@ Export-ModuleMember -Function @(
     'Get-EbcNames', 'Get-EbcSwitch', 'Get-EbcSolenoid', 'Get-EbcLampNumber', 'Get-EbcRamAddress', 'Get-EbcServiceKey',
     'Invoke-EbcSwitchHit', 'Read-EbcByte', 'Get-EbcDisplayText', 'Get-EbcScoreBufferText',
     'Get-EbcScore', 'Get-EbcCredits', 'Get-EbcBallInPlay', 'Get-EbcPlayerCount', 'Get-EbcCurrentPlayer', 'Test-EbcGameOver',
-    'Get-EbcChampState', 'Get-EbcSunkBalls', 'Invoke-EbcScoredHit',
+    'Get-EbcChampState', 'Get-EbcSunkBalls', 'Invoke-EbcScoredHit', 'Complete-EbcChamp',
     'Add-EbcCredit', 'Start-EbcPlay', 'Wait-EbcBallServed', 'Invoke-EbcDrain', 'Complete-EbcGame',
     'Invoke-EbcSelfTestPress', 'Get-EbcStatusText', 'Enter-EbcServiceMode', 'Invoke-EbcKey', 'Set-EbcAdjustment', 'Exit-EbcServiceMode', 'Exit-EbcSolenoidTest',
     'Add-EbcObservation', 'Invoke-EbcComparedScenario',
