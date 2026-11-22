@@ -61,6 +61,7 @@ public static class EightBallChampBoot {
     static SolCb sSol = OnSol; static KeyCb sKey = OnKey; static LogCb sLog = OnLog; static SndCb sSnd = OnSnd;
 
     static IntPtr libraryHandle = IntPtr.Zero;
+    static bool booted;
     static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
     static volatile int state = -1;
     static int frame, totalFrames;
@@ -138,6 +139,12 @@ public static class EightBallChampBoot {
 
     public static EightBallChampBootResult Run(string vpmPath, int frames) {
         if (libraryHandle == IntPtr.Zero) throw new InvalidOperationException("Call LoadLibrary first.");
+        // libpinmame keeps process-wide state between runs: its zip cache reads a
+        // later, different eballchp.zip through the first one's directory (corrupt
+        // data or a hang), and sound-board state can leak into the next run's first
+        // frame. Only the first boot in a process is trustworthy.
+        if (booted) throw new InvalidOperationException("libpinmame allows one boot per process; run each boot test in a new pwsh process.");
+        booted = true;
         if (!vpmPath.EndsWith("/") && !vpmPath.EndsWith("\\")) vpmPath += Path.DirectorySeparatorChar;
         foreach (string d in new[] { "nvram", "cfg", "hi" }) { string p = vpmPath + d; if (Directory.Exists(p)) Directory.Delete(p, true); }
         state = -1; frame = 0; totalFrames = frames; done = new ManualResetEvent(false);
@@ -204,14 +211,6 @@ function Invoke-EightBallChampBootTest {
         [Parameter(Mandatory = $true)][string]$VpmPath,
         [ValidateRange(600, 36000)][int]$Frames = 1500
     )
-    # libpinmame keeps process-wide state between runs: its zip cache reads a
-    # later, different eballchp.zip through the first one's directory (corrupt
-    # data or a hang), and sound-board state can leak into the next run's first
-    # frame. Only the first boot in a process is trustworthy.
-    if ($script:EightBallChampBootDone) {
-        throw 'libpinmame allows one boot per process; run each boot test in a new pwsh process.'
-    }
-    $script:EightBallChampBootDone = $true
     [EightBallChampBoot]::LoadLibrary((Resolve-Path -LiteralPath $LibraryPath).Path)
     $result = [EightBallChampBoot]::Run((Resolve-Path -LiteralPath $VpmPath).Path, $Frames)
     [PSCustomObject]@{
