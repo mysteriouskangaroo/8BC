@@ -11,6 +11,7 @@
 $ErrorActionPreference = 'Stop'
 $script:Repo = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'LibPinmameMachine.ps1')
+$script:MachineWriteRam = ${function:Write-EbcRam}
 $script:Names = Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot 'GameNames.psd1')
 if (-not ('EbcPrivateDirCleanup' -as [type])) {
     Add-Type -Language CSharp -TypeDefinition @'
@@ -34,6 +35,11 @@ $script:Tree = ''
 $script:PrivateDir = $null
 $script:Observations = [Collections.Generic.List[string]]::new()
 $script:ObserveTo = ''
+# RAM-write bookkeeping for the seeded label: every Write-EbcRam call counts;
+# a call outside a test item seeds the state of every later item.
+$script:RamWrites = 0
+$script:InItem = $false
+$script:SeededState = $false
 # A compare child runs only the scenario its parent names.
 $script:ChildScenario = $env:EBC_SCENARIO
 
@@ -65,7 +71,9 @@ function Format-EbcValue($Value) {
 
 # Runs one test: prints PASS, or FAIL with the exception text, and records a
 # failure for Complete-EbcTests. -Seeded marks a test that wrote RAM to reach
-# its state; the label is printed whether it passes or fails.
+# its state; the label is printed whether it passes or fails. An item that
+# called Write-EbcRam, or follows a Write-EbcRam call made outside any item,
+# FAILs unless it is -Seeded.
 function Test-EbcItem {
     [CmdletBinding()]
     param(
@@ -78,17 +86,24 @@ function Test-EbcItem {
     if ($script:ObserveTo) { return }   # a compare child prints no results
     $tag = if ($Seeded) { ' [seeded]' } else { '' }
     $script:CurrentDoc = $Doc
-    try {
-        & $Body | Out-Null
+    $writesBefore = $script:RamWrites
+    $script:InItem = $true
+    $msg = $null
+    try { & $Body | Out-Null }
+    catch { $msg = ($_.Exception.Message -replace '\s*\r?\n\s*', ' ').Trim() }
+    finally { $script:InItem = $false; $script:CurrentDoc = '' }
+    if (-not $Seeded -and ($script:SeededState -or $script:RamWrites -gt $writesBefore)) {
+        $rule = 'wrote RAM without -Seeded (Write-EbcRam ' + $(if ($script:RamWrites -gt $writesBefore) { 'in this item' } else { 'before this item, outside any item' }) + ')'
+        $msg = if ($msg) { "$rule; $msg" } else { $rule }
+    }
+    if ($null -eq $msg) {
         $script:Passed++
         Write-Output "PASS $label :: $Name$tag"
     }
-    catch {
+    else {
         $script:Failed++
-        $msg = ($_.Exception.Message -replace '\s*\r?\n\s*', ' ').Trim()
         Write-Output "FAIL $label :: $Name$tag :: $msg"
     }
-    finally { $script:CurrentDoc = '' }
 }
 
 function Assert-EbcEqual {
@@ -465,6 +480,8 @@ function Invoke-EbcComparedScenario {
         [Parameter(Mandatory = $true)][ValidateCount(2, 2)][string[]]$Trees,
         [Parameter(Mandatory = $true)][scriptblock]$Scenario,
         [scriptblock]$Normalize = { $_ },
+        # The scenario writes RAM to reach its state (see Test-EbcItem).
+        [switch]$Seeded,
         [ValidateRange(10, 3600)][int]$TimeoutSeconds = 900
     )
     $observeTo = Get-CallerValue $PSCmdlet 'ObserveTo'
@@ -472,19 +489,28 @@ function Invoke-EbcComparedScenario {
         $script:ObserveTo = $observeTo
         if ($script:ChildScenario -ne $Name) { return }
         $script:Observations.Clear()
+        $script:InItem = $true
         try { & $Scenario | Out-Null }
         catch { [Console]::Error.WriteLine("scenario '$Name' threw: $($_.Exception.Message)"); Stop-EbcGame; exit 1 }
-        ConvertTo-Json -InputObject @($script:Observations) | Set-Content -LiteralPath $observeTo -Encoding utf8
+        $wrote = $script:SeededState -or $script:RamWrites -gt 0
+        ConvertTo-Json -InputObject ([PSCustomObject]@{ Observations = @($script:Observations); WroteRam = $wrote }) | Set-Content -LiteralPath $observeTo -Encoding utf8
         Stop-EbcGame
         exit 0
     }
 
     $label = Get-ResultLabel $PSCmdlet
+    $tag = if ($Seeded) { ' [seeded]' } else { '' }
     $script:CurrentDoc = $Doc
     $script_ = $PSCmdlet.MyInvocation.PSCommandPath
     $work = New-EbcPrivateDir
     try {
+        # Only zips the runner built and checked in this run (EBC_BUILT_TREES)
+        # may boot; otherwise a stale src/<tree>/build/game-tests zip could.
+        $builtTrees = @(([string]$env:EBC_BUILT_TREES) -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        $notBuilt = @($Trees | Where-Object { $_ -notin $builtTrees })
+        if ($notBuilt.Count) { throw "tree $($notBuilt -join ', ') not built in this run (EBC_BUILT_TREES '$($env:EBC_BUILT_TREES)'); run the file through tools/Invoke-GameTests.ps1 with both trees selected" }
         $lists = @()
+        $wroteRam = @()
         foreach ($t in $Trees) {
             $json = Join-Path $work ("{0}-{1}.json" -f $lists.Count, $t)
             $childDir = Join-Path $work ("child-{0}" -f $lists.Count)
@@ -501,8 +527,11 @@ function Invoke-EbcComparedScenario {
             $p.WaitForExit()
             $err = ($errTask.Result -split "`r?`n" | Where-Object { $_ } | Select-Object -Last 3) -join ' / '
             if ($p.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $json)) { throw "child for $t exited $($p.ExitCode) without observations: $err" }
-            $lists += , @((Get-Content -LiteralPath $json -Raw | ConvertFrom-Json) | ForEach-Object -Process $Normalize | ForEach-Object { "$_" })
+            $obs = Get-Content -LiteralPath $json -Raw | ConvertFrom-Json
+            if ($obs.WroteRam) { $wroteRam += $t }
+            $lists += , @(@($obs.Observations) | ForEach-Object -Process $Normalize | ForEach-Object { "$_" })
         }
+        if ($wroteRam.Count -and -not $Seeded) { throw "scenario wrote RAM without -Seeded (Write-EbcRam in the $($wroteRam -join ' and ') child)" }
         $a = $lists[0]; $b = $lists[1]
         for ($k = 0; $k -lt [Math]::Max($a.Count, $b.Count); $k++) {
             $x = if ($k -lt $a.Count) { "'$($a[$k])'" } else { '(none)' }
@@ -511,16 +540,24 @@ function Invoke-EbcComparedScenario {
         }
         if ($a.Count -eq 0) { throw "no observations ($Doc)" }
         $script:Passed++
-        Write-Output "PASS $label :: $Name"
+        Write-Output "PASS $label :: $Name$tag"
     }
     catch {
         $script:Failed++
-        Write-Output ("FAIL $label :: $Name :: " + (($_.Exception.Message -replace '\s*\r?\n\s*', ' ').Trim()))
+        Write-Output ("FAIL $label :: $Name$tag :: " + (($_.Exception.Message -replace '\s*\r?\n\s*', ' ').Trim()))
     }
     finally {
         $script:CurrentDoc = ''
         Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
     }
+}
+
+# The machine's Write-EbcRam, counted for the seeded label (see Test-EbcItem).
+function Write-EbcRam {
+    param([Parameter(Mandatory = $true)][int]$Address, [Parameter(Mandatory = $true)][byte[]]$Bytes)
+    $script:RamWrites++
+    if (-not $script:InItem) { $script:SeededState = $true }
+    & $script:MachineWriteRam -Address $Address -Bytes $Bytes
 }
 
 Export-ModuleMember -Function @(

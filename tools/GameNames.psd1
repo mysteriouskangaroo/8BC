@@ -207,7 +207,7 @@
         ScoreBuffer3  = 0x1054
         ScoreBuffer4  = 0x105B
         # Balls per game (operator register 23, manual p. 1-4): high nibble of
-        # NVRAM 161F (adjustment table EB45: 17 16 1F; factory value from
+        # NVRAM 161F (adjustment table entry at EB43: 17 16 1F; factory value from
         # C14B at EAB3). Measured: "Set-EbcAdjustment changes a setting"
         # (30 fresh, 50 after storing 5).
         BallsPerGame  = 0x161F

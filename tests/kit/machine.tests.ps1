@@ -132,7 +132,7 @@ try {
             Assert-EbcEqual -Expected '80' -Actual ('{0:X2}' -f $run.Switch102CAt400) -What '$102C at frame 400 (switch 08 = strobe 0, return 7)'
         }
 
-        Test-EbcItem -Name 'RAM write is seen' -Doc $Doc -Body {
+        Test-EbcItem -Name 'RAM write is seen' -Doc $Doc -Seeded -Body {
             $okFF = $run.UnusedStayedFF -and (Read-EbcRam -Address $UnusedU4 -Count 1)[0] -eq 0xFF   # Frame 1501
             Write-EbcRam -Address $UnusedU4 -Bytes ([byte[]]@(0x5A))
             Step-EbcFrames -Frames 1

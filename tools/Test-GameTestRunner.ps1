@@ -55,11 +55,31 @@ try {
     }
 
     # ---- Comparison helper, run directly (its children are boot-free). ----
-    $cmp = @(& $pwshPath -NoProfile -File (Join-Path $sel 'compare/two-trees.tests.ps1') 2>&1 | ForEach-Object { "$_" })
+    $env:EBC_BUILT_TREES = 'originals,8bc-deluxe'
+    try { $cmp = @(& $pwshPath -NoProfile -File (Join-Path $sel 'compare/two-trees.tests.ps1') 2>&1 | ForEach-Object { "$_" }) }
+    finally { Remove-Item Env:EBC_BUILT_TREES -ErrorAction SilentlyContinue }
     $cmpCode = $LASTEXITCODE
     $cmpAll = $cmp -join "`n"
     Write-Check 'Compared scenario: same tree matches' (@($cmp | Where-Object { $_ -like 'PASS *two-trees :: Same tree matches' }).Count -eq 1) $cmpAll
     Write-Check 'Compared scenario: a difference fails at its first line' (@($cmp | Where-Object { $_ -like "FAIL *two-trees :: Different trees differ :: *observation 1*'tree originals'*'tree 8bc-deluxe'*" }).Count -eq 1 -and $cmpCode -eq 1) "exit $cmpCode; $cmpAll"
+    Write-Check 'Compared scenario: a seeded scenario that writes RAM passes' (@($cmp | Where-Object { $_ -like 'PASS *two-trees :: Seeded compare passes `[seeded`]' }).Count -eq 1) $cmpAll
+    Write-Check 'Compared scenario: an unlabelled RAM write fails' (@($cmp | Where-Object { $_ -like 'FAIL *two-trees :: Unlabelled compare write fails :: *without -Seeded*' }).Count -eq 1) $cmpAll
+    Write-Check 'Compared scenario: a tree the runner did not build fails' (@($cmp | Where-Object { $_ -like "FAIL *two-trees :: Unbuilt tree fails :: *loop-score-change*not built*" }).Count -eq 1) $cmpAll
+    $bare = @(& $pwshPath -NoProfile -File (Join-Path $sel 'compare/two-trees.tests.ps1') 2>&1 | ForEach-Object { "$_" })
+    Write-Check 'Compared scenario: outside the runner no tree counts as built' (@($bare | Where-Object { $_ -like 'FAIL *two-trees :: Same tree matches :: *not built*' }).Count -eq 1) ($bare -join "`n")
+
+    # ---- RAM writes need -Seeded (boot-free: the write call itself counts). ----
+    $ram = @(& $pwshPath -NoProfile -File (Join-Path $repo 'tools/tests/rule-fixtures/ram-label.tests.ps1') 2>&1 | ForEach-Object { "$_" })
+    $ramAll = $ram -join "`n"
+    $ramWant = @(
+        'FAIL ram-label :: Unlabelled write fails :: *without -Seeded*',
+        'PASS ram-label :: Seeded write passes `[seeded`]',
+        'PASS ram-label :: No write passes',
+        'FAIL ram-label :: Write before the item fails :: *without -Seeded*',
+        'FAIL ram-label :: Later items stay seeded :: *without -Seeded*')
+    foreach ($w in $ramWant) {
+        Write-Check ("RAM label: " + ((($w -split ' :: ')[1]) -replace '`', '')) (@($ram | Where-Object { $_ -like $w }).Count -eq 1) "expected a line like '$w'; output:`n$ramAll"
+    }
     Write-Check 'Compared scenario: Normalize applies' (@($cmp | Where-Object { $_ -like 'PASS *two-trees :: Normalize hides the tree' }).Count -eq 1) $cmpAll
 }
 finally {

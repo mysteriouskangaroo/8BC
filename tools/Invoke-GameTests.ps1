@@ -101,6 +101,18 @@ function Label($e) { $file = Split-Path -Leaf $e.Name; if ($e.Tree) { "$($e.Tree
 
 # ---- Build each needed tree once, copying its zip before the next build. ----
 $built = @{}
+$buildError = @{}
+function Get-Sha1([byte[]]$Bytes) { [Convert]::ToHexString([Security.Cryptography.SHA1]::HashData($Bytes)) }
+function Get-ZipCpuSha1([string]$Zip) {
+    try {
+        $z = [IO.Compression.ZipFile]::OpenRead($Zip)
+        try {
+            $e = $z.GetEntry('u3_cpu.128'); if (-not $e) { return '(no u3_cpu.128 entry)' }
+            $ms = [IO.MemoryStream]::new(); $st = $e.Open(); try { $st.CopyTo($ms) } finally { $st.Dispose() }
+            Get-Sha1 $ms.ToArray()
+        } finally { $z.Dispose() }
+    } catch { "(unreadable: $($_.Exception.Message))" }
+}
 $needed = @($Tree | Where-Object { $t = $_; @($plan | Where-Object { $t -in $_.Needs }).Count -gt 0 })
 if ($needed.Count) {
     $logDir = Join-Path $repo 'build/game-tests'
@@ -117,11 +129,18 @@ foreach ($t in $needed) {
     if ($ok -and (Test-Path -LiteralPath $zip)) {
         $dest = Join-Path $repo "src/$t/build/game-tests"
         New-Item -ItemType Directory -Path $dest -Force | Out-Null
-        Copy-Item -LiteralPath $zip -Destination (Join-Path $dest 'eballchp.zip') -Force
-        $built[$t] = Join-Path $dest 'eballchp.zip'
-        Write-Output ("BUILD {0} ok in {1:N1} s" -f $t, $b.Elapsed.TotalSeconds)
+        $copy = Join-Path $dest 'eballchp.zip'
+        Copy-Item -LiteralPath $zip -Destination $copy -Force
+        # The copy must hold this tree's CPU ROM, whatever was built before.
+        $want = Get-Sha1 ([IO.File]::ReadAllBytes((Join-Path $repo "src/$t/build/u3_cpu.rebuilt.128")))
+        $have = Get-ZipCpuSha1 $copy
+        if ($have -eq $want) {
+            $built[$t] = $copy
+            Write-Output ("BUILD {0} ok in {1:N1} s (u3_cpu.128 SHA-1 {2})" -f $t, $b.Elapsed.TotalSeconds, $want)
+        }
+        else { $buildError[$t] = "zip check failed: $copy u3_cpu.128 SHA-1 $have, src/$t/build/u3_cpu.rebuilt.128 $want"; Write-Output "BUILD $t FAILED: $($buildError[$t])" }
     }
-    else { Write-Output "BUILD $t FAILED (exit $LASTEXITCODE); see $log" }
+    else { $buildError[$t] = "build failed (exit $LASTEXITCODE; see $log)"; Write-Output "BUILD $t FAILED (exit $LASTEXITCODE); see $log" }
 }
 
 # ---- Run each file in its own pwsh, at most -Jobs at a time. ----
@@ -157,7 +176,7 @@ while ($queue.Count -or $running.Count) {
         $q = $queue.Dequeue(); $e = $q.Entry
         if ($e.Error) { Emit "FAIL $(Label $e) :: (file) :: $($e.Error)"; continue }
         $missing = @($e.Needs | Where-Object { -not $built.ContainsKey($_) })
-        if ($missing.Count) { Emit "FAIL $(Label $e) :: (file) :: build of $($missing -join ', ') failed"; continue }
+        if ($missing.Count) { Emit "FAIL $(Label $e) :: (file) :: $(@($missing | ForEach-Object { "${_}: $($buildError[$_])" }) -join '; ')"; continue }
         $dir = Join-Path $privateRoot $q.Index
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
         $psi = [Diagnostics.ProcessStartInfo]::new($pwshPath)
@@ -168,6 +187,8 @@ while ($queue.Count -or $running.Count) {
         $psi.WorkingDirectory = $repo
         $psi.Environment['EBC_PRIVATE_DIR'] = $dir
         $psi.Environment['NO_COLOR'] = '1'
+        # The trees whose zips this run built and checked (Invoke-EbcComparedScenario).
+        $psi.Environment['EBC_BUILT_TREES'] = (@($built.Keys) | Sort-Object) -join ','
         $psi.Environment.Remove('EBC_SCENARIO') | Out-Null
         $p = [Diagnostics.Process]::Start($psi)
         $running.Add([PSCustomObject]@{ Entry = $e; Proc = $p; Dir = $dir; Out = $p.StandardOutput.ReadToEndAsync(); Err = $p.StandardError.ReadToEndAsync()
