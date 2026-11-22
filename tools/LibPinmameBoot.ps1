@@ -62,6 +62,11 @@ public static class EightBallChampBoot {
 
     static IntPtr libraryHandle = IntPtr.Zero;
     static bool booted;
+    // Guards events/logs: callbacks write them on the emulation thread. After a
+    // run, 'closed' makes any late callback (a stop that never finished) drop
+    // its event instead of racing the result copy.
+    static readonly object gate = new object();
+    static bool closed;
     static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
     static volatile int state = -1;
     static int frame, totalFrames;
@@ -96,10 +101,11 @@ public static class EightBallChampBoot {
     }
     static string Hex(byte[] b) { return BitConverter.ToString(b).Replace("-", "").ToLowerInvariant(); }
     // Events after the frame cutoff are dropped so results do not depend on host timing.
-    static void Ev(string s) { if (frame < totalFrames) events.Add(frame + " " + s); }
-    static void Fail(string where, Exception e) { try { logs.Add("[callback-error " + where + "] " + e.GetType().Name); } catch { } }
+    static void Ev(string s) { lock (gate) { if (!closed && frame < totalFrames) events.Add(frame + " " + s); } }
+    static void Log(string s) { lock (gate) { if (!closed) logs.Add(s); } }
+    static void Fail(string where, Exception e) { try { Log("[callback-error " + where + "] " + e.GetType().Name); } catch { } }
 
-    static void OnState(int s, IntPtr u) { try { state = s; logs.Add("state=" + s); } catch (Exception e) { Fail("state", e); } }
+    static void OnState(int s, IntPtr u) { try { state = s; Log("state=" + s); } catch (Exception e) { Fail("state", e); } }
     static void OnAvail(int i, int n, IntPtr layout, IntPtr u) { }
     static void OnSol(IntPtr p, IntPtr u) { try { Ev("sol " + Marshal.ReadInt32(p, 0) + " " + Marshal.ReadInt32(p, 4)); } catch (Exception e) { Fail("sol", e); } }
     static int OnKey(int k, IntPtr u) { return 0; }
@@ -109,7 +115,7 @@ public static class EightBallChampBoot {
             var sb = new StringBuilder(1024);
             if (IsWindows) WindowsVsnprintf(sb, new UIntPtr(1023), fmt, va);
             else UnixVsnprintf(sb, new UIntPtr(1024), fmt, va);
-            logs.Add("[" + level + "] " + sb.ToString());
+            Log("[" + level + "] " + sb.ToString());
         }
         catch (Exception e) { Fail("log", e); }
     }
@@ -148,7 +154,8 @@ public static class EightBallChampBoot {
         if (!vpmPath.EndsWith("/") && !vpmPath.EndsWith("\\")) vpmPath += Path.DirectorySeparatorChar;
         foreach (string d in new[] { "nvram", "cfg", "hi" }) { string p = vpmPath + d; if (Directory.Exists(p)) Directory.Delete(p, true); }
         state = -1; frame = 0; totalFrames = frames; done = new ManualResetEvent(false);
-        events = new List<string>(); logs = new List<string>(); disp = new Dictionary<int, string>();
+        lock (gate) { events = new List<string>(); logs = new List<string>(); closed = false; }
+        disp = new Dictionary<int, string>();
 
         // PinmameConfig: int audioFormat, int sampleRate, char vpmPath[512], 12 callback pointers.
         int size = 8 + 512 + 12 * IntPtr.Size;
@@ -178,7 +185,7 @@ public static class EightBallChampBoot {
 
         var r = new EightBallChampBootResult();
         r.Frames = frame; r.WallSeconds = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        r.Events = events.ToArray(); r.Logs = logs.ToArray();
+        lock (gate) { closed = true; r.Events = events.ToArray(); r.Logs = logs.ToArray(); }
         string last = null;
         foreach (string e in r.Events) {
             string k = e.Split(' ')[1];
