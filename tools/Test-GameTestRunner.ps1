@@ -1,7 +1,8 @@
 # Checks tools/Invoke-GameTests.ps1 and the comparison helper on boot-free
 # fixtures: files that crash, hang or print nothing count as FAILs, the summary
 # counts seeded results, the runner selects kit, tree, long and compare files
-# by tree, and Invoke-EbcComparedScenario reports a difference.
+# by tree, a file under long/ gets -LongTimeoutSeconds, and
+# Invoke-EbcComparedScenario reports a difference.
 # Usage: pwsh tools/Test-GameTestRunner.ps1   (exits 1 on any failure)
 
 $ErrorActionPreference = 'Stop'
@@ -53,6 +54,13 @@ try {
         $want = @($c.Expect | Sort-Object)
         Write-Check "Selection for $($c.Args -join ' ')" (($got -join '|') -eq ($want -join '|')) "planned '$($got -join ''' , ''')', expected '$($want -join ''' , ''')'"
     }
+
+    # ---- A file under long/ gets -LongTimeoutSeconds; other files keep
+    # -TimeoutSeconds. Both fixtures sleep 6 s (the run builds originals). ----
+    $tmo = @(& $pwshPath -NoProfile -File $runner -TestRoot (Join-Path $repo 'tools/tests/timeout-fixtures') -Tree originals -Long -TimeoutSeconds 2 -LongTimeoutSeconds 60 -ReportPath (Join-Path $scratch 'timeout.txt') 2>&1 | ForEach-Object { "$_" })
+    $tmoAll = $tmo -join "`n"
+    Write-Check 'A long/ file runs to -LongTimeoutSeconds' (@($tmo | Where-Object { $_ -eq 'PASS originals/slow :: Finishes after 6 s' }).Count -eq 1) $tmoAll
+    Write-Check 'Other files keep -TimeoutSeconds' (@($tmo | Where-Object { $_ -eq 'FAIL originals/slow :: (file) :: timed out after 2 s; process killed' }).Count -eq 1) $tmoAll
 
     # ---- Comparison helper, run directly (its children are boot-free). ----
     $env:EBC_BUILT_TREES = 'originals,8bc-deluxe'

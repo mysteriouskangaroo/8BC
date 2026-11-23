@@ -9,12 +9,14 @@
 #   files at the root     run once with no tree and no build (runner fixtures)
 #
 # A file that prints no result line, exits nonzero without a FAIL line, or
-# runs past -TimeoutSeconds counts as a FAIL. Prints every result line, writes
+# runs past -TimeoutSeconds (-LongTimeoutSeconds for a file under long/)
+# counts as a FAIL. Prints every result line, writes
 # them to -ReportPath, ends with
 #   Game tests: <p> passed, <f> failed, <s> seeded, <n> files
 # and exits 1 on any failure.
 # Usage: pwsh tools/Invoke-GameTests.ps1 [-Tree originals,loop-score-change,8bc-deluxe]
 #        [-Path <file, folder or glob>] [-Jobs 1..4] [-Long] [-TimeoutSeconds 300]
+#        [-LongTimeoutSeconds 1800]
 #        [-TestRoot tests] [-ReportPath build/game-tests/report.txt] [-ListOnly]
 
 [CmdletBinding()]
@@ -24,6 +26,9 @@ param(
     [ValidateRange(1, 4)][int]$Jobs = 1,
     [switch]$Long,
     [ValidateRange(1, 86400)][int]$TimeoutSeconds = 300,
+    # The limit for a file under long/ (tests/<tree>/long/ holds runs longer
+    # than the default limit, such as 300 games).
+    [ValidateRange(1, 86400)][int]$LongTimeoutSeconds = 1800,
     [string]$TestRoot = 'tests',
     [string]$ReportPath,
     # Prints the planned runs ("RUN <tree> <file>") without building or running.
@@ -83,7 +88,7 @@ foreach ($f in $files) {
         }
     }
     elseif (Test-Path -LiteralPath (Join-Path $repo "src/$($parts[0])/asm/build.ps1")) {
-        if ($parts[0] -in $Tree) { $plan.Add([PSCustomObject]@{ File = $f.FullName; Name = $name; Tree = $parts[0]; Group = $parts[0]; Needs = @($parts[0]); Error = $null }) }
+        if ($parts[0] -in $Tree) { $plan.Add([PSCustomObject]@{ File = $f.FullName; Name = $name; Tree = $parts[0]; Group = $parts[0]; Needs = @($parts[0]); Error = $null; IsLong = $isLong }) }
     }
     else {
         $plan.Add([PSCustomObject]@{ File = $f.FullName; Name = $name; Tree = ''; Group = '-'; Needs = @(); Error = "not under kit/, compare/ or a tree folder" })
@@ -162,7 +167,7 @@ function Complete-Run($r) {
     $tail = (($err | Select-Object -Last 2) -join ' / ').Trim()
     if ($tail.Length -gt 300) { $tail = $tail.Substring(0, 300) + '...' }
     $code = $r.Code
-    if ($r.TimedOut) { Emit "FAIL $label :: (file) :: timed out after $TimeoutSeconds s; process killed" }
+    if ($r.TimedOut) { Emit "FAIL $label :: (file) :: timed out after $($r.Limit) s; process killed" }
     elseif ($results.Count -eq 0 -and $code -eq 0) { Emit "FAIL $label :: (file) :: printed no result lines (exit 0)" }
     elseif ($results.Count -eq 0) { Emit "FAIL $label :: (file) :: exited $code before any result line: $tail" }
     elseif ($code -ne 0 -and @($results | Where-Object { $_ -like 'FAIL *' }).Count -eq 0) { Emit "FAIL $label :: (file) :: exited $code after its results: $tail" }
@@ -192,10 +197,11 @@ while ($queue.Count -or $running.Count) {
         $psi.Environment.Remove('EBC_SCENARIO') | Out-Null
         $p = [Diagnostics.Process]::Start($psi)
         $running.Add([PSCustomObject]@{ Entry = $e; Proc = $p; Dir = $dir; Out = $p.StandardOutput.ReadToEndAsync(); Err = $p.StandardError.ReadToEndAsync()
-                                        Clock = [Diagnostics.Stopwatch]::StartNew(); TimedOut = $false; Code = $null })
+                                        Clock = [Diagnostics.Stopwatch]::StartNew(); TimedOut = $false; Code = $null
+                                        Limit = $(if ($e.IsLong) { $LongTimeoutSeconds } else { $TimeoutSeconds }) })
     }
     foreach ($r in @($running)) {
-        if (-not $r.Proc.HasExited -and $r.Clock.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
+        if (-not $r.Proc.HasExited -and $r.Clock.Elapsed.TotalSeconds -ge $r.Limit) {
             $r.TimedOut = $true
             try { $r.Proc.Kill($true) } catch { }
         }
