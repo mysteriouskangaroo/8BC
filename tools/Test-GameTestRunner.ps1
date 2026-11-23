@@ -1,5 +1,6 @@
 # Checks tools/Invoke-GameTests.ps1 and the comparison helper on boot-free
-# fixtures: files that crash, hang or print nothing count as FAILs, the summary
+# fixtures: files that crash, hang, print nothing, exit nonzero without a FAIL
+# line or exit 0 despite one count as FAILs, the summary
 # counts seeded results, the runner selects kit, tree, long and compare files
 # by tree, a file under long/ gets -LongTimeoutSeconds,
 # Invoke-EbcComparedScenario reports a difference, and
@@ -19,7 +20,8 @@ function Write-Check([string]$Name, [bool]$Ok, [string]$Detail) {
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ('ebc-runner-check-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $scratch | Out-Null
 try {
-    # ---- Runner fixtures: pass, fail, silent, crash, hang, seeded. ----
+    # ---- Runner fixtures: pass, fail, silent, crash, hang, seeded, nonzero,
+    # zero-after-fail. ----
     $report = Join-Path $scratch 'report.txt'
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $out = @(& $pwshPath -NoProfile -File $runner -TestRoot (Join-Path $repo 'tools/tests/runner-fixtures') -TimeoutSeconds 5 -ReportPath $report 2>&1 | ForEach-Object { "$_" })
@@ -28,16 +30,20 @@ try {
     $all = $out -join "`n"
     $summary = @($out | Where-Object { $_ -like 'Game tests:*' })
     Write-Check 'Runner exits 1 on a failure' ($code -eq 1) "exit code $code; output:`n$all"
-    Write-Check 'Summary counts seeded' ($summary.Count -eq 1 -and $summary[0] -eq 'Game tests: 2 passed, 4 failed, 1 seeded, 6 files') "summary lines: '$($summary -join ''' / ''')', expected 'Game tests: 2 passed, 4 failed, 1 seeded, 6 files'"
+    Write-Check 'Summary counts seeded' ($summary.Count -eq 1 -and $summary[0] -eq 'Game tests: 3 passed, 7 failed, 1 seeded, 8 files') "summary lines: '$($summary -join ''' / ''')', expected 'Game tests: 3 passed, 7 failed, 1 seeded, 8 files'"
     foreach ($f in 'silent', 'crash', 'hang') {
         $line = @($out | Where-Object { $_ -match "^FAIL (\S+/)?$f :: .+ :: .+" })
         Write-Check "A $f file is a FAIL with a reason" ($line.Count -eq 1) "FAIL lines for ${f}: $($line.Count), expected 1 with a reason; output:`n$all"
     }
+    $nonzero = @($out | Where-Object { $_ -match '^FAIL (\S+/)?nonzero :: \(file\) :: exited 1 after its results' })
+    Write-Check 'A file that exits nonzero without a FAIL line is a FAIL' ($nonzero.Count -eq 1) "output:`n$all"
+    $zeroFail = @($out | Where-Object { $_ -match '^FAIL (\S+/)?zero-after-fail :: \(file\) :: exit 0 despite FAIL lines' })
+    Write-Check 'A file that exits 0 despite a FAIL line is a FAIL' ($zeroFail.Count -eq 1) "output:`n$all"
     $failLine = @($out | Where-Object { $_ -like 'FAIL *fail :: Always fails :: one: expected 1, actual 2 (runner fixture)' })
     Write-Check 'Assertion text names What, values and Doc' ($failLine.Count -eq 1) "output:`n$all"
     Write-Check 'Hang is cut at the timeout' ($clock.Elapsed.TotalSeconds -lt 60) ("runner took {0:N1} s with a 5 s timeout" -f $clock.Elapsed.TotalSeconds)
     $reportText = if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report -Raw } else { '' }
-    Write-Check 'Report holds the lines and summary' ($reportText -like '*Game tests: 2 passed, 4 failed, 1 seeded, 6 files*' -and $reportText -like '*PASS*pass :: Always passes*') "report.txt:`n$reportText"
+    Write-Check 'Report holds the lines and summary' ($reportText -like '*Game tests: 3 passed, 7 failed, 1 seeded, 8 files*' -and $reportText -like '*PASS*pass :: Always passes*') "report.txt:`n$reportText"
 
     # ---- Selection: kit per tree, tree files, long only with -Long, compare with both trees. ----
     $sel = Join-Path $repo 'tools/tests/selection-fixtures'
