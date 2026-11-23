@@ -86,6 +86,11 @@ $ExpectedOrbitLamps = [ordered]@{
 # Same table, second page: SPINNER 1,000/3,000/5,000 on J10-17, J10-3, J10-9,
 # phase B; by6803.c: 34, 3, 19.
 $ExpectedSpinnerLamps = [ordered]@{ 'Spinner 1,000' = 34 + 48; 'Spinner 3,000' = 3 + 48; 'Spinner 5,000' = 19 + 48 }
+# Same table, first page: 'C'/'H'/'A'/'M'/'P' ROLLOVER on J10-1, J10-7,
+# J10-16, J10-2, J10-8 and LEFT/RIGHT OUTLANE on J10-14/J10-6, phase B;
+# by6803.c: 1, 17, 33, 2, 18, 37, 6.
+$ExpectedChampLamps = [ordered]@{ '"C" Rollover' = 1 + 48; '"H" Rollover' = 17 + 48; '"A" Rollover' = 33 + 48; '"M" Rollover' = 2 + 48
+                                  '"P" Rollover' = 18 + 48; 'Left Outlane' = 37 + 48; 'Right Outlane' = 6 + 48 }
 
 # ---- Pure table checks (no emulator). ----
 
@@ -103,6 +108,8 @@ $badOrbit = @(); foreach ($k in $ExpectedOrbitLamps.Keys) { if ($N.Lamps[$k] -ne
 Test-EbcItem -Name 'Orbit-value lamps are the manual''s rollover lane pins, phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badOrbit.Count -eq 0) ("wrong: " + ($badOrbit -join '; ')) }
 $badSpin = @(); foreach ($k in $ExpectedSpinnerLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedSpinnerLamps[$k]) { $badSpin += "$k=$($N.Lamps[$k]) (expected $($ExpectedSpinnerLamps[$k]))" } }
 Test-EbcItem -Name 'Spinner value lamps are J10-17, J10-3 and J10-9 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badSpin.Count -eq 0) ("wrong: " + ($badSpin -join '; ')) }
+$badChamp = @(); foreach ($k in $ExpectedChampLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedChampLamps[$k]) { $badChamp += "$k=$($N.Lamps[$k]) (expected $($ExpectedChampLamps[$k]))" } }
+Test-EbcItem -Name 'C-H-A-M-P and outlane lamps are J10 phase B pins' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badChamp.Count -eq 0) ("wrong: " + ($badChamp -join '; ')) }
 Test-EbcItem -Name 'Rebound sound is 0x22' -Doc 'GAME_RULE_TRACES.md Switch 07: Rebound' -Body { Assert-EbcEqual -Expected $ExpectedReboundSound -Actual $N.Sounds.Rebound -What 'Sounds.Rebound' }
 
 # ---- Play checks (one boot). ----

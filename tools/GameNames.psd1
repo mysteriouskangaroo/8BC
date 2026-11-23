@@ -155,6 +155,16 @@
     # (the lamps show the spinner value an E-I-G-H-T letter advanced it to).
     # Checked in names.tests.ps1 "Spinner value lamps are J10-17, J10-3 and
     # J10-9 phase B".
+    #
+    # The table's first page puts 'C' ROLLOVER, 'H' ROLLOVER, 'A' ROLLOVER,
+    # 'M' ROLLOVER and 'P' ROLLOVER (the C-H-A-M-P lane letters) on J10-1,
+    # J10-7, J10-16, J10-2 and J10-8, and LEFT OUTLANE / RIGHT OUTLANE on
+    # J10-14 / J10-6, all phase B; by6803.c converts them to 1, 17, 33, 2, 18,
+    # 37 and 6, so they are 49, 65, 81, 50, 66, 85 and 54. Measured:
+    # tests/8bc-deluxe/champ-lamps.tests.ps1 (each letter lamp is lit exactly
+    # while its letter is collected; both outlane lamps light at the fifth
+    # CHAMP completion). Checked in names.tests.ps1 "C-H-A-M-P and outlane
+    # lamps are J10 phase B pins".
     Lamps = @{
         'Bonus 120,000'         = 77
         'Bonus 240,000'         = 93
@@ -182,6 +192,13 @@
         'Spinner 1,000'         = 82
         'Spinner 3,000'         = 51
         'Spinner 5,000'         = 67
+        '"C" Rollover'          = 49
+        '"H" Rollover'          = 65
+        '"A" Rollover'          = 81
+        '"M" Rollover'          = 50
+        '"P" Rollover'          = 66
+        'Left Outlane'          = 85
+        'Right Outlane'         = 54
     }
 
     # E-I-G-H-T standup -> the pool-ball drop group behind it. A standup's
