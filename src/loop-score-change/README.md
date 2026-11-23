@@ -23,7 +23,8 @@ record is in `notes/SCORING_CHANGES.md`.
 From the repository root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\src\loop-score-change\asm\build.ps1
+pwsh -File src/loop-score-change/asm/build.ps1
+powershell -ExecutionPolicy Bypass -File .\src\loop-score-change\asm\build.ps1   # Windows PowerShell 5.1
 ```
 
 This writes all generated files under `src/loop-score-change/build/`, compares
@@ -34,10 +35,10 @@ with the unchanged canonical sound ROMs, and deploys the complete set to:
 VisualPinballX/VPinMAME/roms/eballchp.zip
 ```
 
-Run the variation smoke test with:
+Run the variation's libpinmame boot test (PowerShell 7) with:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\src\loop-score-change\asm\test-pinmame.ps1
+pwsh -File src/loop-score-change/asm/test-pinmame.ps1
 ```
 
 Do not use `-RequireByteIdentical` for this variation: its rule changes are

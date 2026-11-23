@@ -1,31 +1,31 @@
 [CmdletBinding()]
 param(
-    [ValidateRange(60, 36000)]
-    [int]$Frames = 600,
+    [ValidateRange(600, 36000)]
+    [int]$Frames = 1500,
     [switch]$RequireByteIdentical
 )
+
+# Builds this tree, then boots the exact eballchp.zip the build packaged in
+# libpinmame (headless, unthrottled). Requires PowerShell 7 and the library
+# from tools/Get-LibPinmame.ps1.
 
 $ErrorActionPreference = 'Stop'
 
 $asmDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
-$variationDirectory = Split-Path -Parent $asmDirectory
-$repositoryRoot = Split-Path -Parent (Split-Path -Parent $variationDirectory)
-$buildDirectory = Join-Path $variationDirectory 'build'
+$treeDirectory = Split-Path -Parent $asmDirectory
+$repositoryRoot = Split-Path -Parent (Split-Path -Parent $treeDirectory)
+$buildDirectory = Join-Path $treeDirectory 'build'
 $rebuiltRom = Join-Path $buildDirectory 'u3_cpu.rebuilt.128'
-$pinmame = Join-Path $repositoryRoot 'pinmame\pinmame.exe'
-$packagedArchive = Join-Path $repositoryRoot 'VisualPinballX\VPinMAME\roms\eballchp.zip'
+$packagedArchive = Join-Path $repositoryRoot 'VisualPinballX/VPinMAME/roms/eballchp.zip'
 $smokeRoot = Join-Path $buildDirectory 'pinmame-smoke'
 $romSetDirectory = Join-Path $smokeRoot 'roms'
 $testArchive = Join-Path $romSetDirectory 'eballchp.zip'
-$cfgDirectory = Join-Path $smokeRoot 'cfg'
-$nvramDirectory = Join-Path $smokeRoot 'nvram'
-$snapshotDirectory = Join-Path $smokeRoot 'snap'
-$waveDirectory = Join-Path $smokeRoot 'wave'
-$reportPath = Join-Path $smokeRoot 'pinmame-smoke-test.txt'
+$reportPath = Join-Path $smokeRoot 'pinmame-boot-test.txt'
+$treeName = 'Deluxe'
 
-if (-not (Test-Path -LiteralPath $pinmame -PathType Leaf)) {
-    throw "PinMAME was not found at $pinmame"
-}
+. (Join-Path $repositoryRoot 'tools/LibPinmameBoot.ps1')
+$libraryPath = & (Join-Path $repositoryRoot 'tools/Get-LibPinmame.ps1')
+
 $buildScript = Join-Path $asmDirectory 'build.ps1'
 if ($RequireByteIdentical) {
     & $buildScript -RequireByteIdentical
@@ -33,52 +33,30 @@ if ($RequireByteIdentical) {
 else {
     & $buildScript
 }
-if ($LASTEXITCODE -ne 0) { throw "Deluxe ROM build failed with exit code $LASTEXITCODE" }
 if (-not (Test-Path -LiteralPath $packagedArchive -PathType Leaf)) {
     throw "The build did not create $packagedArchive"
 }
 
-foreach ($directory in @($romSetDirectory, $cfgDirectory, $nvramDirectory,
-        $snapshotDirectory, $waveDirectory)) {
-    New-Item -ItemType Directory -Path $directory -Force | Out-Null
-}
-
+New-Item -ItemType Directory -Path $romSetDirectory -Force | Out-Null
 Copy-Item -LiteralPath $packagedArchive -Destination $testArchive -Force
 
-$pinmameArguments = @(
-    'eballchp'
-    '-rompath', $romSetDirectory
-    '-cfg_directory', $cfgDirectory
-    '-nvram_directory', $nvramDirectory
-    '-snapshot_directory', $snapshotDirectory
-    '-wave_directory', $waveDirectory
-    '-noreadconfig'
-    '-window'
-    '-noddraw'
-    '-nodirect3d'
-    '-nosound'
-    '-noartwork'
-    '-nothrottle'
-    '-skip_disclaimer'
-    '-skip_gameinfo'
-    '-frames_to_run', $Frames.ToString()
-)
-
-& $pinmame @pinmameArguments
-$pinmameExitCode = $LASTEXITCODE
-if ($pinmameExitCode -ne 0) {
-    throw "PinMAME smoke test failed with exit code $pinmameExitCode"
-}
+$result = Invoke-EightBallChampBootTest -LibraryPath $libraryPath -VpmPath $smokeRoot -Frames $Frames
 
 $rebuiltHash = (Get-FileHash -Algorithm SHA1 -LiteralPath $rebuiltRom).Hash
 $report = @(
-    'Eight Ball Champ Deluxe PinMAME smoke test: PASS'
-    "Frames executed: $Frames"
+    "Eight Ball Champ $treeName PinMAME boot test: $(if ($result.Pass) { 'PASS' } else { 'FAIL' })"
+    "Result: $($result.Reason)"
+    "Frames emulated: $($result.Frames)"
+    "Display events: $($result.DisplayEvents); lamp events: $($result.LampEvents); solenoid events: $($result.SolenoidEvents); sound commands: $($result.SoundEvents)"
+    "Stack 00FC-00FF at last frame: $($result.Stack00FC)"
+    "U4 RAM bytes written: $($result.U4WrittenBytes)"
+    "Event digest (SHA-256): $($result.Digest)"
     "ROM SHA-1: $rebuiltHash"
-    "PinMAME exit code: $pinmameExitCode"
     "Packaged ROM set: $packagedArchive"
     "Isolated ROM set: $testArchive"
-    'Scope: load, reset, and sustained emulation only; interactive rule and service tests remain required.'
+    "libpinmame: $libraryPath"
+    'Scope: the ROM booted past the startup checksum and drove the displays; game rules and physical outputs are untested.'
 )
 $report | Set-Content -LiteralPath $reportPath -Encoding ascii
 $report
+if (-not $result.Pass) { exit 1 }

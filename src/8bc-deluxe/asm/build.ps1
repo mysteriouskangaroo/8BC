@@ -8,27 +8,32 @@ $ErrorActionPreference = 'Stop'
 $asmDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $variationDirectory = Split-Path -Parent $asmDirectory
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $variationDirectory)
-$canonicalDirectory = Join-Path $repositoryRoot 'src\originals'
-$assembler = Join-Path $repositoryRoot 'dasm-2.20.14.1-win-x64\dasm.exe'
-$originalRom = Join-Path $canonicalDirectory 'roms\u3_cpu.128'
+$canonicalDirectory = Join-Path $repositoryRoot 'src/originals'
+# Windows PowerShell 5.1 has no $IsWindows; treat it as Windows.
+$dasmDirectory = if ($IsMacOS) { 'dasm-2.20.14.1-osx-x64' }
+                 elseif ($IsLinux) { 'dasm-2.20.14.1-linux-x64' }
+                 else { 'dasm-2.20.14.1-win-x64' }
+$dasmName = if ($IsMacOS -or $IsLinux) { 'dasm' } else { 'dasm.exe' }
+$assembler = Join-Path (Join-Path $repositoryRoot $dasmDirectory) $dasmName
+$originalRom = Join-Path $canonicalDirectory 'roms/u3_cpu.128'
 $buildDirectory = Join-Path $variationDirectory 'build'
 $rebuiltRom = Join-Path $buildDirectory 'u3_cpu.rebuilt.128'
 $listing = Join-Path $buildDirectory 'u3_cpu.rebuilt.lst'
 $symbols = Join-Path $buildDirectory 'u3_cpu.rebuilt.sym'
 $verification = Join-Path $buildDirectory 'verification.txt'
 $checksumInclude = Join-Path $buildDirectory 'rom_checksum.inc'
-$weeblyBuilder = Join-Path $repositoryRoot 'tools\New-WeeblyM27C160Image.ps1'
+$weeblyBuilder = Join-Path $repositoryRoot 'tools/New-WeeblyM27C160Image.ps1'
 $weeblyRom = Join-Path $buildDirectory 'eballchp-weebly-m27c160.bin'
-$pinmameRomDirectory = Join-Path $repositoryRoot 'VisualPinballX\VPinMAME\roms'
+$pinmameRomDirectory = Join-Path $repositoryRoot 'VisualPinballX/VPinMAME/roms'
 $pinmameArchive = Join-Path $pinmameRomDirectory 'eballchp.zip'
 $packageBackupDirectory = Join-Path $buildDirectory 'visual-pinball-package-backup'
 $packageBackup = Join-Path $packageBackupDirectory 'eballchp.pre-8bc-deluxe.zip'
 $temporaryArchive = Join-Path $buildDirectory 'eballchp.packaging.zip'
 $expectedSha1 = '25D310F169B92CE6B348330816DDC3B5710E57DA'
 $soundRoms = @(
-    (Join-Path $canonicalDirectory 'roms\u3_snd.532')
-    (Join-Path $canonicalDirectory 'roms\u4_snd.532')
-    (Join-Path $canonicalDirectory 'roms\u5_snd.532')
+    (Join-Path $canonicalDirectory 'roms/u3_snd.532')
+    (Join-Path $canonicalDirectory 'roms/u4_snd.532')
+    (Join-Path $canonicalDirectory 'roms/u5_snd.532')
 )
 
 if (-not (Test-Path -LiteralPath $assembler -PathType Leaf)) {
