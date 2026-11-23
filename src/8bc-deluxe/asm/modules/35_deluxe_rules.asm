@@ -1252,7 +1252,7 @@ DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
 ; Activate the current location only; never change or queue its location here.
         LDAA DELUXE_COLLECT_STATE
         BITA #DELUXE_COLLECT_ACTIVE
-        BNE DELUXE_COLLECT_ACTIVATION_DONE
+        BNE DELUXE_COLLECT_ALREADY_ACTIVE
 ; A newly sunk ball activates exactly the current waiting location. If already
 ; active, later sunk balls are not queued and do not change this state.
         ORAA #DELUXE_COLLECT_ACTIVE
@@ -1261,6 +1261,8 @@ DELUXE_ACTIVATE_CURRENT_COLLECT_IF_INACTIVE:
         CMPA #DELUXE_COLLECT_SPINNER
         BEQ DELUXE_FIRST_SINK_ACTIVATE_SPINNER
         BRA DELUXE_FIRST_SINK_ACTIVATE_ORBIT
+DELUXE_COLLECT_ALREADY_ACTIVE:
+        RTS
 
 DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION:
 ; Called only after either orbit collect or the first active-spinner pulse has
@@ -1302,7 +1304,17 @@ DELUXE_RELIGHT_HOLE_8X_100000:
 DELUXE_RELIGHT_HOLE_10X_100000:
         LDAA #HOLE_NEXT_10X_100000_FLASH_MASK
 DELUXE_STORE_RELIT_HOLE_FLASH_MASK:
+; $10C1 is part of the canonical per-player record. Its low nibble is the
+; saucer flash state, but bit 7 is also the B-A-L-L Extra Ball qualifier that
+; later advances to Special. Never let a Deluxe saucer update erase it.
+        PSHB
+        TAB
+        ANDB #HOLE_FLASH_STATE_MASK
+        LDAA $10c1
+        ANDA #BALL_EXTRA_BALL_QUALIFIED_STATE
+        ABA
         STAA $10c1
+        PULB
 DELUXE_COLLECT_DEACTIVATION_100000_DONE:
         RTS
 
@@ -1442,7 +1454,8 @@ DELUXE_HOLE_TERMINAL_STATE:
         STAA DELUXE_COLLECT_STATE
         JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER
         LDAA #HOLE_100000_STATE
-        STAA $10c1
+DELUXE_STORE_DORMANT_UNARMED_HOLE_STATE:
+        JSR DELUXE_STORE_RELIT_HOLE_FLASH_MASK
         JMP $d0b4
 
 DELUXE_HOLE_AWARD_ARMED_100000:
@@ -1459,7 +1472,8 @@ DELUXE_HOLE_AWARD_ARMED_100000:
         ORAA #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
         STAA DELUXE_COLLECT_STATE
         LDAA #HOLE_100000_STATE
-        STAA $10c1
+DELUXE_STORE_DORMANT_ARMED_HOLE_STATE:
+        JSR DELUXE_STORE_RELIT_HOLE_FLASH_MASK
         JMP $d0b4
 
 DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH:
@@ -1468,13 +1482,19 @@ DELUXE_HOLE_USE_ORIGINAL_STATE_DISPATCH:
 DELUXE_APPLY_HOLE_FLASH_MASK:
 ; C1BC originally XORed $10C1 directly into the hole lamp shadow. Deluxe uses
 ; the same path for a complete blinking next-award mask ($0D/$0E/$0F), while
-; the separate numeric bytes remain authoritative for drain bonus. Suppress the
-; XOR while waiting so no top award is advertised before qualification.
+; the separate numeric bytes remain authoritative for drain bonus. Suppress only
+; the low saucer nibble while waiting so no top award is advertised before
+; qualification; the unrelated B-A-L-L bit 7 must continue blinking normally.
 ; Preserve B for the periodic lamp-refresh caller.
         PSHB
         LDAB DELUXE_COLLECT_STATE
         BITB #DELUXE_HOLE_WAITING_FOR_COLLECT_DEACTIVATION
-        BNE DELUXE_HOLE_FLASH_DONE
+        BEQ DELUXE_HOLE_FLASH_ALL_STATE
+        LDAB $10c1
+        BPL DELUXE_HOLE_FLASH_DONE
+        EORA #BALL_EXTRA_BALL_QUALIFIED_STATE
+        BRA DELUXE_HOLE_FLASH_DONE
+DELUXE_HOLE_FLASH_ALL_STATE:
         EORA $10c1
 DELUXE_HOLE_FLASH_DONE:
         PULB

@@ -291,8 +291,12 @@ the same ball even though the arrow value itself remains at the terminal state.
 
 ## Saucer multiplier progression and 100,000 relight qualification
 
-The saucer state in `10C1` still progresses through 2x (`01`), 3x (`02`), 5x
-(`04`), and the post-5x/100,000 state (`08`). `DELUXE_HANDLE_HOLE_STATE`
+The low saucer nibble in `10C1` still progresses through 2x (`01`), 3x (`02`),
+5x (`04`), and the post-5x/100,000 state (`08`). Bit 7 of the same byte is the
+independent original B-A-L-L Extra Ball qualifier, which later participates in
+the Special progression. The canonical player save/restore copies the whole
+byte into each player's 13-byte record, so every Deluxe low-nibble writer must
+merge its saucer mask with the existing bit 7. `DELUXE_HANDLE_HOLE_STATE`
 records the actually collected multiplier numerically at `1149`: 1x initially,
 then 2x, 3x, and 5x. When the player collects 5x, the handler clears any stale
 waiting flag and sets the authorization before the original dispatch advances
@@ -310,12 +314,14 @@ first appears.
 
 The active-low steady lamp shadow at `1043` represents the multiplier already
 earned: 5x (`BF`), 7x as 2x+5x (`AF`), 8x as 3x+5x (`9F`), and 10x as
-2x+3x+5x (`8F`). While waiting, `10C1` is the dormant `08` and the periodic
-XOR is suppressed, so the next-award lamps remain dark. A qualifying transition
-loads the complete blinking mask into `10C1`: `0D` for 7x+100,000, `0E` for
-8x+100,000, or `0F` for 10x+100,000. Once 10x has been earned, it loads `08`
-and therefore blinks 100,000 alone. The numeric byte at `1149`, never `114B`
-or a combined/blinking lamp mask, controls bonus scoring.
+2x+3x+5x (`8F`). While waiting, the `10C1` low nibble is the dormant `08` and
+the periodic helper suppresses only that nibble, so the next-award lamps remain
+dark while bit 7 can still blink the B-A-L-L Extra Ball/Special lamp. A
+qualifying transition loads the complete low-nibble mask into `10C1`: `0D` for
+7x+100,000, `0E` for 8x+100,000, or `0F` for 10x+100,000, always preserving bit
+7. Once 10x has been earned, it loads low-nibble `08` and therefore blinks
+100,000 alone. The numeric byte at `1149`, never `114B` or a combined/blinking
+lamp mask, controls bonus scoring.
 
 The three physical paths that end an active collect call
 `DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION` only after storing the next
@@ -337,8 +343,9 @@ side effect.
 Collecting 100,000 awards the existing scaled 10,000 through its original
 playfield-multiplier-aware path, plays the original 100,000 sound, advances the
 bonus stage if it is below 10x, clears the authorization, and restores the
-waiting flag while restoring `10C1` to dormant `08`. The next active-to-inactive
-transition at any collect stage can therefore reveal exactly one more award.
+waiting flag while restoring the `10C1` low nibble to dormant `08` without
+changing the saved B-A-L-L bit. The next active-to-inactive transition at any
+collect stage can therefore reveal exactly one more award.
 After 10x+100,000, the revealed award is 100,000 alone and that qualify/collect
 cycle repeats until drain. An unarmed saucer hit bypasses the original terminal
 5x speech dispatch, scores only the ordinary saucer value, and cannot advance

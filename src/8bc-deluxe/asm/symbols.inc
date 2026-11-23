@@ -130,6 +130,10 @@ HOLE_BONUS_2X_STATE                          equ $01
 HOLE_BONUS_3X_STATE                          equ $02
 HOLE_BONUS_5X_STATE                          equ $04
 HOLE_100000_STATE                            equ $08
+HOLE_FLASH_STATE_MASK                        equ $0F
+; $10C1 is shared: its low nibble drives saucer award flashing, while bit 7
+; is the original per-player B-A-L-L Extra Ball/Special qualification state.
+BALL_EXTRA_BALL_QUALIFIED_STATE              equ $80
 ; Active-low steady earned-multiplier lamps in HOLE_BONUS_LAMP_SHADOW. The
 ; low nibble remains off until the periodic refresh XORs in the relit next-award
 ; mask from $10C1.

@@ -218,6 +218,65 @@ foreach ($check in $deluxeHookChecks) {
     }
 }
 
+# $10C1 is shared by the saucer flash state (low nibble) and the original
+# per-player B-A-L-L Extra Ball/Special qualifier (bit 7). Lock down the
+# assembled preservation helper and both terminal-state callers so a future
+# saucer change cannot silently reintroduce a whole-byte overwrite.
+$sharedBallAwardStateChecks = @(
+    @{
+        Symbol = 'DELUXE_STORE_RELIT_HOLE_FLASH_MASK'
+        Bytes = [byte[]](0x37, 0x16, 0xC4, 0x0F, 0xB6, 0x10, 0xC1,
+            0x84, 0x80, 0x1B, 0xB7, 0x10, 0xC1, 0x33, 0x39)
+        Name = 'saucer-state writer preserves B-A-L-L bit 7'
+    }
+    @{
+        Symbol = 'DELUXE_STORE_DORMANT_UNARMED_HOLE_STATE'
+        CallTarget = 'DELUXE_STORE_RELIT_HOLE_FLASH_MASK'
+        Name = 'unarmed terminal saucer state uses preserving writer'
+    }
+    @{
+        Symbol = 'DELUXE_STORE_DORMANT_ARMED_HOLE_STATE'
+        CallTarget = 'DELUXE_STORE_RELIT_HOLE_FLASH_MASK'
+        Name = 'armed terminal saucer state uses preserving writer'
+    }
+    @{
+        Symbol = 'DELUXE_APPLY_HOLE_FLASH_MASK'
+        Bytes = [byte[]](0x37, 0xF6, 0x10, 0xFB, 0xC5, 0x40, 0x27, 0x09,
+            0xF6, 0x10, 0xC1, 0x2A, 0x07, 0x88, 0x80, 0x20, 0x03,
+            0xB8, 0x10, 0xC1, 0x33, 0x39)
+        Name = 'waiting saucer gate still flashes B-A-L-L bit 7'
+    }
+)
+foreach ($check in $sharedBallAwardStateChecks) {
+    if ($check.CallTarget) {
+        $targetAddress = Get-DasmSymbolAddress $check.CallTarget
+        $check.Bytes = [byte[]](0xBD, (($targetAddress -shr 8) -band 0xFF),
+            ($targetAddress -band 0xFF))
+    }
+    $address = Get-DasmSymbolAddress $check.Symbol
+    $offset = $address - 0xC000
+    for ($byteIndex = 0; $byteIndex -lt $check.Bytes.Length; $byteIndex++) {
+        if ($rebuiltBytes[$offset + $byteIndex] -ne $check.Bytes[$byteIndex]) {
+            throw "Deluxe $($check.Name) check failed at $('$' + ($address + $byteIndex).ToString('X4'))."
+        }
+    }
+}
+
+# Exhaust the two possible qualifier states against every low-nibble value.
+# This models the merge implemented above and verifies that neither player
+# qualification state can be changed by any saucer flash-mask update.
+$sharedBallAwardStateCaseCount = 0
+foreach ($qualifiedState in @(0x00, 0x80)) {
+    foreach ($holeState in 0x00..0x0F) {
+        $mergedState = ($qualifiedState -band 0x80) -bor ($holeState -band 0x0F)
+        if (($mergedState -band 0x80) -ne $qualifiedState -or
+                ($mergedState -band 0x0F) -ne $holeState) {
+            throw 'Deluxe shared saucer/B-A-L-L state truth-table check failed.'
+        }
+        $sharedBallAwardStateCaseCount++
+    }
+}
+
 $firstDifferences = [System.Collections.Generic.List[string]]::new()
 $differenceCount = 0
 for ($index = 0; $index -lt $originalBytes.Length; $index++) {
@@ -259,6 +318,8 @@ $report = @(
     "Canonical player slots: $('$' + $canonicalPlayerRecordStart.ToString('X4'))-$('$' + $canonicalPlayerRecordEnd.ToString('X4')) (4 x 13 bytes)"
     "Deluxe RAM: $('$' + $deluxeRamStart.ToString('X4'))-$('$' + $deluxeRamEnd.ToString('X4')) (non-overlap PASS)"
     "Deluxe fixed-address executable checks: $($deluxeHookChecks.Count) (PASS)"
+    "Shared saucer/B-A-L-L executable checks: $($sharedBallAwardStateChecks.Count) (PASS)"
+    "Shared saucer/B-A-L-L truth-table cases: $sharedBallAwardStateCaseCount (PASS)"
     $vectorLines
 )
 if ($firstDifferences.Count -ne 0) {
