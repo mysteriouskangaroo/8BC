@@ -83,6 +83,20 @@ function Invoke-Crossing([long]$Threshold) {
     }
     [PSCustomObject]@{ Approach = $approach; Hits = $hits }
 }
+# Points Complete-EbcGame adds after the pump: one Rebound on the current
+# ball, still at 3x, and one on each of balls 2 and 3 at 1x (3 + 1 + 1;
+# nothing is sunk, so no bonus).
+$GameOutPoints = 3 * $Rebound + 2 * $Rebound
+# Pumps like Invoke-Crossing but stops below $Threshold: measured hits go on
+# only while one more hit (the last hit's value) and $Spare points stay below
+# it. Returns the score and that hit value.
+function Invoke-JustBelow([long]$Threshold, [long]$Spare) {
+    if ((Get-EbcChampState) -ne 0x20) { for ($c = 0; $c -lt 4; $c++) { Complete-EbcChamp -RearmWith 'Center Rollover Button' | Out-Null } }
+    while ((Get-Buffer) -lt $Threshold - $Approach) { Invoke-Bulk $PumpSwitch $Chunk }
+    $step = Invoke-EbcScoredHit $PumpSwitch
+    while ((Get-Buffer) + $step + $Spare -lt $Threshold) { $step = Invoke-EbcScoredHit $PumpSwitch }
+    [PSCustomObject]@{ Score = Get-Buffer; Step = $step }
+}
 # A replay at $Threshold: nothing during the approach or the measured hits
 # below it, then one credit and one knocker pulse on the hit that reaches it.
 function Assert-ReplayAt([long]$Threshold) {
@@ -94,12 +108,14 @@ function Assert-ReplayAt([long]$Threshold) {
     Assert-EbcEqual -Expected '+1 credit, 1 knock' -Actual ('+{0} credit, {1} knock' -f $last.Credits, $last.Knocks) -What "award on the hit $($last.Before) -> $($last.After) that reaches $Threshold"
 }
 # Plays the rest of the game out; returns the credit change and knocker
-# pulses from the last drain to game over.
+# pulses from the last drain to game over, and player 1's final score, read
+# on the game-over frame.
 function Complete-Game {
     $c = Get-EbcCredits; $seen = Get-EbcEventCount
     Complete-EbcGame | Out-Null
+    $final = [long](Get-EbcScoreBufferText (Get-EbcRamAddress 'ScoreBuffer1'))
     Step-EbcFrames -Frames 300
-    [PSCustomObject]@{ Credits = (Get-EbcCredits) - $c; Knocks = Get-Knocks $seen }
+    [PSCustomObject]@{ Credits = (Get-EbcCredits) - $c; Knocks = Get-Knocks $seen; Final = $final }
 }
 
 Start-EbcGame
@@ -156,11 +172,12 @@ Test-EbcItem -Name 'A combined 4,500-point award path scores 450 (lane 3,000 + t
 }
 Test-EbcItem -Name 'Game 1: the first replay is awarded at 150,000' -Doc "$Settings; $Manual" -Body { Assert-ReplayAt $FirstReplay }
 Test-EbcItem -Name 'Game 1: the second replay is awarded at 300,000' -Doc "$Settings; $Manual" -Body { Assert-ReplayAt $SecondReplay }
-Test-EbcItem -Name 'Game 1: a game ending between 300,000 and 400,000 gets no High Score to Date award' -Doc "$Settings; $Manual" -Body {
-    $final = Get-Buffer
-    Assert-EbcTrue ($final -lt $HighScoreToDate) "game 1 score $final is not below $HighScoreToDate"
+Test-EbcItem -Name 'Game 1: a game ending just below 400,000 gets no High Score to Date award' -Doc "$Settings; $Manual" -Body {
+    $below = Invoke-JustBelow $HighScoreToDate $GameOutPoints
     $r = Complete-Game
-    Assert-EbcEqual -Expected '+0 credits, 0 knocks' -Actual ('+{0} credits, {1} knocks' -f $r.Credits, $r.Knocks) -What "award at game over with $final"
+    $note = "final $($r.Final) (one more hit would add $($below.Step))"
+    Assert-EbcTrue ($r.Final -lt $HighScoreToDate -and $r.Final + $below.Step -ge $HighScoreToDate) "game 1 did not end within one hit below $HighScoreToDate ($note)"
+    Assert-EbcEqual -Expected '+0 credits, 0 knocks' -Actual ('+{0} credits, {1} knocks' -f $r.Credits, $r.Knocks) -What "award at game over ($note)"
 }
 Test-EbcItem -Name 'Game 2: replays again at 150,000 and 300,000' -Doc "$Settings; $Manual" -Body {
     Start-EbcPlay | Out-Null
@@ -168,11 +185,16 @@ Test-EbcItem -Name 'Game 2: replays again at 150,000 and 300,000' -Doc "$Setting
     Assert-ReplayAt $FirstReplay
     Assert-ReplayAt $SecondReplay
 }
-Test-EbcItem -Name 'Game 2: a game ending above 400,000 gets the High Score to Date award' -Doc "$Settings; $Manual" -Body {
-    Invoke-Crossing ($HighScoreToDate + $Approach) | Out-Null
-    $final = Get-Buffer
+Test-EbcItem -Name 'Game 2: a game ending on the hit that reaches 400,000 gets the High Score to Date award' -Doc "$Settings; $Manual" -Body {
+    # The award comes at game over (manual p. 1-10), so the game ends right
+    # after the measured hit that reaches 400,000; that hit awards nothing.
+    $c = Invoke-Crossing $HighScoreToDate
+    $last = $c.Hits[-1]
     $r = Complete-Game
-    Assert-EbcEqual -Expected ('+{0} credits, {0} knocks' -f $HighScoreCredits) -Actual ('+{0} credits, {1} knocks' -f $r.Credits, $r.Knocks) -What "award at game over with $final (register 26 = $HighScoreCredits)"
+    $note = "hit $($last.Before) -> $($last.After), final $($r.Final)"
+    Assert-EbcTrue ($last.Before -lt $HighScoreToDate -and $r.Final -ge $HighScoreToDate -and $r.Final -le $last.After + $GameOutPoints) "game 2 did not end on the hit that reaches $HighScoreToDate ($note)"
+    Assert-EbcEqual -Expected '+0 credits, 0 knocks' -Actual ('+{0} credits, {1} knocks' -f $last.Credits, $last.Knocks) -What "award on the crossing hit ($note)"
+    Assert-EbcEqual -Expected ('+{0} credits, {0} knocks' -f $HighScoreCredits) -Actual ('+{0} credits, {1} knocks' -f $r.Credits, $r.Knocks) -What "award at game over ($note; register 26 = $HighScoreCredits)"
 }
 Test-EbcItem -Name 'Extra-ball thresholds entered at one tenth (200,000, 370,000) are accepted by the displays' -Doc "$Settings; $Manual" -Body {
     Enter-EbcServiceMode | Out-Null
