@@ -68,8 +68,15 @@
     # port 3 "KP: 3/2/1/6/5/4/9/8/7" and by6803.c SWITCH_UPDATE, which puts
     # port 3 nibbles 1-3 in matrix columns 2-4), sharing page 1-18 switches
     # 9-11, 17-19 and 25-27. Measured: "Set-EbcAdjustment changes a setting"
-    # (keys 2, 3 and 5 select register 23 and store 5; the other digits
-    # rest on the pinmame source only).
+    # (keys 2, 3 and 5 select register 23 and store 5) and tests/kit/
+    # service.tests.ps1 "Every digit key reaches the keypad".
+    #
+    # Key 8 shares switch 26, which pinmame declares the eballchp lower-right
+    # flipper switch (by6803games.c INITGAME6803 FLIP_SWNO(0,26)); core.c
+    # rewrites that matrix bit every update from the flipper input, so
+    # PinmameSetSwitch(26) never reaches the ROM (measured: keying 4, 8 shows
+    # 04). The flipper input is VPM switch 82 (swLRFlip), which core.c copies
+    # onto switch 26 (measured: 4, then switch 82, shows 48).
     ServiceKeys = @{
         Enter  = 1
         Zero   = 2
@@ -82,7 +89,7 @@
         Five   = 18
         Four   = 19
         Nine   = 25
-        Eight  = 26
+        Eight  = 82
         Seven  = 27
     }
 

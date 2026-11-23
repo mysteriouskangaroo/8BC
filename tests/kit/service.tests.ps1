@@ -44,4 +44,16 @@ Test-EbcItem -Name 'Set-EbcAdjustment sets two registers in one session' -Doc $D
     Assert-EbcEqual -Expected $FactoryBalls -Actual (Get-BallsSetting) -What 'balls-per-game byte after both entries'
     Exit-EbcServiceMode | Out-Null
 }
+# Manual p. 1-3: the register number's digits appear in the Match/Credit
+# display as they are pressed. After Clear (00), each digit d shows 0d.
+Test-EbcItem -Name 'Every digit key reaches the keypad' -Doc 'OPS manual p. 1-3 KEYBOARD ENTRY; tools/GameNames.psd1 ServiceKeys' -Body {
+    Enter-EbcServiceMode | Out-Null
+    $seen = @(foreach ($d in 0..9) {
+        Invoke-EbcKey 'Clear'; Step-EbcFrames -Frames 60
+        Invoke-EbcKey ([string]$d); Step-EbcFrames -Frames 30
+        "key ${d}: $(Get-EbcStatusText)" })
+    Assert-EbcEqual -Expected @(0..9 | ForEach-Object { "key ${_}: 0$_" }) -Actual $seen -What 'Match/Credit display after Clear and one digit'
+    Invoke-EbcKey 'Clear'; Step-EbcFrames -Frames 60
+    Exit-EbcServiceMode | Out-Null
+}
 Complete-EbcTests
