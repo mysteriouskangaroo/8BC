@@ -130,11 +130,34 @@
     # target is hit) and tests/compare/original-vs-deluxe-5000-lamp.tests.ps1
     # (the original ROM lights it identically). Checked in
     # names.tests.ps1 "5,000 drop target 3 lamp is J13-10 phase A".
+    #
+    # The table's first page lists the fourteen numbered DROP TARGET lamps,
+    # all phase A: 1 J10-18, 2 J10-4, 3 J10-11, 4 J10-19, 5 J10-5, 6 J10-12,
+    # 7 J10-14, 9 J10-10, 10 J10-13, 11 J11-8, 12 J11-16, 13 J11-6, 14 J11-12,
+    # 15 J11-11. by6803.c converts them to 35, 4, 20, 36, 5, 21, 37, 22, 38,
+    # 7, 23, 39, 8, 24 (HARDWARE_MAP.md "Numbered pool-ball drop-target lamps"
+    # gives the same numbers). Measured: tests/8bc-deluxe/called-ball.tests.ps1
+    # (the spoken ball's lamp flashes). Checked in names.tests.ps1 "Numbered
+    # drop-target lamps are the manual's J10/J11 phase A pins".
     Lamps = @{
         'Bonus 120,000'         = 77
         'Bonus 240,000'         = 93
         'Ball "B"'              = 83
         '5,000 Drop Target 3'   = 46
+        'Drop Target 1'         = 35
+        'Drop Target 2'         = 4
+        'Drop Target 3'         = 20
+        'Drop Target 4'         = 36
+        'Drop Target 5'         = 5
+        'Drop Target 6'         = 21
+        'Drop Target 7'         = 37
+        'Drop Target 9'         = 22
+        'Drop Target 10'        = 38
+        'Drop Target 11'        = 7
+        'Drop Target 12'        = 23
+        'Drop Target 13'        = 39
+        'Drop Target 14'        = 8
+        'Drop Target 15'        = 24
     }
 
     # E-I-G-H-T standup -> the pool-ball drop group behind it. A standup's

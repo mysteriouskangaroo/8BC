@@ -64,6 +64,16 @@ $ExpectedBallBLamp = 35 + 48
 # Same table, second page (PDF p. 62): "5,000 DROP TARGET 3" is J13-10, phase
 # A; by6803.c: J13-10 = 46, phase A unchanged.
 $ExpectedDropTarget3Lamp = 46
+# Same table, first page: DROP TARGET 1-7 and 9-15, all phase A, on the
+# pins below; by6803.c converts each pin (phase A unchanged).
+$ByPin = @{ 'J10-18' = 35; 'J10-4' = 4; 'J10-11' = 20; 'J10-19' = 36; 'J10-5' = 5; 'J10-12' = 21; 'J10-14' = 37
+            'J10-10' = 22; 'J10-13' = 38; 'J11-8' = 7; 'J11-16' = 23; 'J11-6' = 39; 'J11-12' = 8; 'J11-11' = 24 }
+$ExpectedNumberedLamps = [ordered]@{
+    'Drop Target 1' = $ByPin['J10-18']; 'Drop Target 2' = $ByPin['J10-4']; 'Drop Target 3' = $ByPin['J10-11']
+    'Drop Target 4' = $ByPin['J10-19']; 'Drop Target 5' = $ByPin['J10-5']; 'Drop Target 6' = $ByPin['J10-12']
+    'Drop Target 7' = $ByPin['J10-14']; 'Drop Target 9' = $ByPin['J10-10']; 'Drop Target 10' = $ByPin['J10-13']
+    'Drop Target 11' = $ByPin['J11-8']; 'Drop Target 12' = $ByPin['J11-16']; 'Drop Target 13' = $ByPin['J11-6']
+    'Drop Target 14' = $ByPin['J11-12']; 'Drop Target 15' = $ByPin['J11-11'] }
 # Zero-cross service ticks per second (E0FB: 1C20 = 7,200 per minute).
 $TicksPerSecond = 120
 
@@ -77,6 +87,8 @@ $badLamp = @(); foreach ($k in $ExpectedBonusLamps.Keys) { if ($N.Lamps[$k] -ne 
 Test-EbcItem -Name 'Bonus lamps are J13-13 and J13-5 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badLamp.Count -eq 0) ("wrong: " + ($badLamp -join '; ')) }
 Test-EbcItem -Name 'B-A-L-L B lamp is J10-18 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcEqual -Expected $ExpectedBallBLamp -Actual $N.Lamps['Ball "B"'] -What 'Lamps entry Ball "B"' }
 Test-EbcItem -Name '5,000 drop target 3 lamp is J13-10 phase A' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcEqual -Expected $ExpectedDropTarget3Lamp -Actual $N.Lamps['5,000 Drop Target 3'] -What 'Lamps entry 5,000 Drop Target 3' }
+$badNum = @(); foreach ($k in $ExpectedNumberedLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedNumberedLamps[$k]) { $badNum += "$k=$($N.Lamps[$k]) (expected $($ExpectedNumberedLamps[$k]))" } }
+Test-EbcItem -Name 'Numbered drop-target lamps are the manual''s J10/J11 phase A pins' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badNum.Count -eq 0) ("wrong: " + ($badNum -join '; ')) }
 Test-EbcItem -Name 'Rebound sound is 0x22' -Doc 'GAME_RULE_TRACES.md Switch 07: Rebound' -Body { Assert-EbcEqual -Expected $ExpectedReboundSound -Actual $N.Sounds.Rebound -What 'Sounds.Rebound' }
 
 # ---- Play checks (one boot). ----
