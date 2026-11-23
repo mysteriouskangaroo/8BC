@@ -10,7 +10,8 @@ Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 # scale"), changes the end-of-ball bonus timing and uses the credit display
 # during the bonus (gamerules.md "B-A-L-L and E-I-G-H-T bonus" and
 # "Pool-ball bonus"), so no observation holds a score, display text or a frame
-# count. Each observation is a fact named in words: credits from the credit
+# count, except the frame at which the second player's credit is taken
+# (start scenario). Each observation is a fact named in words: credits from the credit
 # bytes (1627-1628), player count, ball in play, current player and the game
 # over flag from RAM (GameNames.psd1 Ram), and coils by page 1-18 name from
 # solenoid-on events. The tilt item records only whether the score changed
@@ -21,8 +22,14 @@ $Rules = 'src/8bc-deluxe/gamerules.md "Existing rules established in the origina
 $Normalize = { $_ }
 $Trees = @('originals', '8bc-deluxe')
 
-# Coins dropped one at a time in Coin I (Left).
+# Coins dropped one at a time in each chute, on the factory coinage of a
+# fresh NVRAM (each scenario boots its own machine).
 $Coins = 4
+$Chutes = @('Coin I (Left)', 'Coin II (Middle)', 'Coin III (Right)')
+# Frames after each coin before the credits are read (as Add-EbcCredit).
+$CoinSettleFrames = 60
+# Frames watched, one at a time, after the Credit press that adds player 2.
+$CreditWatchFrames = 100
 # Players started for the play scenarios.
 $Players = 2
 # Frames a served ball travels before its first hit (a hit in the first
@@ -49,16 +56,27 @@ function Start-TwoPlayerGame {
     Add-EbcCredit -Count $Players | Out-Null
     $seen = Get-EbcEventCount
     Start-EbcPlay -Players $Players | Out-Null
-    # Start-EbcPlay returns as soon as the player count rises; the credit
-    # bytes change later, at a frame that differs between the trees
-    # (measured), so the state is read after the ball's travel frames.
+    # Start-EbcPlay returns at the frame the player count rises. The Credit
+    # handler (F854, the same bytes F854-F8D0 in both images) raises it at
+    # F83D (INC 008E) and then takes the credit at F6E6 (1627), straight-line
+    # code in one call; the original's frame boundary falls between the two
+    # (measured: the press adding player 2 raises the count at +28 frames and
+    # takes the credit at +29 in the original, both at +29 in Deluxe). The
+    # frame the credit is taken is compared in the start scenario; here the
+    # state, including the final credit count, is read after the travel frames.
     Step-EbcFrames -Frames $TravelFrames
     Add-EbcObservation "start: $(Get-PlayState); credits $(Get-EbcCredits); coils [$((Get-CoilsSince $seen) -join ', ')]"
 }
 
-Invoke-EbcComparedScenario -Name 'Credits after each Coin I coin' -Doc $Rules -Trees $Trees -Normalize $Normalize -Scenario {
-    Start-EbcGame
-    for ($k = 1; $k -le $Coins; $k++) { Add-EbcObservation "coin ${k}: credits $(Add-EbcCredit -Count 1)" }
+foreach ($chute in $Chutes) {
+    Invoke-EbcComparedScenario -Name "Credits after each $chute coin" -Doc $Rules -Trees $Trees -Normalize $Normalize -Scenario {
+        Start-EbcGame
+        for ($k = 1; $k -le $Coins; $k++) {
+            Invoke-EbcSwitchHit $chute
+            Step-EbcFrames -Frames $CoinSettleFrames
+            Add-EbcObservation "$chute coin ${k}: credits $(Get-EbcCredits)"
+        }
+    }
 }
 
 Invoke-EbcComparedScenario -Name 'Ball, player and serve at a two-player start' -Doc $Rules -Trees $Trees -Normalize $Normalize -Scenario {
@@ -71,9 +89,15 @@ Invoke-EbcComparedScenario -Name 'Ball, player and serve at a two-player start' 
     Add-EbcObservation "first Credit: $(Get-PlayState); credits $(Get-EbcCredits); coils [$((Get-CoilsSince $seen) -join ', ')]"
     $seen = Get-EbcEventCount
     Step-EbcFrames -Frames $TravelFrames
-    Invoke-EbcSwitchHit 'Credit'
-    Step-EbcFrames -Frames 48
-    Add-EbcObservation "second Credit: $(Get-PlayState); credits $(Get-EbcCredits); coils [$((Get-CoilsSince $seen) -join ', ')]"
+    # The press adding player 2, stepped one frame at a time: the frame after
+    # the press at which the credit bytes 1627-1628 change.
+    $sw = Get-EbcSwitch 'Credit'; $pressed = Get-EbcFrame; $before = Get-EbcCredits; $taken = 'not taken'
+    for ($w = 0; $w -lt $CreditWatchFrames; $w++) {
+        Set-EbcSwitch -Number $sw -Closed ($w -lt 4)
+        Step-EbcFrames -Frames 1
+        if ($taken -eq 'not taken' -and (Get-EbcCredits) -ne $before) { $taken = "+$((Get-EbcFrame) - $pressed) frames" }
+    }
+    Add-EbcObservation "second Credit: $(Get-PlayState); credits $(Get-EbcCredits), taken at $taken; coils [$((Get-CoilsSince $seen) -join ', ')]"
 }
 
 Invoke-EbcComparedScenario -Name 'Each drain serves the next player and ball, to game over' -Doc $Rules -Trees $Trees -Normalize $Normalize -Scenario {
