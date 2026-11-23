@@ -148,6 +148,13 @@
     # and the lit legends add up to the value the next collect scores).
     # Checked in names.tests.ps1 "Orbit-value lamps are the manual's rollover
     # lane pins, phase B".
+    #
+    # The table's second page (PDF p. 62) puts SPINNER 1,000 / 3,000 / 5,000
+    # on J10-17, J10-3 and J10-9, phase B; by6803.c converts them to 34, 3 and
+    # 19, so they are 82, 51 and 67. Measured: tests/8bc-deluxe/previews.tests.ps1
+    # (the lamps show the spinner value an E-I-G-H-T letter advanced it to).
+    # Checked in names.tests.ps1 "Spinner value lamps are J10-17, J10-3 and
+    # J10-9 phase B".
     Lamps = @{
         'Bonus 120,000'         = 77
         'Bonus 240,000'         = 93
@@ -172,6 +179,9 @@
         'Rollover Lanes 30,000' = 76
         'Rollover Lanes 40,000' = 92
         'Rollover Lanes Special' = 61
+        'Spinner 1,000'         = 82
+        'Spinner 3,000'         = 51
+        'Spinner 5,000'         = 67
     }
 
     # E-I-G-H-T standup -> the pool-ball drop group behind it. A standup's

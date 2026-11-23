@@ -83,6 +83,9 @@ $TicksPerSecond = 120
 $ExpectedOrbitLamps = [ordered]@{
     'Rollover Lanes 10,000' = 43 + 48; 'Rollover Lanes 20,000' = 12 + 48; 'Rollover Lanes 30,000' = 28 + 48
     'Rollover Lanes 40,000' = 44 + 48; 'Rollover Lanes Special' = 13 + 48 }
+# Same table, second page: SPINNER 1,000/3,000/5,000 on J10-17, J10-3, J10-9,
+# phase B; by6803.c: 34, 3, 19.
+$ExpectedSpinnerLamps = [ordered]@{ 'Spinner 1,000' = 34 + 48; 'Spinner 3,000' = 3 + 48; 'Spinner 5,000' = 19 + 48 }
 
 # ---- Pure table checks (no emulator). ----
 
@@ -98,6 +101,8 @@ $badNum = @(); foreach ($k in $ExpectedNumberedLamps.Keys) { if ($N.Lamps[$k] -n
 Test-EbcItem -Name 'Numbered drop-target lamps are the manual''s J10/J11 phase A pins' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badNum.Count -eq 0) ("wrong: " + ($badNum -join '; ')) }
 $badOrbit = @(); foreach ($k in $ExpectedOrbitLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedOrbitLamps[$k]) { $badOrbit += "$k=$($N.Lamps[$k]) (expected $($ExpectedOrbitLamps[$k]))" } }
 Test-EbcItem -Name 'Orbit-value lamps are the manual''s rollover lane pins, phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badOrbit.Count -eq 0) ("wrong: " + ($badOrbit -join '; ')) }
+$badSpin = @(); foreach ($k in $ExpectedSpinnerLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedSpinnerLamps[$k]) { $badSpin += "$k=$($N.Lamps[$k]) (expected $($ExpectedSpinnerLamps[$k]))" } }
+Test-EbcItem -Name 'Spinner value lamps are J10-17, J10-3 and J10-9 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badSpin.Count -eq 0) ("wrong: " + ($badSpin -join '; ')) }
 Test-EbcItem -Name 'Rebound sound is 0x22' -Doc 'GAME_RULE_TRACES.md Switch 07: Rebound' -Body { Assert-EbcEqual -Expected $ExpectedReboundSound -Actual $N.Sounds.Rebound -What 'Sounds.Rebound' }
 
 # ---- Play checks (one boot). ----
