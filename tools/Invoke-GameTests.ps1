@@ -151,6 +151,16 @@ foreach ($t in $needed) {
     }
     else { $buildError[$t] = "build failed (exit $LASTEXITCODE; see $log)"; Write-Output "BUILD $t FAILED (exit $LASTEXITCODE); see $log" }
 }
+# Each build deploys its zip to VisualPinballX; name the tree whose CPU ROM is
+# left there, matched by SHA-1 against this run's checked copies.
+if ($needed.Count) {
+    $zip = Join-Path $repo 'VisualPinballX/VPinMAME/roms/eballchp.zip'
+    $deployedSha = if (Test-Path -LiteralPath $zip) { Get-ZipCpuSha1 $zip } else { '(missing)' }
+    $owner = @($needed | Where-Object { $built.ContainsKey($_) -and (Get-ZipCpuSha1 $built[$_]) -eq $deployedSha } | Select-Object -Last 1)
+    if ($owner.Count -and $owner[0] -eq $needed[-1]) { Write-Output "Deployed eballchp.zip: $($owner[0]) (last built)" }
+    elseif ($owner.Count) { Write-Output "Deployed eballchp.zip: $($owner[0]) (the last build, $($needed[-1]), failed)" }
+    else { Write-Output "Deployed eballchp.zip: no tree built this run (u3_cpu.128 SHA-1 $deployedSha)" }
+}
 
 # ---- Run each file in its own pwsh, at most -Jobs at a time. ----
 $privateRoot = Join-Path ([IO.Path]::GetTempPath()) ("ebc-game-tests-$PID")
