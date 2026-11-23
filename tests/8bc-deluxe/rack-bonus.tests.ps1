@@ -19,6 +19,10 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # is the score change from the drain to the frame before the first $38 (or to
 # the end of the bonus when no $38 is played); the rack phase is the frames
 # from the first $37 to that point.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Complete at least four 8-ball racks
+# Clause: During that drain bonus
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'
@@ -160,6 +164,12 @@ Write-Output ("INFO {0}/rack-bonus :: 5x rack phase ({1} frames): credit display
 Test-EbcItem -Name 'During the rack bonus the credit display shows 06 for six completed racks and stays stable through every multiplier pass' -Doc "$Doc; $Pool" -Body {
     Assert-EbcEqual -Expected @($RackCountShown) -Actual $shownDuring -What ("credit display (GameNames Displays.Credits) on every frame from the first `$37 to the B-A-L-L phase, 5x drain (status display showed [{0}])" -f ($statusDuring -join ', '))
 }
+# While mismatch "credit display shows 06" stands, this item cannot fail on
+# the display: the ROM never changes the credit display (index 4), so its
+# restore is vacuous and only the credit RAM part tests anything. If the
+# user rules that the doc's "credit display" is the status display (index
+# 5, RAM 1069/106A, where the ROM shows the counts), this item must read
+# index 5 instead.
 Test-EbcItem -Name 'After the B-A-L-L bonus the credit display restores the exact prior credit count, and credits are unchanged' -Doc "$Doc; $Pool" -Body {
     $seen = @($drains | ForEach-Object { $d = $_; $last = ($d.Frames.Keys | Sort-Object)[-1]
         $creditsSeen = @($d.Frames.Values | ForEach-Object { $_.Credits } | Select-Object -Unique) -join ','

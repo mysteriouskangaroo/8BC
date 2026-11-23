@@ -4,6 +4,9 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo, [int]$Games = 300)
 # ending at a different frame, the share of games that award a match credit
 # lies between 6% and 14%. -Games exists only to time a shorter run; the
 # runner always uses the default.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify Match retains the factory
 Import-Module (Join-Path $PSScriptRoot '../../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'

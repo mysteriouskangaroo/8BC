@@ -25,6 +25,10 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # 10_game_state_and_drop_reset.asm $C7FC, $C90C). The B-A-L-L/E-I-G-H-T
 # portion is the score change from the frame before the first $38 to the
 # first later command that is not $38; the rack portion is the change before.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Complete E-I-G-H-T at least five times
+# Clause: In a four-player game, give Player 1
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'
@@ -232,8 +236,12 @@ foreach ($t in @(@(1, 2, 5), @(2, 2, 7), @(3, 2, 8), @(1, 3, 10))) { Enter-Turn 
 Complete-EbcGame | Out-Null
 
 Test-EbcItem -Name 'All four B-A-L-L inserts are lit after the fourth E-I-G-H-T completion and blink together from the fifth' -Doc "$Doc; $BallDoc" -Body {
-    $want = @('B steady', 'B+A steady', 'B+A+L1 steady', 'B+A+L1+L2 steady', 'B+A+L1+L2 blinking in phase') | ForEach-Object -Begin { $c = 0 } -Process { $c++; "completion ${c}: $_" }
-    Assert-EbcTrue ($AllLitAt -eq 4 -and $BlinkAt -eq 5) 'thresholds'
+    # Through $AllLitAt completions the inserts light one more letter each
+    # (the original progression); from $BlinkAt all four blink together.
+    $names = @($BallLamps.Keys)
+    $want = @(1..5 | ForEach-Object {
+        $state = if ($_ -ge $BlinkAt) { "$($names -join '+') blinking in phase" } else { "$($names[0..([Math]::Min($_, $AllLitAt) - 1)] -join '+') steady" }
+        "completion ${_}: $state" })
     Assert-EbcEqual -Expected $want -Actual $progress -What "B-A-L-L inserts over $LampSampleFrames frames after each completion (player 1)"
 }
 Test-EbcItem -Name 'The fifth E-I-G-H-T completion is retained in RAM' -Doc "$Doc; $BallDoc; $Impl" -Body {

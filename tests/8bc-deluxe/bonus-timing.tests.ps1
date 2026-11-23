@@ -24,6 +24,9 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # only in the four delay selectors at $C8A0, $C912, $D937, $DA14 and the
 # checksum byte at $C000), and this file was run against that zip with
 # -VpmZip. Its INFO line gave the values in $Reference.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Time representative partial-rack
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'

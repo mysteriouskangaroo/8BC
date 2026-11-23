@@ -16,6 +16,11 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # The spinner value is read from its three value lamps (GameNames.psd1 Lamps
 # 'Spinner 1,000/3,000/5,000'): the printed legends of the lit lamps add up to
 # it, the doc's binary counter.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify spinner values and lamps
+# Clause: Verify activating spinner collect or
+# Clause: With spinner collect inactive
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'

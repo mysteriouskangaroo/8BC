@@ -10,6 +10,11 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # orbit. The "current value" an active orbit shows is read from the orbit-value
 # arrows (GameNames.psd1 Lamps 'Rollover Lanes ...'): the printed legends of
 # the lit arrows add up to it.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify unlit left/right orbit shots
+# Clause: Verify the left rollover advances
+# Clause: Verify an inactive left rollover
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'
@@ -28,6 +33,8 @@ $CenterSound = 0x31
 # / 10 ("Existing rules": printed 10,000 scores 1,000; 100,000 scores 10,000).
 $LeftStep = 10000
 $RightStep = 20000
+$DeluxeLeftStep = 10000 / 10
+$DeluxeRightStep = 20000 / 10
 $Terminal = 100000
 # Activating promotes the 5,000 baseline to the printed 10,000.
 $FirstValue = 10000
@@ -237,6 +244,13 @@ Test-EbcItem -Name 'The left rollover advances the printed value by 10,000 (Delu
         (Want-Collect 'Left' 80000 (80000 + $LeftStep)),
         (Want-Collect 'Right' 90000 $Terminal))
     Assert-EbcEqual -Expected $want -Actual $seen -What 'collects on ball 1 (each value shown is the previous preview)'
+}
+Test-EbcItem -Name 'The left rollover advances the Deluxe value by 1,000 and the right by 2,000' -Doc "$Doc; $Left; $Right" -Body {
+    # Each collect scores the current Deluxe value, so the next collect's
+    # award grows by the step of the collect before it.
+    $steps = @(for ($k = 0; $k -lt 5; $k++) { "{0} collect: next award +{1}" -f $c[$k].Side, ($c[$k + 1].Award - $c[$k].Award) })
+    $want = @('Left', 'Right', 'Right', 'Right', 'Left' | ForEach-Object { "{0} collect: next award +{1}" -f $_, $(if ($_ -eq 'Left') { $DeluxeLeftStep } else { $DeluxeRightStep }) })
+    Assert-EbcEqual -Expected $want -Actual $steps -What 'award differences between successive collects on ball 1'
 }
 Test-EbcItem -Name 'A right advance from 90,000 stops at 100,000/Special with no wrap' -Doc "$Doc; $Right" -Body {
     Assert-EbcEqual -Expected $Terminal -Actual (Get-PreviewValue $c[5]) -What 'value previewed after the right collect of 90,000 (90,000 + 20,000 saturates)'

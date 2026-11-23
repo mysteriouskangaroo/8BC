@@ -57,11 +57,16 @@ try {
     }
 
     # ---- A file under long/ gets -LongTimeoutSeconds; other files keep
-    # -TimeoutSeconds. Both fixtures sleep 6 s (the run builds originals). ----
-    $tmo = @(& $pwshPath -NoProfile -File $runner -TestRoot (Join-Path $repo 'tools/tests/timeout-fixtures') -Tree originals -Long -TimeoutSeconds 2 -LongTimeoutSeconds 60 -ReportPath (Join-Path $scratch 'timeout.txt') 2>&1 | ForEach-Object { "$_" })
+    # -TimeoutSeconds. Both fixtures sleep 6 s; they have no tree, so the
+    # runner builds and deploys nothing. ----
+    $tmoRoot = Join-Path $repo 'tools/tests/timeout-fixtures'
+    $tmo = @(& $pwshPath -NoProfile -File $runner -TestRoot $tmoRoot -Long -TimeoutSeconds 2 -LongTimeoutSeconds 60 -ReportPath (Join-Path $scratch 'timeout.txt') 2>&1 | ForEach-Object { "$_" })
     $tmoAll = $tmo -join "`n"
-    Write-Check 'A long/ file runs to -LongTimeoutSeconds' (@($tmo | Where-Object { $_ -eq 'PASS originals/slow :: Finishes after 6 s' }).Count -eq 1) $tmoAll
-    Write-Check 'Other files keep -TimeoutSeconds' (@($tmo | Where-Object { $_ -eq 'FAIL originals/slow :: (file) :: timed out after 2 s; process killed' }).Count -eq 1) $tmoAll
+    Write-Check 'A long/ file runs to -LongTimeoutSeconds' (@($tmo | Where-Object { $_ -eq 'PASS slow-long :: Finishes after 6 s' }).Count -eq 1) $tmoAll
+    Write-Check 'Other files keep -TimeoutSeconds' (@($tmo | Where-Object { $_ -eq 'FAIL slow :: (file) :: timed out after 2 s; process killed' }).Count -eq 1) $tmoAll
+    Write-Check 'The timeout check builds nothing' (@($tmo | Where-Object { $_ -like 'BUILD *' }).Count -eq 0) $tmoAll
+    $noLong = @(& $pwshPath -NoProfile -File $runner -TestRoot $tmoRoot -ListOnly 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -like 'RUN *' })
+    Write-Check 'A root long/ file runs only with -Long' (($noLong -join '|') -eq 'RUN - slow') ($noLong -join ' / ')
 
     # ---- Comparison helper, run directly (its children are boot-free). ----
     $env:EBC_BUILT_TREES = 'originals,8bc-deluxe'
@@ -93,8 +98,16 @@ try {
     $cf = Join-Path $repo 'tools/tests/coverage-fixtures'
     $cov = @(& $pwshPath -NoProfile -File (Join-Path $repo 'tools/tests/Test-DeluxeCoverage.ps1') -Doc (Join-Path $cf 'gamerules.md') -TestRoot (Join-Path $cf 'tests') 2>&1 | ForEach-Object { "$_" })
     $covCode = $LASTEXITCODE
-    $covWant = @('COVERED 500 :: 8bc-deluxe/a.tests.ps1', 'COVERED 2x :: 8bc-deluxe/a.tests.ps1', 'COVERED 99K :: 8bc-deluxe/a.tests.ps1', 'COVERED `06` :: 8bc-deluxe/a.tests.ps1', 'COVERED 75% :: 8bc-deluxe/a.tests.ps1', 'COVERED $2A :: 8bc-deluxe/a.tests.ps1', 'MISSING 7', 'Deluxe coverage: 7 numbers, 6 covered, 1 missing, 1 test files')
-    Write-Check 'Deluxe coverage: asserted numbers covered, a number only in -What or the name missing, section bounded' ((($cov -join '|') -eq ($covWant -join '|')) -and $covCode -eq 1) ("exit $covCode; output:`n" + ($cov -join "`n"))
+    $covWant = @(
+        'COVERED 500 :: clause 1 (A target scores 500 at) :: 8bc-deluxe/a.tests.ps1', 'COVERED 2x :: clause 1 (A target scores 500 at) :: 8bc-deluxe/a.tests.ps1',
+        'COVERED 99K :: clause 1 (A target scores 500 at) :: 8bc-deluxe/a.tests.ps1', 'COVERED `06` :: clause 1 (A target scores 500 at) :: 8bc-deluxe/a.tests.ps1',
+        'COVERED 75% :: clause 1 (A target scores 500 at) :: 8bc-deluxe/a.tests.ps1', 'COVERED $2A :: clause 1 (A target scores 500 at) :: 8bc-deluxe/a.tests.ps1',
+        'MISSING 7 :: clause 1 (A target scores 500 at) :: tagged 8bc-deluxe/a.tests.ps1',
+        'MISSING 444 :: clause 2 (Probes 444, 555, 777 and) :: tagged 8bc-deluxe/a.tests.ps1', 'MISSING 555 :: clause 2 (Probes 444, 555, 777 and) :: tagged 8bc-deluxe/a.tests.ps1',
+        'MISSING 777 :: clause 2 (Probes 444, 555, 777 and) :: tagged 8bc-deluxe/a.tests.ps1', 'MISSING 888 :: clause 2 (Probes 444, 555, 777 and) :: tagged 8bc-deluxe/a.tests.ps1',
+        'MISSING 321 :: clause 3 (An untagged clause scores 321.) :: tagged by no file',
+        'Deluxe coverage: 12 clause numbers in 3 clauses, 6 covered, 6 missing, 0 bad tags, 1 test files')
+    Write-Check 'Deluxe coverage: asserted clause numbers covered; -What, name, measurement, filter, message, constant comparison and untagged clause missing; section bounded' ((($cov -join '|') -eq ($covWant -join '|')) -and $covCode -eq 1) ("exit $covCode; output:`n" + ($cov -join "`n"))
     Write-Check 'Compared scenario: Normalize applies' (@($cmp | Where-Object { $_ -like 'PASS *two-trees :: Normalize hides the tree' }).Count -eq 1) $cmpAll
 }
 finally {

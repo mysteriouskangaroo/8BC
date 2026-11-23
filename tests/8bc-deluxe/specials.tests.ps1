@@ -28,6 +28,9 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # hit before completion 5 (same ball), the E-I-G-H-T letter before the
 # completing one (same round) or the completing letter of completion 1, and
 # the 120K pair's 8-ball collection.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Collect each available special
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'

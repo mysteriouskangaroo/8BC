@@ -10,6 +10,9 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # .tests.ps1). Each is reached by sinking a new ball to activate the current
 # location first. The next-award lamps are the SAUCER 2X/3X/5X/100K inserts
 # (GameNames.psd1 Lamps), read over $LampSampleFrames frames.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify the saucer displays and collects
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'

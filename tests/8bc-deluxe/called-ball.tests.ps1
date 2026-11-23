@@ -11,6 +11,13 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # standup when the group is down (GameNames.psd1 StandupDropGroups).
 # The award a sink shows is read from the other three players' RAM score
 # buffers, which the award display replaces (sunk-ball-awards.tests.ps1).
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: With each player active in turn
+# Clause: Follow the spoken call
+# Clause: Verify the individually numbered physical
+# Clause: Complete a rack with the lit 8-ball
+# Clause: Advance Called Ball to 50,000
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'

@@ -3,6 +3,10 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # playfield multiplier, an already-sunk ball keeps its 500 path and 5,000 lamp
 # and leaves the collect alone, and each new sink's award blinks on the other
 # three player displays, all by play in a four-player game.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify an uncalled first sink
+# Clause: With each player active in turn
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'

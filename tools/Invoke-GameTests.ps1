@@ -6,7 +6,8 @@
 #   tests/<tree>/         run for that tree; tests/<tree>/long/ only with -Long
 #   tests/compare/        run when both trees named in the file's
 #                         "# Trees: a, b" line are selected
-#   files at the root     run once with no tree and no build (runner fixtures)
+#   files at the root     run once with no tree and no build (runner fixtures);
+#                         so do files in a root long/ folder, only with -Long
 # With 8bc-deluxe selected and no -Path, it also runs
 # tools/tests/Test-DeluxeCoverage.ps1 and prints its result as
 # 8bc-deluxe/coverage.
@@ -73,8 +74,8 @@ foreach ($f in $files) {
     $parts = $rel -split '/'
     $isLong = $parts -contains 'long'
     if ($isLong -and -not $Long) { continue }
-    if ($parts.Count -eq 1) {
-        $plan.Add([PSCustomObject]@{ File = $f.FullName; Name = $name; Tree = ''; Group = '-'; Needs = @(); Error = $null })
+    if ($parts.Count -eq 1 -or ($parts.Count -eq 2 -and $parts[0] -eq 'long')) {
+        $plan.Add([PSCustomObject]@{ File = $f.FullName; Name = $name; Tree = ''; Group = '-'; Needs = @(); Error = $null; IsLong = $isLong })
     }
     elseif ($parts[0] -eq 'kit') {
         foreach ($t in $Tree) { $plan.Add([PSCustomObject]@{ File = $f.FullName; Name = $name; Tree = $t; Group = $t; Needs = @($t); Error = $null }) }

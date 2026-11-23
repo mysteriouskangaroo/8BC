@@ -11,6 +11,11 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # with the doc's divide-by-ten rule ("Deluxe score scale"): thumper 3K/6K/9K
 # -> 300/600/900, stock 1K -> 100, 30K -> 3,000, 90K -> 9,000, 9K -> 900,
 # 99K -> 9,900. The reading is listed for a user ruling in the Task 8b report.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify CHAMP completions 1-5
+# Clause: Verify lighting the outlane specials
+# Clause: Verify the upgraded left and right thumpers
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'
@@ -18,8 +23,8 @@ $Champ = 'src/8bc-deluxe/gamerules.md "CHAMP"'
 $Collect = 'src/8bc-deluxe/gamerules.md "Deluxe collect feature"'
 $Scale = 'src/8bc-deluxe/gamerules.md "Deluxe score scale"'
 
-# Upgraded thumpers: 3K/6K/9K at 1x/2x/3x -> 3,000 / 10 times the multiplier.
-$Thumper3K = 3000 / 10
+# Upgraded thumpers: 3K/6K/9K at 1x/2x/3x, each / 10.
+$Thumper = @{ 1 = 3000 / 10; 2 = 6000 / 10; 3 = 9000 / 10 }
 # Stock thumper: 1K -> 1,000 / 10 at 1x.
 $Stock = 1000 / 10
 # Completion 5 and later: 30K base through the multiplier: 90K at 3x;
@@ -78,7 +83,7 @@ function Invoke-Completion {
     $seen = Get-EbcEventCount
     $lanes = @(Complete-EbcChamp -RearmWith 'Center Rollover Button')
     [PSCustomObject]@{
-        Completing = $lanes[-1]; State = Get-Multiplier
+        Completing = $lanes[-1]; Lanes = $lanes; State = Get-Multiplier
         Special6F = @(Get-Commands $seen | Where-Object { $_.B -eq $SpecialSound }).Count
         Knocks = Get-Pulses $seen $Knocker; Credits = (Get-EbcCredits) - $credits
     }
@@ -130,10 +135,10 @@ Test-EbcItem -Name 'CHAMP completions 1-4 give right thumper 3K, 2x playfield, l
     # checked only at 1x (completion 1).
     $seen = @(1..4 | ForEach-Object { "completion ${_}: state $($comp[$_].State); right thumper $($thump[$_][0].Score)" + $(if ($_ -ne 2) { ", left thumper $($thump[$_][1].Score)" }) })
     $want = @(
-        "completion 1: state $($StateAfter[1]); right thumper $($Thumper3K * 1), left thumper $($Stock * 1)",
-        "completion 2: state $($StateAfter[2]); right thumper $($Thumper3K * 2)",
-        "completion 3: state $($StateAfter[3]); right thumper $($Thumper3K * 2), left thumper $($Thumper3K * 2)",
-        "completion 4: state $($StateAfter[4]); right thumper $($Thumper3K * 3), left thumper $($Thumper3K * 3)")
+        "completion 1: state $($StateAfter[1]); right thumper $($Thumper[1]), left thumper $($Stock * 1)",
+        "completion 2: state $($StateAfter[2]); right thumper $($Thumper[2])",
+        "completion 3: state $($StateAfter[3]); right thumper $($Thumper[2]), left thumper $($Thumper[2])",
+        "completion 4: state $($StateAfter[4]); right thumper $($Thumper[3]), left thumper $($Thumper[3])")
     Assert-EbcEqual -Expected $want -Actual $seen -What 'state and thumper scores after each completion'
 }
 Test-EbcItem -Name 'Completion 5 lights both outlane specials and awards 30K; at 3x the milestone is 90K and the completing switch event moves 99K' -Doc "$Doc; $Champ; $Scale" -Body {
@@ -143,6 +148,12 @@ Test-EbcItem -Name 'Completion 5 lights both outlane specials and awards 30K; at
 }
 Test-EbcItem -Name 'Each later completion awards another 30K through the multiplier (99K switch event at 3x)' -Doc "$Doc; $Champ; $Scale" -Body {
     Assert-EbcEqual -Expected "state $($StateAfter[4]); completing P lane event $Full3x" -Actual "state $($comp[6].State); completing P lane event $($comp[6].Completing)" -What 'completion 6'
+}
+Test-EbcItem -Name 'A completion after the fifth awards another 30K base through the playfield multiplier, apart from the completing lane''s own score' -Doc "$Doc; $Champ; $Scale" -Body {
+    # The completing P lane's own score is a CHAMP lane's normal score; the M
+    # lane of the same completion is one, at the same multiplier.
+    $mScore = $comp[6].Lanes[3]
+    Assert-EbcEqual -Expected "lane $($Lane * 3); milestone $($Milestone * 3)" -Actual "lane $mScore; milestone $($comp[6].Completing - $mScore)" -What "completion 6 at $($comp[6].State): the M lane's score, and the P lane event minus it"
 }
 Test-EbcItem -Name 'Lighting the outlane specials on completion 5 enters no Special path: no Special points, sound, knocker or award' -Doc "$Doc; $Champ" -Body {
     # Special points would show as a score above the 99K event above.
@@ -206,7 +217,7 @@ Test-EbcItem -Name 'The upgraded thumpers score 3K/6K/9K at 1x/2x/3x, return to 
             @(1..4 | ForEach-Object { $n = $_; $thump[$n] | ForEach-Object { "completion ${n} $($_.Side): sounds [$($_.Sounds)], coil pulses $($_.Pulses)" } }) +
             @($ball2 | ForEach-Object { "ball 2 ($state3): " + (Format-Thumper $_) })
     $want = @($stockHits | ForEach-Object { "ball 1 stock: $($_.Side) thumper $Stock, sounds [$($stockHits[0].Sounds)], coil pulses 1" }) +
-            @("1x: right $($Thumper3K * 1)", "2x: right $($Thumper3K * 2), left $($Thumper3K * 2)", "3x: right $($Thumper3K * 3), left $($Thumper3K * 3)") +
+            @("1x: right $($Thumper[1])", "2x: right $($Thumper[2]), left $($Thumper[2])", "3x: right $($Thumper[3]), left $($Thumper[3])") +
             @(1..4 | ForEach-Object { $n = $_; $thump[$n] | ForEach-Object { "completion ${n} $($_.Side): sounds [$($stockHits[0].Sounds)], coil pulses 1" } }) +
             @($ball2 | ForEach-Object { "ball 2 (1x): $($_.Side) thumper $Stock, sounds [$($stockHits[0].Sounds)], coil pulses 1" })
     Assert-EbcEqual -Expected $want -Actual $seen -What 'thumper hits'

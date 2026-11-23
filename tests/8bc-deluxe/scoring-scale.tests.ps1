@@ -3,6 +3,9 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # carries, and the replay, extra-ball and High Score to Date settings are
 # entered at one tenth through the service-mode keypad and award at those
 # scores, all by play.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify a manual/playfield 10-point Rebound
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Deluxe score scale"; "Required gameplay verification"'
@@ -30,6 +33,7 @@ $Target500Switch = 'Center Rollover Button'
 $CombinedPath = @('"M" Top Lane', 'Left Thumper Bumper', 'Center Rollover Button')
 # Ones-digit carries: 9 -> 10, 99 -> 100, 999 -> 1,000.
 $Carries = @(9, 99, 999)
+$CarryTo = @{ 9 = 10; 99 = 100; 999 = 1000 }
 # Stock thumper, displayed: 1,000 / 10.
 $Thumper = 1000 / 10
 
@@ -152,7 +156,7 @@ Test-EbcItem -Name 'Carries use the ones digit across 9 -> 10, 99 -> 100 and 999
         Invoke-EbcScoredHit 'Rebound' | Out-Null
         $seen += '{0} -> {1} (display {2})' -f $before, (Get-EbcScore -Player 1), (Get-EbcDisplayText (Get-EbcNames).Displays.Player1)
     }
-    $want = @($Carries | ForEach-Object { '{0} -> {1} (display {1})' -f $_, ($_ + $Rebound) })
+    $want = @($Carries | ForEach-Object { '{0} -> {1} (display {1})' -f $_, $CarryTo[$_] })
     Assert-EbcEqual -Expected $want -Actual $seen -What 'score before and after the Rebound at each carry'
 }
 Test-EbcItem -Name 'A manual/playfield 10-point Rebound scores 1' -Doc $Doc -Body {

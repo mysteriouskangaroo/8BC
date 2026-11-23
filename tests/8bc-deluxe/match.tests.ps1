@@ -5,6 +5,9 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # when that digit equals the score's tens digit (tests/originals/match
 # .tests.ps1 is the original-ROM version). Each game's score, digits and
 # outcome are printed as INFO lines.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify Match retains the factory
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Required gameplay verification"'

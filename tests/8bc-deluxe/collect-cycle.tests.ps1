@@ -9,6 +9,9 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # printed 10,000, 1,000 displayed); an inactive spinner scores 10 and an
 # active one its lit value (at least the printed 1,000, 100 displayed).
 # Exact orbit and spinner values are checked in orbits and spinner.tests.ps1.
+# Clauses of gamerules.md "Required gameplay verification" checked here
+# (tools/tests/Test-DeluxeCoverage.ps1):
+# Clause: Verify collecting the lit 8-ball activates
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
 $Doc = 'src/8bc-deluxe/gamerules.md "Deluxe collect feature"; "Required gameplay verification"'
