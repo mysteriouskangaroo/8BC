@@ -257,18 +257,84 @@ Test-EbcItem -Name "The award blinks for about three seconds (timing window: $Bl
     $want = @($script:M | ForEach-Object { 'P{0} award {1}: in window' -f $_.Player, $_.Award })
     Assert-EbcEqual -Expected $want -Actual $seen -What 'frames from the award first showing on all three displays to their restore'
 }
-Test-EbcItem -Name 'A drain during the blink restores every displaced score before the next ball' -Doc "$Doc; $Display" -Body {
-    # Player 4 sinks an uncalled ball; the drain closes the outhole while the
-    # award is still showing.
+# Sinks a new ball with drop group $Group and closes the outhole on the frame
+# the award first shows on all three other displays, then reads every frame
+# to the next serve. Frames count from the sink's switch closure. The bonus
+# begins on the first rise of the scorer's score with the pending queue
+# (0094-0099) already empty: the sink's own award posts through that queue,
+# the end-of-ball bonus bypasses it (gamerules.md "Deluxe score scale").
+# -HoldTimer rewrites the overlay timer to $HoldTicks every frame while
+# draining, so only the drain can end the overlay.
+function Measure-DrainDuringBlink([string]$Group, [switch]$HoldTimer) {
     $p = Get-EbcCurrentPlayer
     $others = @(1..4 | Where-Object { $_ -ne $p })
     $pre = @{}; foreach ($o in $others) { $pre[$o] = Get-BufferOf $o }
-    $r = Measure-Sink 'Drop Target 6,14' $script:Call -Frames 20
-    $during = @($others | ForEach-Object { Get-BufferOf $_ })
-    Assert-EbcTrue (@($during | Where-Object { $_ -eq [string]$UncalledSink[1] -or $_ -eq '' }).Count -eq $others.Count) "award not showing when the drain begins: $($during -join ' | ')"
-    Assert-EbcEqual -Expected 'Served' -Actual (Invoke-EbcDrain) -What 'drain outcome'
-    $seen = @($others | ForEach-Object { "P$_ $(Get-DisplayOf $_)" }) + @("P$p live $((Get-DisplayOf $p) -eq (Get-BufferOf $p))")
+    $outhole = Get-EbcSwitch 'Outhole'; $serveSol = Get-EbcSolenoid 'Outhole'
+    $sink = Get-EbcSwitch $Group
+    $pendingAt = Get-EbcRamAddress 'PENDING_SCORE_10S'
+    $f0 = Get-EbcFrame
+    Set-EbcSwitch -Number $sink -Closed $true; Step-EbcFrames -Frames 4; Set-EbcSwitch -Number $sink -Closed $false
+    $first = -1
+    while ($first -lt 0) {
+        if ((Get-EbcFrame) - $f0 -gt 120) { throw 'the award did not show on all three other displays within 120 frames of the sink' }
+        Step-EbcFrames -Frames 1
+        $away = @($others | Where-Object { $t = Get-BufferOf $_; $t -ne '' -and $t -ne $pre[$_] })
+        if ($away.Count -eq $others.Count) { $first = (Get-EbcFrame) - $f0 }
+    }
+    $seen = Get-EbcEventCount
+    Set-EbcSwitch -Number $outhole -Closed $true
+    $closed = (Get-EbcFrame) - $f0
+    $bonus = -1; $restored = -1; $served = -1
+    $last = [long](Get-BufferOf $p); $wasEmpty = $false
+    while ($served -lt 0) {
+        if ((Get-EbcFrame) - $f0 -gt 6000) { throw 'no serve within 6000 frames of the sink' }
+        if ($HoldTimer -and $restored -lt 0 -and $bonus -lt 0) { Write-EbcRam -Address $OverlayTimer -Bytes @($HoldTicks) }
+        Step-EbcFrames -Frames 1
+        $now = (Get-EbcFrame) - $f0
+        $b = Get-BufferOf $p; $score = if ($b -eq '') { 0 } else { [long]$b }
+        if ($bonus -lt 0 -and $wasEmpty -and $score -gt $last) { $bonus = $now }
+        $last = $score
+        $wasEmpty = @(Read-EbcRam -Address $pendingAt -Count 6 | Where-Object { $_ -ne 0 }).Count -eq 0
+        $back = @($others | Where-Object { (Get-BufferOf $_) -eq $pre[$_] }).Count -eq $others.Count
+        if ($back -and $restored -lt 0) { $restored = $now } elseif (-not $back) { $restored = -1 }
+        if (@(Get-EbcEvents -Since $seen | Where-Object { $_ -match "^\d+ sol $serveSol 1$" }).Count) { $served = $now }
+    }
+    Set-EbcSwitch -Number $outhole -Closed $false
+    $text = @($others | ForEach-Object { "P$_ $(Get-DisplayOf $_)" }) + @("P$p live $((Get-DisplayOf $p) -eq (Get-BufferOf $p))")
     $want = @($others | ForEach-Object { "P$_ $($pre[$_])" }) + @("P$p live True")
-    Assert-EbcEqual -Expected $want -Actual $seen -What "displays at the next serve (player $(Get-EbcCurrentPlayer) ball $(Get-EbcBallInPlay))"
+    [PSCustomObject]@{ First = $first; Closed = $closed; Bonus = $bonus; Restored = $restored; Served = $served; Displays = $text; Want = $want }
+}
+function Format-Drain($d, [int]$TimerEnd) { "award shown +$($d.First), outhole closed +$($d.Closed), restored +$($d.Restored), timer's own end +$TimerEnd, bonus began +$($d.Bonus), served +$($d.Served)" }
+
+Test-EbcItem -Name 'A drain during the blink has every displaced score restored by the timer''s end or the bonus start, whichever is first, and before the next ball' -Doc "$Doc; $Display" -Body {
+    # Player 4's single sink above restored the displays $script:M[-1].Restored
+    # frames after its closure: the timer's own end.
+    $timerEnd = $script:M[-1].Restored
+    $d = Measure-DrainDuringBlink 'Drop Target 6,14'
+    $frames = Format-Drain $d $timerEnd
+    Assert-EbcTrue ($d.Bonus -ge 0) "no end-of-ball bonus seen ($frames)"
+    Assert-EbcTrue ($d.Restored -ge 0 -and $d.Restored -le [Math]::Min($timerEnd, $d.Bonus)) "displaced scores not restored by the earlier of the timer's end and the bonus start ($frames)"
+    Assert-EbcEqual -Expected $d.Want -Actual $d.Displays -What "displays at the next serve ($frames)"
+    Write-Host "drain timeline: $frames"
+}
+# By play the bonus begins about 270 frames after the outhole closes, after
+# any award display has ended by itself (even at the doc's 3 seconds), so the
+# drain's own restore is reached by holding the overlay timer:
+# DELUXE_SUNK_BALL_SCORE_TIMER (1126, src/8bc-deluxe/asm/symbols.inc) is kept
+# at its reload value DELUXE_SUNK_BALL_SCORE_DISPLAY_TICKS (B4) while draining.
+$OverlayTimer = 0x1126
+$HoldTicks = 0xB4
+Test-EbcItem -Name 'With the award display held, the drain restores every displaced score when the end-of-ball bonus begins' -Doc "$Doc; $Display" -Seeded -Body {
+    # Player 1, ball 2: Drop Target 4,5,12,13 sinks ball 4, not yet sunk.
+    Start-Turn | Out-Null
+    $d = Measure-DrainDuringBlink 'Drop Target 4,5,12,13' -HoldTimer
+    # Restored after the timer's own end (player 4's single sink) shows the
+    # hold worked and the drain, not the timer, restored the scores.
+    $timerEnd = $script:M[-1].Restored
+    $frames = Format-Drain $d $timerEnd
+    Assert-EbcTrue ($d.Bonus -ge 0) "no end-of-ball bonus seen ($frames)"
+    Assert-EbcTrue ($d.Restored -gt $timerEnd -and $d.Restored -le $d.Bonus) "displaced scores not restored by the drain at the bonus start ($frames)"
+    Assert-EbcEqual -Expected $d.Want -Actual $d.Displays -What "displays at the next serve ($frames)"
+    Write-Host "drain timeline: $frames"
 }
 Complete-EbcTests
