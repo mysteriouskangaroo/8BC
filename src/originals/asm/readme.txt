@@ -147,8 +147,7 @@ build/game-tests/report.txt.
 
 A pass proves that the scripted scenarios gave the expected switch, lamp,
 solenoid, sound-command, display and RAM results in libpinmame. It does not
-prove ball physics, real switch timing, or hardware I/O timing and safety. A
-FAIL may be a doc/ROM mismatch awaiting a ruling.
+prove ball physics, real switch timing, or hardware I/O timing and safety.
 
 Source maintenance
 ------------------

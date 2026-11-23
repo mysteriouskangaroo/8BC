@@ -56,8 +56,11 @@ replace this build-time check.
 Do not overstate the automated PinMAME boot test. A pass proves only that the
 packaged ROM set booted past the startup checksum, wrote RAM and drove the
 displays within the frame limit. It does not validate game rules or physical
-outputs. Interactive
-gameplay and service-mode testing are still required
+outputs. The game tests (`tools/Invoke-GameTests.ps1`) go further: a pass
+shows that the scripted scenarios in `tests/` produced the expected switch,
+lamp, solenoid, sound-command, display and RAM results in libpinmame. They do
+not test ball physics, real switch timing, or hardware I/O timing and safety.
+Interactive gameplay and service-mode testing are still required
 before calling an image gameplay-ready, and timing/safety review of hardware
 I/O is required before calling it suitable to burn and install in a machine.
 

@@ -137,13 +137,12 @@ eballchp.zip. Run one file, folder or glob with -Path:
 
 Tests in tests/compare/ run only when every tree named on the file's
 "# Trees:" line is selected, so the default command (all three trees) runs
-them and -Tree loop-score-change alone does not. The result lines are written to
-build/game-tests/report.txt.
+them and -Tree loop-score-change alone does not. The result lines are
+written to build/game-tests/report.txt.
 
 A pass proves that the scripted scenarios gave the expected switch, lamp,
 solenoid, sound-command, display and RAM results in libpinmame. It does not
-prove ball physics, real switch timing, or hardware I/O timing and safety. A
-FAIL may be a doc/ROM mismatch awaiting a ruling.
+prove ball physics, real switch timing, or hardware I/O timing and safety.
 
 Source maintenance
 ------------------
