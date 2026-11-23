@@ -19,10 +19,13 @@
       <feDropShadow dx="5" dy="6" stdDeviation="2" flood-color="#000000" flood-opacity="0.9"/>
     </filter>
     <clipPath id="playerClip">
-      <rect x="40" y="610" width="1720" height="308" rx="10"/>
+      <rect x="0" y="610" width="1800" height="365"/>
+    </clipPath>
+    <clipPath id="tableFootprintClip">
+      <path d="M215,865 H1800 V975 H0 Z"/>
     </clipPath>
     <clipPath id="tableExtensionClip">
-      <rect x="1396" y="845" width="353" height="73"/>
+      <rect x="1396" y="865" width="404" height="110"/>
     </clipPath>
     <style>
       .rule-title { font-family: "Arial Black", Arial, sans-serif; font-size: 32px; font-weight: 900; letter-spacing: 0.7px; fill: #ffbd31; }
@@ -196,18 +199,32 @@
 
   <!-- Pool-table field and backglass-style player -->
   <g clip-path="url(#playerClip)">
-    <image href="scorecard-pool-player.png" x="170" y="520" width="1250" height="417" preserveAspectRatio="xMidYMid meet"/>
+    <!-- Continue the table behind the figure: diagonal at lower left, full bleed at right/bottom. -->
+    <g clip-path="url(#tableFootprintClip)">
+      <rect x="0" y="865" width="1800" height="110" fill="#075221"/>
+      <svg x="0" y="865" width="1800" height="40" viewBox="2075 565 50 65" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="0" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="300" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="600" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="900" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1200" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1500" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+    </g>
+    <path d="M0,975 L215,865" fill="none" stroke="#2a1007" stroke-width="18"/>
+    <path d="M0,975 L215,865" fill="none" stroke="#9f3e0d" stroke-width="9"/>
+    <path d="M0,975 L215,865" fill="none" stroke="#e8921d" stroke-width="3"/>
+    <image href="scorecard-pool-player.png" x="170" y="540" width="1250" height="417" preserveAspectRatio="xMidYMid meet"/>
     <!-- Continue clean source-art bands over the illustration's tapered end. -->
     <g clip-path="url(#tableExtensionClip)">
-      <svg x="1396" y="845" width="353" height="37.41" viewBox="2075 565 50 65" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
-      <svg x="1396" y="882.41" width="115.10" height="35.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
-      <svg x="1511.10" y="882.41" width="115.10" height="35.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
-      <svg x="1626.20" y="882.41" width="115.10" height="35.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
-      <svg x="1741.30" y="882.41" width="115.10" height="35.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1396" y="865" width="404" height="37.41" viewBox="2075 565 50 65" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1396" y="902.41" width="101" height="72.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1497" y="902.41" width="101" height="72.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1598" y="902.41" width="101" height="72.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1699" y="902.41" width="101" height="72.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
     </g>
   </g>
 
-  <g transform="translate(0 -18)">
+  <g transform="translate(0 24)">
   <path d="M70,850 H380 L410,890 380,930 H70 L99,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
   <path d="M420,850 H730 L760,890 730,930 H420 L449,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
   <path d="M770,850 H1080 L1110,890 1080,930 H770 L799,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
@@ -221,4 +238,7 @@
   <text x="940" y="880" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="19" letter-spacing="0.3" fill="#ffbd35">ALL SPECIALS</text>
   <text x="940" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#fff2c2">250K &#215; PLAYFIELD</text>
   </g>
+
+  <!-- Keep the cabinet perimeter above the full-bleed table artwork. -->
+  <rect x="6" y="6" width="1788" height="963" rx="19" fill="none" stroke="#ef9f21" stroke-width="11"/>
 </svg>
