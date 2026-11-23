@@ -77,6 +77,13 @@ $ExpectedNumberedLamps = [ordered]@{
 # Zero-cross service ticks per second (E0FB: 1C20 = 7,200 per minute).
 $TicksPerSecond = 120
 
+# Same table: ROLLOVER LANES 10,000/20,000/30,000/40,000/SPECIAL on J12-4,
+# J13-1, J13-8, J13-6, J13-2, all phase B; by6803.c: 43, 12, 28, 44, 13,
+# phase B = x + 48.
+$ExpectedOrbitLamps = [ordered]@{
+    'Rollover Lanes 10,000' = 43 + 48; 'Rollover Lanes 20,000' = 12 + 48; 'Rollover Lanes 30,000' = 28 + 48
+    'Rollover Lanes 40,000' = 44 + 48; 'Rollover Lanes Special' = 13 + 48 }
+
 # ---- Pure table checks (no emulator). ----
 
 $badSw = @(); foreach ($k in $ExpectedSwitches.Keys) { if ($N.Switches[$k] -ne $ExpectedSwitches[$k]) { $badSw += "$k=$($N.Switches[$k]) (expected $($ExpectedSwitches[$k]))" } }
@@ -89,6 +96,8 @@ Test-EbcItem -Name 'B-A-L-L B lamp is J10-18 phase B' -Doc 'OPS manual lamp driv
 Test-EbcItem -Name '5,000 drop target 3 lamp is J13-10 phase A' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcEqual -Expected $ExpectedDropTarget3Lamp -Actual $N.Lamps['5,000 Drop Target 3'] -What 'Lamps entry 5,000 Drop Target 3' }
 $badNum = @(); foreach ($k in $ExpectedNumberedLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedNumberedLamps[$k]) { $badNum += "$k=$($N.Lamps[$k]) (expected $($ExpectedNumberedLamps[$k]))" } }
 Test-EbcItem -Name 'Numbered drop-target lamps are the manual''s J10/J11 phase A pins' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badNum.Count -eq 0) ("wrong: " + ($badNum -join '; ')) }
+$badOrbit = @(); foreach ($k in $ExpectedOrbitLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedOrbitLamps[$k]) { $badOrbit += "$k=$($N.Lamps[$k]) (expected $($ExpectedOrbitLamps[$k]))" } }
+Test-EbcItem -Name 'Orbit-value lamps are the manual''s rollover lane pins, phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badOrbit.Count -eq 0) ("wrong: " + ($badOrbit -join '; ')) }
 Test-EbcItem -Name 'Rebound sound is 0x22' -Doc 'GAME_RULE_TRACES.md Switch 07: Rebound' -Body { Assert-EbcEqual -Expected $ExpectedReboundSound -Actual $N.Sounds.Rebound -What 'Sounds.Rebound' }
 
 # ---- Play checks (one boot). ----

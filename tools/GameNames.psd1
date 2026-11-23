@@ -139,6 +139,15 @@
     # gives the same numbers). Measured: tests/8bc-deluxe/called-ball.tests.ps1
     # (the spoken ball's lamp flashes). Checked in names.tests.ps1 "Numbered
     # drop-target lamps are the manual's J10/J11 phase A pins".
+    #
+    # The table's first page puts ROLLOVER LANES 10,000 / 20,000 / 30,000 /
+    # 40,000 / SPECIAL (the orbit-value arrows and orbit Special) on J12-4,
+    # J13-1, J13-8, J13-6 and J13-2, all phase B; by6803.c converts them to
+    # 43, 12, 28, 44 and 13, so they are 91, 60, 76, 92 and 61. Measured:
+    # tests/8bc-deluxe/orbits.tests.ps1 (the arrows chase upward on a collect
+    # and the lit legends add up to the value the next collect scores).
+    # Checked in names.tests.ps1 "Orbit-value lamps are the manual's rollover
+    # lane pins, phase B".
     Lamps = @{
         'Bonus 120,000'         = 77
         'Bonus 240,000'         = 93
@@ -158,6 +167,11 @@
         'Drop Target 13'        = 39
         'Drop Target 14'        = 8
         'Drop Target 15'        = 24
+        'Rollover Lanes 10,000' = 91
+        'Rollover Lanes 20,000' = 60
+        'Rollover Lanes 30,000' = 76
+        'Rollover Lanes 40,000' = 92
+        'Rollover Lanes Special' = 61
     }
 
     # E-I-G-H-T standup -> the pool-ball drop group behind it. A standup's
