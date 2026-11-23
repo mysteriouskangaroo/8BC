@@ -318,8 +318,17 @@ function Invoke-EbcScoredHit {
 # changes. Each completion advances CHAMP_COMPLETION_STATE (10C0) and clears
 # the lanes (CAD4-CB23, GAME_RULE_TRACES.md "Playfield Scores Double and
 # Triple"), so successive calls reach double, then triple.
+# -RearmWith names a switch hit (and settled) just before the P lane. Deluxe
+# locks a second new C or P until a qualifying shot rearms it
+# (src/8bc-deluxe/gamerules.md "CHAMP"), so without it P never completes the
+# word there (measured: 1040 stays EF after C, H, A, M, P). Its score change
+# is not returned.
 function Complete-EbcChamp {
-    foreach ($lane in @('"C" Return Lane', '"H" Top Lane', '"A" Top Lane', '"M" Top Lane', '"P" Return Lane')) { Invoke-EbcScoredHit $lane }
+    param($RearmWith)
+    foreach ($lane in @('"C" Return Lane', '"H" Top Lane', '"A" Top Lane', '"M" Top Lane', '"P" Return Lane')) {
+        if ($RearmWith -and $lane -eq '"P" Return Lane') { Invoke-EbcScoredHit $RearmWith | Out-Null }
+        Invoke-EbcScoredHit $lane
+    }
 }
 
 # ---------------------------------------------------------------- game flow

@@ -86,6 +86,18 @@ Test-EbcItem -Name 'Invoke-EbcDrain passes to player 2' -Doc $Rules -Body {
     Assert-EbcEqual -Expected 1 -Actual (Get-EbcBallInPlay) -What 'ball in play'
     Assert-EbcEqual -Expected '00' -Actual ('{0:X2}' -f (Get-EbcChampState)) -What 'CHAMP completion state on the new ball'
 }
+Test-EbcItem -Name 'Complete-EbcChamp -RearmWith reaches playfield double' -Doc $Rules -Body {
+    # Player 2's first ball starts at 10C0 = 00. Double is 10C0 = 10 after one
+    # completion ("Playfield Scores Double and Triple"); Deluxe's first
+    # completion raises the right thumper and its second lights 2x
+    # (src/8bc-deluxe/gamerules.md "CHAMP"), and its C/P latch needs the
+    # Center Rollover rearm before P.
+    $completions = if ($Tree -eq '8bc-deluxe') { 2 } else { 1 }
+    $deltas = @()
+    for ($k = 0; $k -lt $completions; $k++) { $deltas += @(Complete-EbcChamp -RearmWith 'Center Rollover Button') }
+    Assert-EbcEqual -Expected (5 * $completions) -Actual @($deltas | Where-Object { $_ -gt 0 }).Count -What "lanes that scored ($($deltas -join ', '))"
+    Assert-EbcEqual -Expected '10' -Actual ('{0:X2}' -f (Get-EbcChampState)) -What "CHAMP completion state after $completions completion(s)"
+}
 Test-EbcItem -Name 'Complete-EbcGame plays out the factory balls' -Doc 'OPS manual p. 1-3' -Body {
     # Player 1 has drained ball 1; 2 x 3 - 1 balls remain.
     Assert-EbcEqual -Expected (2 * $BallsPerGame - 1) -Actual (Complete-EbcGame) -What 'balls drained to game over'
