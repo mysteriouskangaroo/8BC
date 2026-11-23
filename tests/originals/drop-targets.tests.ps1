@@ -4,8 +4,8 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # alone; both go through the CHAMP playfield multiplier, reached by play.
 #
 # src/8bc-deluxe/gamerules.md "Existing rules established in the original
-# ROM" gives the first sink as 2,500; GAME_RULE_TRACES.md gives 500. The
-# controller ruled that this file asserts the GAME_RULE_TRACES values; the
+# ROM" gives the first sink as 2,500; GAME_RULE_TRACES.md gives 500. This file
+# asserts both, each citing its doc, so the mismatch shows as a FAIL; the
 # conflict goes to the user.
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
@@ -15,6 +15,15 @@ $Champ = 'src/originals/ghidra/GAME_RULE_TRACES.md "Playfield Scores Double and 
 # playfield multiplier.
 $FirstSink = 500
 $AlreadySunk = 5000
+$RulesDoc = 'src/8bc-deluxe/gamerules.md "Existing rules established in the original ROM"'
+# gamerules.md "Existing rules established in the original ROM": "New pool
+# balls are recorded in `$10C3`; their first-sink path is `$CE07`. Its 2,500
+# playfield value follows Deluxe's divide-by-ten score scale, awarding 250
+# displayed points through the current playfield multiplier". The original
+# ROM has no divide-by-ten scale, so its first sink is 2,500 times the
+# playfield multiplier (the same wording as the E-I-G-H-T standups at $CC7C,
+# tests/originals/eight-targets.tests.ps1).
+$RulesFirstSink = 2500
 # The drop-target table: switch -> sunk-ball bit(s), paired switches record
 # their first ball, then their second.
 $ExpectedSinks = @('25:01', '27:04', '28:08', '30:20', '25:02', '28:10', '31:40')
@@ -26,6 +35,8 @@ $ResetBy = @{}
 $standups = (Get-EbcNames).StandupDropGroups
 foreach ($s in $standups.Keys) { $ResetBy[$standups[$s]] = $s }
 $script:Sinks = @()
+# Every first sink this file plays, as '<target> at <m>x: <score change>'.
+$script:FirstSinks = @()
 
 # Hits a drop target; returns the score change and 10C3 before and after,
 # and records any newly set 10C3 bits as '<switch>:<bits>'.
@@ -47,6 +58,7 @@ function Assert-Multiplier([int]$m) {
 }
 function Assert-FirstSink([string]$Name, [int]$m) {
     $r = Invoke-Drop $Name
+    $script:FirstSinks += [PSCustomObject]@{ Name = $Name; M = $m; Delta = $r.Delta }
     Assert-EbcEqual -Expected ($FirstSink * $m) -Actual $r.Delta -What "first sink on '$Name' at ${m}x"
     Assert-EbcTrue ($r.After -ne $r.Before) ('10C3 {0:X2} unchanged by the first sink on {1}' -f $r.Before, $Name)
 }
@@ -92,5 +104,9 @@ Test-EbcItem -Name 'Each ball sets its 10C3 bit on its first sink' -Doc $Doc -Bo
     Invoke-Drop 'Drop Target 7,15' | Out-Null
     Assert-EbcEqual -Expected $ExpectedSinks -Actual $script:Sinks -What 'switch:new 10C3 bits, in sink order'
     Assert-EbcEqual -Expected '7F' -Actual ('{0:X2}' -f (Get-EbcSunkBalls)) -What '10C3 after all seven balls'
+}
+Test-EbcItem -Name 'A first sink scores 2,500 x the playfield multiplier' -Doc $RulesDoc -Body {
+    Assert-EbcTrue ($script:FirstSinks.Count -gt 0) 'no first sink was played'
+    Assert-EbcEqual -Expected @($script:FirstSinks | ForEach-Object { "'$($_.Name)' at $($_.M)x: $($RulesFirstSink * $_.M)" }) -Actual @($script:FirstSinks | ForEach-Object { "'$($_.Name)' at $($_.M)x: $($_.Delta)" }) -What 'score of each first sink above'
 }
 Complete-EbcTests
