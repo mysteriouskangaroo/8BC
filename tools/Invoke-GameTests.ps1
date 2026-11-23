@@ -7,6 +7,9 @@
 #   tests/compare/        run when both trees named in the file's
 #                         "# Trees: a, b" line are selected
 #   files at the root     run once with no tree and no build (runner fixtures)
+# With 8bc-deluxe selected and no -Path, it also runs
+# tools/tests/Test-DeluxeCoverage.ps1 and prints its result as
+# 8bc-deluxe/coverage.
 #
 # A file that prints no result line, exits nonzero without a FAIL line, or
 # runs past -TimeoutSeconds (-LongTimeoutSeconds for a file under long/)
@@ -215,6 +218,20 @@ while ($queue.Count -or $running.Count) {
     if ($running.Count) { Start-Sleep -Milliseconds 50 }
 }
 Remove-Item -LiteralPath $privateRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+# ---- Deluxe coverage (boots nothing): every number in gamerules.md
+# "Required gameplay verification" must be asserted by a Deluxe test. Runs
+# when 8bc-deluxe is selected and the whole test folder is (no -Path). ----
+if ('8bc-deluxe' -in $Tree -and -not $Path -and (Test-Path -LiteralPath (Join-Path $root '8bc-deluxe') -PathType Container)) {
+    $covName = 'Every number in src/8bc-deluxe/gamerules.md "Required gameplay verification" is asserted by a Deluxe test'
+    $cov = @(& $pwshPath -NoProfile -File (Join-Path $repo 'tools/tests/Test-DeluxeCoverage.ps1') -TestRoot $root 2>&1 | ForEach-Object { "$_" })
+    $covCode = $LASTEXITCODE
+    $covSummary = @($cov | Where-Object { $_ -like 'Deluxe coverage:*' }) -join ' '
+    $covMissing = @($cov | Where-Object { $_ -like 'MISSING *' } | ForEach-Object { $_ -replace '^MISSING ', '' })
+    if ($covCode -eq 0) { Emit "PASS 8bc-deluxe/coverage :: $covName" }
+    elseif ($covMissing.Count) { Emit "FAIL 8bc-deluxe/coverage :: $covName :: not asserted: $($covMissing -join ', ') ($covSummary; tools/tests/Test-DeluxeCoverage.ps1 lists each number's files)" }
+    else { Emit "FAIL 8bc-deluxe/coverage :: $covName :: exited $covCode`: $((@($cov) | Select-Object -Last 2) -join ' / ')" }
+}
 
 # ---- Summary. ----
 $pass = @($lines | Where-Object { $_ -like 'PASS *' }).Count

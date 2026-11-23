@@ -1,8 +1,9 @@
 # Checks tools/Invoke-GameTests.ps1 and the comparison helper on boot-free
 # fixtures: files that crash, hang or print nothing count as FAILs, the summary
 # counts seeded results, the runner selects kit, tree, long and compare files
-# by tree, a file under long/ gets -LongTimeoutSeconds, and
-# Invoke-EbcComparedScenario reports a difference.
+# by tree, a file under long/ gets -LongTimeoutSeconds,
+# Invoke-EbcComparedScenario reports a difference, and
+# tools/tests/Test-DeluxeCoverage.ps1 applies its matching rule.
 # Usage: pwsh tools/Test-GameTestRunner.ps1   (exits 1 on any failure)
 
 $ErrorActionPreference = 'Stop'
@@ -88,6 +89,12 @@ try {
     foreach ($w in $ramWant) {
         Write-Check ("RAM label: " + ((($w -split ' :: ')[1]) -replace '`', '')) (@($ram | Where-Object { $_ -like $w }).Count -eq 1) "expected a line like '$w'; output:`n$ramAll"
     }
+    # ---- Deluxe coverage script: its matching rule on a fixture doc and test. ----
+    $cf = Join-Path $repo 'tools/tests/coverage-fixtures'
+    $cov = @(& $pwshPath -NoProfile -File (Join-Path $repo 'tools/tests/Test-DeluxeCoverage.ps1') -Doc (Join-Path $cf 'gamerules.md') -TestRoot (Join-Path $cf 'tests') 2>&1 | ForEach-Object { "$_" })
+    $covCode = $LASTEXITCODE
+    $covWant = @('COVERED 500 :: 8bc-deluxe/a.tests.ps1', 'COVERED 2x :: 8bc-deluxe/a.tests.ps1', 'COVERED 99K :: 8bc-deluxe/a.tests.ps1', 'COVERED `06` :: 8bc-deluxe/a.tests.ps1', 'COVERED 75% :: 8bc-deluxe/a.tests.ps1', 'COVERED $2A :: 8bc-deluxe/a.tests.ps1', 'MISSING 7', 'Deluxe coverage: 7 numbers, 6 covered, 1 missing, 1 test files')
+    Write-Check 'Deluxe coverage: asserted numbers covered, a number only in -What or the name missing, section bounded' ((($cov -join '|') -eq ($covWant -join '|')) -and $covCode -eq 1) ("exit $covCode; output:`n" + ($cov -join "`n"))
     Write-Check 'Compared scenario: Normalize applies' (@($cmp | Where-Object { $_ -like 'PASS *two-trees :: Normalize hides the tree' }).Count -eq 1) $cmpAll
 }
 finally {
