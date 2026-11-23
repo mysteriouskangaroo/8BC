@@ -122,10 +122,18 @@
     # tests/originals/eight-targets.tests.ps1 (83 lights when E-I-G-H-T is
     # first completed). Checked in names.tests.ps1 "B-A-L-L B lamp is J10-18
     # phase B".
+    #
+    # The table's second page (PDF p. 62) puts "5,000 DROP TARGET 3" on
+    # J13-10, phase A; by6803.c converts J13-10 to 46, phase A unchanged.
+    # Measured: tests/8bc-deluxe/sunk-ball-awards.tests.ps1 (46 flashes once
+    # Drop Target 3,11 is reset with ball 3 sunk, and goes dark when the reset
+    # target is hit; the original ROM does the same). Checked in
+    # names.tests.ps1 "5,000 drop target 3 lamp is J13-10 phase A".
     Lamps = @{
-        'Bonus 120,000' = 77
-        'Bonus 240,000' = 93
-        'Ball "B"'      = 83
+        'Bonus 120,000'         = 77
+        'Bonus 240,000'         = 93
+        'Ball "B"'              = 83
+        '5,000 Drop Target 3'   = 46
     }
 
     # E-I-G-H-T standup -> the pool-ball drop group behind it. A standup's
