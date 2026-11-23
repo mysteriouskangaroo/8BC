@@ -2,7 +2,7 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # Trees: originals, loop-score-change
 # One scripted two-player game, played identically on the original ROM and on
 # loop-score-change: coins, start, a fixed list of switch hits covering every
-# page 1-18 switch except 05, 12 and 13, then drains to game over. The two
+# page 1-18 switch except 05, 12, 13 and 26, then drains to game over. The two
 # observation lists must match exactly.
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 
@@ -13,6 +13,13 @@ Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 # score, sound and fire coils exactly as in the original.
 $Doc = 'src/loop-score-change/notes/SCORING_CHANGES.md (introduction: the retained shared code)'
 $Excluded = @(5, 12, 13)
+# Switch 26 (Lane Change (Cabinet)) cannot be closed through libpinmame:
+# pinmame declares it the eballchp lower-right flipper switch
+# (by6803games.c INITGAME6803 FLIP_SWNO(0,26)), and core.c rewrites its matrix
+# bit every update from the flipper input, so PinmameSetSwitch(26) never
+# reaches the ROM (GameNames.psd1 ServiceKeys comment). The scenario leaves
+# it out, and the coverage guard excludes it for that reason.
+$NotDrivable = @(26)
 
 # What each observation holds, after each hit, drain and attract closure:
 #   <step>: <switch or action> p1=<score> p2=<score> snd=[<frame offset>:<board> <command>, ...]
@@ -41,9 +48,9 @@ $Standups = @('Drop Target "E"', 'Drop Target "I"', 'Drop Target "G"', 'Drop Tar
 $Balls = @(
     , (@('Rebound', 'Credit', 'Right Thumper Bumper', 'Left Thumper Bumper', 'Right Slingshot', 'Left Slingshot',
          'Not Used 22', 'Center Rollover Button', 'Spinner', 'Left Outlane', 'Right Outlane') + $Champ +
-       $Drops + @('Spinner', 'Rebound', 'Lane Change (Cabinet)') + $Standups + $Champ +
+       $Drops + @('Spinner', 'Rebound') + $Standups + $Champ +
        $Drops + $Standups + @('Spinner', 'Center Rollover Button', 'Right Thumper Bumper', 'Left Outlane'))
-    , (@('Rebound', 'Coin I (Left)', 'Coin II (Middle)', 'Coin III (Right)', 'Lane Change (Cabinet)') + $Champ +
+    , (@('Rebound', 'Coin I (Left)', 'Coin II (Middle)', 'Coin III (Right)') + $Champ +
        @('Drop Target 3,11', 'Drop Target "G"', 'Spinner', 'Right Outlane'))
     , @('Left Slingshot', 'Drop Target 7,15', 'Spinner', 'Tilt', 'Right Thumper Bumper')
     , @('Rebound', 'Drop Target 1,2,9,10', 'Drop Target "I"', 'Center Rollover Button')
@@ -73,10 +80,10 @@ function Add-Step([string]$What, [int]$Since, [int]$From) {
     Add-EbcObservation ("{0}: {1} p1={2} p2={3} snd=[{4}] sol=[{5}]" -f $script:step, $What, $p1, $p2, ($snd -join ', '), ($sol -join ', '))
 }
 
-Invoke-EbcComparedScenario -Name 'Two-player game without switches 05, 12 and 13 plays identically' -Doc $Doc -Trees @('originals', 'loop-score-change') -Scenario {
+Invoke-EbcComparedScenario -Name 'Two-player game without switches 05, 12 and 13 (26 not drivable) plays identically' -Doc $Doc -Trees @('originals', 'loop-score-change') -Scenario {
     $all = @($Balls | ForEach-Object { $_ } | ForEach-Object { Get-EbcSwitch $_ }) + @($Attract | ForEach-Object { Get-EbcSwitch $_ }) + @(Get-EbcSwitch 'Outhole')
-    $missing = @(1..37 | Where-Object { $_ -notin $Excluded -and $_ -notin $all })
-    $used = @($Excluded | Where-Object { $_ -in $all })
+    $missing = @(1..37 | Where-Object { $_ -notin $Excluded -and $_ -notin $NotDrivable -and $_ -notin $all })
+    $used = @(($Excluded + $NotDrivable) | Where-Object { $_ -in $all })
     if ($missing.Count -or $used.Count) { throw "switch list: missing $($missing -join ',') ; excluded but used $($used -join ',')" }
 
     Start-EbcGame
