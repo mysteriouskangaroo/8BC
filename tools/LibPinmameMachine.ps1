@@ -39,6 +39,14 @@ public static class EightBallChampMachine {
         get { return hangGuardSeconds; }
         set { if (value < 1) throw new ArgumentOutOfRangeException("value"); hangGuardSeconds = value; }
     }
+    // Test hook (tests/kit/machine.tests.ps1 'Start survives a slow start-up'):
+    // holds the game thread this long in the run-state callback, which
+    // libpinmame raises before cpu_run has finished starting.
+    static volatile int runStateDelayMs;
+    public static int RunStateDelayMs {
+        get { return runStateDelayMs; }
+        set { if (value < 0) throw new ArgumentOutOfRangeException("value"); runStateDelayMs = value; }
+    }
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void StateCb(int state, IntPtr u);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void DispAvailCb(int i, int n, IntPtr layout, IntPtr u);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void DispUpdCb(int i, IntPtr data, IntPtr layout, IntPtr u);
@@ -141,7 +149,7 @@ public static class EightBallChampMachine {
         }
     }
 
-    static void OnState(int s, IntPtr u) { try { state = s; Log("state=" + s); } catch (Exception e) { Fail("state", e); } }
+    static void OnState(int s, IntPtr u) { try { state = s; Log("state=" + s); if (s == 1 && runStateDelayMs > 0) Thread.Sleep(runStateDelayMs); } catch (Exception e) { Fail("state", e); } }
     static void OnAvail(int i, int n, IntPtr layout, IntPtr u) { try { if (i > lastDisplay) lastDisplay = i; } catch (Exception e) { Fail("avail", e); } }
     static void OnSol(IntPtr p, IntPtr u) { try { Ev("sol " + Marshal.ReadInt32(p, 0) + " " + Marshal.ReadInt32(p, 4)); } catch (Exception e) { Fail("sol", e); } }
     static int OnKey(int k, IntPtr u) { return 0; }
@@ -218,9 +226,12 @@ public static class EightBallChampMachine {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             while (state != 1 && sw.Elapsed.TotalSeconds < 20) Thread.Sleep(5);
             if (state != 1) throw new TimeoutException("libpinmame did not reach the run state within 20 s (frame " + frame + ")");
-            PinmameSetTimeFence(1.0); PinmameSetTimeFence(1.0e7);   // turns off real-time throttling
             if (!paused.WaitOne(TimeSpan.FromSeconds(HangGuardSeconds)))
                 throw new TimeoutException("machine did not pause at frame 0 within " + HangGuardSeconds + " s (frame " + frame + ")");
+            // Turns off real-time throttling. Only once paused at frame 0: libpinmame
+            // raises the run state before cpu_run resets the fence offset to
+            // -fence, and fences set before that reset freeze emulated time at 0.
+            PinmameSetTimeFence(1.0); PinmameSetTimeFence(1.0e7);
         }
         catch { try { Stop(); } catch { } throw; }
     }

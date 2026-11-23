@@ -8,7 +8,7 @@ param(
     [string]$Tree,
     [string]$VpmZip,
     [string]$ObserveTo,
-    [ValidateSet('', 'Deterministic', 'ThrowWhilePaused', 'HangGuard')][string]$ChildMode = '',
+    [ValidateSet('', 'Deterministic', 'ThrowWhilePaused', 'HangGuard', 'SlowStartup')][string]$ChildMode = '',
     [string]$OutFile
 )
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
@@ -65,6 +65,18 @@ try {
             Start-EbcGame -AttractFrames 0 -EmptyOuthole
             Step-EbcFrames -Frames 10
             throw 'deliberate exception while the emulator is paused'
+        }
+        if ($ChildMode -eq 'SlowStartup') {
+            # The game thread is held 300 ms in the run-state callback, as a
+            # busy machine may preempt it there; the 20 s guard stands in for
+            # the 600 s one so a machine that never reaches frame 0 fails fast.
+            [EightBallChampMachine]::RunStateDelayMs = 300
+            [EightBallChampMachine]::HangGuardSeconds = 20
+            Start-EbcGame -AttractFrames 0 -EmptyOuthole
+            Step-EbcFrames -Frames 10
+            Set-Content -LiteralPath $OutFile -Value ('frame=' + (Get-EbcFrame)) -Encoding utf8
+            Stop-EbcGame
+            exit 0
         }
         if ($ChildMode -eq 'HangGuard') {
             # A 2 s guard stands in for the 600 s one: after it expires with no
@@ -171,6 +183,21 @@ try {
             if (-not $proc.WaitForExit(60000)) { $proc.Kill(); throw 'child still running after 60 s' }
             $state = if (Test-Path -LiteralPath $throwOut) { (Get-Content -LiteralPath $throwOut -Raw).Trim() } else { 'no state file' }
             Assert-EbcTrue ($proc.ExitCode -ne 0 -and $state -eq 'running=False') ("child exited {0} after {1:N1} s; emulator after cleanup: {2}" -f $proc.ExitCode, $clock.Elapsed.TotalSeconds, $state)
+        }
+
+        # libpinmame raises the run state (MACHINE_INIT, src/wpc/core.c) inside
+        # cpu_pre_run, before cpu_run resets the time-fence offset
+        # (src/cpuexec.c); a fence set in that window freezes emulated time at 0.
+        Test-EbcItem -Name 'Start survives a slow start-up' -Doc $Doc -Body {
+            $slowOut = Join-Path $work 'slow-startup.txt'
+            $slowErr = Join-Path $work 'slow-startup.err'
+            $proc = Start-Process -FilePath (Get-Process -Id $PID).Path -PassThru -NoNewWindow -RedirectStandardError $slowErr -RedirectStandardOutput (Join-Path $work 'slow-startup.out') -ArgumentList @(
+                '-NoProfile', '-File', $PSCommandPath, '-Tree', $Tree, '-VpmZip', $VpmZip, '-ChildMode', 'SlowStartup', '-OutFile', $slowOut)
+            if (-not $proc.WaitForExit(60000)) { $proc.Kill(); throw 'child still running after 60 s' }
+            $got = if (Test-Path -LiteralPath $slowOut) { (Get-Content -LiteralPath $slowOut -Raw).Trim() } else {
+                $why = (@(Get-Content -LiteralPath $slowErr -ErrorAction SilentlyContinue | Where-Object { $_ -match '\w' } | Select-Object -Last 3) -join ' ').Trim()
+                "no output; child exited $($proc.ExitCode): $why" }
+            Assert-EbcEqual -Expected 'frame=10' -Actual $got -What 'Frame after Start and Advance(10), run-state callback held 300 ms'
         }
 
         Test-EbcItem -Name 'Hang guard faults the machine' -Doc $Doc -Body {
