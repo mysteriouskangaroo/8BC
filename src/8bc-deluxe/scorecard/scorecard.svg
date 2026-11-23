@@ -129,18 +129,18 @@
     <text class="value-arrow" x="1465" y="473">&#8644;</text>
     <text class="value" x="1595" y="473">SPINNER</text>
   </g>
-  <text class="section-title" x="1250" y="545">ORBITS</text>
-  <line x1="1250" y1="555" x2="1690" y2="555" stroke="#d8871b" stroke-width="3"/>
-  <text class="rule-copy" x="1250" y="574">
+  <text class="section-title" x="1250" y="535">ORBITS</text>
+  <line x1="1250" y1="550" x2="1690" y2="550" stroke="#d8871b" stroke-width="3"/>
+  <text class="rule-copy" x="1250" y="580">
     <tspan class="gold">LEFT:</tspan><tspan> COLLECT + ADV. 10K</tspan>
-    <tspan x="1250" dy="30" class="gold">RIGHT:</tspan><tspan> COLLECT + ADV. 20K</tspan>
-    <tspan x="1250" dy="30">REACH </tspan><tspan class="gold">100K</tspan><tspan> TO LIGHT </tspan><tspan class="accent">SPECIAL</tspan>
+    <tspan x="1250" dy="32" class="gold">RIGHT:</tspan><tspan> COLLECT + ADV. 20K</tspan>
+    <tspan x="1250" dy="32">REACH </tspan><tspan class="gold">100K</tspan><tspan> TO LIGHT </tspan><tspan class="accent">SPECIAL</tspan>
     <tspan x="1250" dy="32">CARRIES BETWEEN DRAINS</tspan>
   </text>
 
-  <text class="section-title" x="1250" y="708">SPINNER</text>
-  <line x1="1250" y1="718" x2="1690" y2="718" stroke="#d8871b" stroke-width="3"/>
-  <text class="rule-copy" x="1250" y="746">
+  <text class="section-title" x="1250" y="714">SPINNER</text>
+  <line x1="1250" y1="729" x2="1690" y2="729" stroke="#d8871b" stroke-width="3"/>
+  <text class="rule-copy" x="1250" y="759">
     <tspan class="gold">E-I-G-H-T</tspan><tspan> ADDS TO SPINNER VALUE</tspan>
     <tspan x="1250" dy="32">MAX </tspan><tspan class="gold">9K PER SPIN</tspan><tspan> &#8226; RESETS ON DRAIN</tspan>
   </text>
