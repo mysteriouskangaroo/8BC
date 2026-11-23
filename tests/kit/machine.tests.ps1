@@ -8,13 +8,38 @@ param(
     [string]$Tree,
     [string]$VpmZip,
     [string]$ObserveTo,
-    [ValidateSet('', 'Deterministic', 'ThrowWhilePaused', 'HangGuard', 'SlowStartup')][string]$ChildMode = '',
+    [ValidateSet('', 'Deterministic', 'ThrowWhilePaused', 'UnhandledWhilePaused', 'HangGuard', 'SlowStartup')][string]$ChildMode = '',
     [string]$OutFile
 )
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
 $ErrorActionPreference = 'Stop'
 $VpmZip = (Resolve-Path -LiteralPath $VpmZip).Path
 $Doc = 'tools/LibPinmameMachine.ps1 header'
+
+# A test file that throws at top level while paused, with no Stop of its own,
+# relies on the machine's ProcessExit handler (registered in Start). A second
+# ProcessExit handler, registered after Start's so it runs after it, records
+# whether the emulator was still running by then.
+if ($ChildMode -eq 'UnhandledWhilePaused') {
+    Start-EbcGame -AttractFrames 0 -EmptyOuthole
+    Step-EbcFrames -Frames 10
+    Add-Type -TypeDefinition @'
+public static class EbcExitProbe {
+    public static void Register(string path) {
+        System.AppDomain.CurrentDomain.ProcessExit += delegate {
+            string state = "no EightBallChampMachine type";
+            foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies()) {
+                var t = a.GetType("EightBallChampMachine");
+                if (t != null) { state = "running=" + t.GetProperty("IsRunning").GetValue(null); break; }
+            }
+            System.IO.File.WriteAllText(path, state);
+        };
+    }
+}
+'@
+    [EbcExitProbe]::Register($OutFile)
+    throw 'deliberate top-level exception while the emulator is paused'
+}
 
 # U4 byte for the RAM-write test. No U4 byte stays $FF through 1,500 frames:
 # U4 powers on all $FF and the startup RAM test writes every byte of
@@ -183,6 +208,16 @@ try {
             if (-not $proc.WaitForExit(60000)) { $proc.Kill(); throw 'child still running after 60 s' }
             $state = if (Test-Path -LiteralPath $throwOut) { (Get-Content -LiteralPath $throwOut -Raw).Trim() } else { 'no state file' }
             Assert-EbcTrue ($proc.ExitCode -ne 0 -and $state -eq 'running=False') ("child exited {0} after {1:N1} s; emulator after cleanup: {2}" -f $proc.ExitCode, $clock.Elapsed.TotalSeconds, $state)
+        }
+
+        Test-EbcItem -Name 'Unhandled exception while paused exits and stops the emulator' -Doc $Doc -Body {
+            $clock = [System.Diagnostics.Stopwatch]::StartNew()
+            $probeOut = Join-Path $work 'unhandled-child-state.txt'
+            $proc = Start-Process -FilePath (Get-Process -Id $PID).Path -PassThru -NoNewWindow -RedirectStandardError (Join-Path $work 'unhandled-child.err') -RedirectStandardOutput (Join-Path $work 'unhandled-child.out') -ArgumentList @(
+                '-NoProfile', '-File', $PSCommandPath, '-Tree', $Tree, '-VpmZip', $VpmZip, '-ChildMode', 'UnhandledWhilePaused', '-OutFile', $probeOut)
+            if (-not $proc.WaitForExit(60000)) { $proc.Kill(); throw 'child still running after 60 s' }
+            $state = if (Test-Path -LiteralPath $probeOut) { (Get-Content -LiteralPath $probeOut -Raw).Trim() } else { 'no state file' }
+            Assert-EbcTrue ($proc.ExitCode -ne 0 -and $state -eq 'running=False') ("child exited {0} after {1:N1} s; emulator at process exit: {2}" -f $proc.ExitCode, $clock.Elapsed.TotalSeconds, $state)
         }
 
         # libpinmame raises the run state (MACHINE_INIT, src/wpc/core.c) inside
