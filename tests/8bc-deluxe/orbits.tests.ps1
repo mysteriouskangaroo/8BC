@@ -31,9 +31,17 @@ $RightStep = 20000
 $Terminal = 100000
 # Activating promotes the 5,000 baseline to the printed 10,000.
 $FirstValue = 10000
-# "the left orbit's single $29 collect sound"; the right sends "$2A twice
-# back-to-back" before the terminal value and "$29" once maxed.
-$LeftSound = 0x29
+# "Left orbit": the active left collect keeps its "original single
+# collect-sound path". The original ROM sends one command, $00: CB53 loads
+# selector $29 into B and calls CAAA, which stores it at 1024 and calls F4DF;
+# F4DF leaves B = (~103A) & C0, zero once the score gate passes; CB59-CB5B
+# then do TBA / JSR C27E (src/originals/asm/modules, CB4F data bytes and
+# CHECK_SCORE_GATE_LAMP_BITS). tests/compare/original-vs-deluxe-orbit-sound
+# checks the Deluxe collect against the original ROM. "Right orbit": once
+# maxed, the right collect uses that same left-orbit sound ("after the gate,
+# the path preserves the same B state used by the working left-orbit collect
+# sound"); before the terminal value it sends "$2A twice back-to-back".
+$LeftSound = 0x00
 $RightSound = 0x2A
 # "Back-to-back": no other command between them and at most 30 frames apart
 # (the brief's continuous-flow gap).
@@ -237,7 +245,7 @@ Test-EbcItem -Name 'Every orbit collect moves the collect to spinner inactive' -
     # Read by the first spinner pulse after each collect.
     Assert-EbcEqual -Expected (@($SpinnerUnlit) * $spin.Count) -Actual $spin -What 'spinner score after each collect'
 }
-Test-EbcItem -Name 'The active left collect uses only its single $29 collect sound' -Doc "$Doc; $Left" -Body {
+Test-EbcItem -Name 'The active left collect uses only its original single collect sound' -Doc "$Doc; $Left" -Body {
     $seen = @($c | Where-Object { $_.Side -eq 'Left' } | ForEach-Object { "left collect of $($_.Shown): [$(Format-Commands $_.Commands)]" })
     $want = @($c | Where-Object { $_.Side -eq 'Left' } | ForEach-Object { "left collect of $($_.Shown): [{0:X2}]" -f $LeftSound })
     Assert-EbcEqual -Expected $want -Actual $seen -What 'sound commands of each active left collect'
@@ -296,9 +304,12 @@ Test-EbcItem -Name 'The active orbit collects the printed 100,000/Special for 10
     $want = "value shown $Terminal; score $($Terminal / 10 + $SpecialPoints); knocks 1; `$6F sent 0"
     Assert-EbcEqual -Expected $want -Actual $seen -What "right collect at 100,000 (commands [$(Format-Commands $special.Commands)])"
 }
-Test-EbcItem -Name 'At 100,000 the right collect uses the left orbit''s single $29 sound, not $2A' -Doc "$Doc; $Right" -Body {
-    $seen = '$29 sent {0} times, $2A sent {1} times' -f @($special.Commands | Where-Object { $_.B -eq $LeftSound }).Count, @($special.Commands | Where-Object { $_.B -eq $RightSound }).Count
-    Assert-EbcEqual -Expected '$29 sent 1 times, $2A sent 0 times' -Actual $seen -What "right collect at 100,000 (commands [$(Format-Commands $special.Commands)])"
+Test-EbcItem -Name 'At 100,000 the right collect uses the left collect''s single sound, without $2A or $6F' -Doc "$Doc; $Right" -Body {
+    $leftCmds = Format-Commands @($c | Where-Object { $_.Side -eq 'Left' } | Select-Object -First 1).Commands
+    $six = @($special.AllCommands | Where-Object { $_.B -eq $SpecialSound }).Count
+    $seen = "commands [$(Format-Commands $special.Commands)], `$6F sent $six"
+    Assert-EbcEqual -Expected "commands [$leftCmds], `$6F sent 0" -Actual $seen -What 'right collect at 100,000 against the first left collect'
+    Assert-EbcEqual -Expected ('{0:X2}' -f $LeftSound) -Actual $leftCmds -What 'the left collect''s commands'
 }
 Test-EbcItem -Name 'A right advance from 100,000 stays at 100,000/Special, and a later orbit activation restores 100,000' -Doc "$Doc; $Right; $Left" -Body {
     # The special was collected, so it is not relit this ball ("Left orbit":
