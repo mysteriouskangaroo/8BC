@@ -127,8 +127,13 @@
     # The same table puts the "B" of B-A-L-L on J10-18, phase B; by6803.c
     # converts J10-18 to 35, so it is 35 + 48 = 83. Measured:
     # tests/originals/eight-targets.tests.ps1 (83 lights when E-I-G-H-T is
-    # first completed). Checked in names.tests.ps1 "B-A-L-L B lamp is J10-18
-    # phase B".
+    # first completed). The same page puts the A and the two Ls of B-A-L-L
+    # on J10-4, J10-11 and J10-19, phase B; by6803.c converts them to 4, 20
+    # and 36, so they are 52, 68 and 84 (HARDWARE_MAP.md "B-A-L-L inserts and
+    # the paired AC lamp phases" gives the same drivers). Measured:
+    # tests/8bc-deluxe/ball-bonus.tests.ps1 (all four light after the fourth
+    # E-I-G-H-T completion). Checked in names.tests.ps1 "B-A-L-L lamps are
+    # J10-18, J10-4, J10-11 and J10-19 phase B".
     #
     # The table's second page (PDF p. 62) puts "5,000 DROP TARGET 3" on
     # J13-10, phase A; by6803.c converts J13-10 to 46, phase A unchanged.
@@ -196,6 +201,9 @@
         'Bonus 120,000'         = 77
         'Bonus 240,000'         = 93
         'Ball "B"'              = 83
+        'Ball "A"'              = 52
+        'Ball "L" 1'            = 68
+        'Ball "L" 2'            = 84
         '5,000 Drop Target 3'   = 46
         'Drop Target 1'         = 35
         'Drop Target 2'         = 4

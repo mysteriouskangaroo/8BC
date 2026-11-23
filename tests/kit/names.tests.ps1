@@ -59,8 +59,9 @@ $ExpectedSolenoidCancelPresses = 3
 # BONUS 240,000 is J13-5, both phase B. pinmame src/wpc/by6803.c header:
 # J13-13 = 29, J13-05 = 45, phase B = x + 48.
 $ExpectedBonusLamps = [ordered]@{ 'Bonus 120,000' = 29 + 48; 'Bonus 240,000' = 45 + 48 }
-# Same table: the "B" of B-A-L-L is J10-18, phase B; by6803.c: J10-18 = 35.
-$ExpectedBallBLamp = 35 + 48
+# Same table: B, A, L, L of B-A-L-L are J10-18, J10-4, J10-11 and J10-19,
+# phase B; by6803.c: J10-18 = 35, J10-04 = 4, J10-11 = 20, J10-19 = 36.
+$ExpectedBallLamps = [ordered]@{ 'Ball "B"' = 35 + 48; 'Ball "A"' = 4 + 48; 'Ball "L" 1' = 20 + 48; 'Ball "L" 2' = 36 + 48 }
 # Same table, second page (PDF p. 62): "5,000 DROP TARGET 3" is J13-10, phase
 # A; by6803.c: J13-10 = 46, phase A unchanged.
 $ExpectedDropTarget3Lamp = 46
@@ -106,7 +107,7 @@ $badBuf = @(); for ($p = 1; $p -le 4; $p++) { if ($N.Ram["ScoreBuffer$p"] -ne $E
 Test-EbcItem -Name 'Score buffers are HARDWARE_MAP addresses' -Doc 'HARDWARE_MAP.md score-display buffers' -Body { Assert-EbcTrue ($badBuf.Count -eq 0) ("wrong: " + ($badBuf -join ', ')) }
 $badLamp = @(); foreach ($k in $ExpectedBonusLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedBonusLamps[$k]) { $badLamp += "$k=$($N.Lamps[$k]) (expected $($ExpectedBonusLamps[$k]))" } }
 Test-EbcItem -Name 'Bonus lamps are J13-13 and J13-5 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badLamp.Count -eq 0) ("wrong: " + ($badLamp -join '; ')) }
-Test-EbcItem -Name 'B-A-L-L B lamp is J10-18 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcEqual -Expected $ExpectedBallBLamp -Actual $N.Lamps['Ball "B"'] -What 'Lamps entry Ball "B"' }
+Test-EbcItem -Name 'B-A-L-L lamps are J10-18, J10-4, J10-11 and J10-19 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcEqual -Expected @($ExpectedBallLamps.Values) -Actual @($ExpectedBallLamps.Keys | ForEach-Object { $N.Lamps[$_] }) -What "Lamps entries $($ExpectedBallLamps.Keys -join ', ')" }
 Test-EbcItem -Name '5,000 drop target 3 lamp is J13-10 phase A' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcEqual -Expected $ExpectedDropTarget3Lamp -Actual $N.Lamps['5,000 Drop Target 3'] -What 'Lamps entry 5,000 Drop Target 3' }
 $badNum = @(); foreach ($k in $ExpectedNumberedLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedNumberedLamps[$k]) { $badNum += "$k=$($N.Lamps[$k]) (expected $($ExpectedNumberedLamps[$k]))" } }
 Test-EbcItem -Name 'Numbered drop-target lamps are the manual''s J10/J11 phase A pins' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badNum.Count -eq 0) ("wrong: " + ($badNum -join '; ')) }
