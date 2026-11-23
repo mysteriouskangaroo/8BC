@@ -165,7 +165,27 @@
     # while its letter is collected; both outlane lamps light at the fifth
     # CHAMP completion). Checked in names.tests.ps1 "C-H-A-M-P and outlane
     # lamps are J10 phase B pins".
+    #
+    # The table's first page puts SAUCER 2X / 3X / 5X on J12-13, J12-7 and
+    # J12-2, and its second page 2X / 3X / 5X (the earned bonus multiplier)
+    # on J12-8, J12-3 and J12-11, all phase B; by6803.c converts them to 9,
+    # 25, 41 and 26, 42, 11, so they are 57, 73, 89 and 74, 90, 59. The
+    # second page puts SAUCER 100K on J12-14 phase B (by6803.c 8, lamp 56),
+    # but gives it wire code 73, the code of BONUS 4 on J11-14 (by6803.c 10,
+    # J12-12; first page), while J12-14's phase-A lamp DROP TARGET 14 has
+    # wire code 45. Following the wire code, SAUCER 100K is J11-14/J12-12
+    # phase B, 10 + 48 = 58. Measured: tests/8bc-deluxe/saucer.tests.ps1 (58
+    # blinks once 5x is collected; 56 stays dark). The connector conflict is
+    # listed for the user in the Task 8c report. Checked in names.tests.ps1
+    # "Saucer and bonus multiplier lamps are J12 phase B pins".
     Lamps = @{
+        'Saucer 2X'             = 57
+        'Saucer 3X'             = 73
+        'Saucer 5X'             = 89
+        'Saucer 100,000'        = 58
+        'Bonus Multiplier 2X'   = 74
+        'Bonus Multiplier 3X'   = 90
+        'Bonus Multiplier 5X'   = 59
         'Bonus 120,000'         = 77
         'Bonus 240,000'         = 93
         'Ball "B"'              = 83

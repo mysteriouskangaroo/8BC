@@ -91,6 +91,12 @@ $ExpectedSpinnerLamps = [ordered]@{ 'Spinner 1,000' = 34 + 48; 'Spinner 3,000' =
 # by6803.c: 1, 17, 33, 2, 18, 37, 6.
 $ExpectedChampLamps = [ordered]@{ '"C" Rollover' = 1 + 48; '"H" Rollover' = 17 + 48; '"A" Rollover' = 33 + 48; '"M" Rollover' = 2 + 48
                                   '"P" Rollover' = 18 + 48; 'Left Outlane' = 37 + 48; 'Right Outlane' = 6 + 48 }
+# Same table: SAUCER 2X/3X/5X on J12-13, J12-7, J12-2 and 2X/3X/5X on J12-8,
+# J12-3, J12-11, phase B; by6803.c: 9, 25, 41, 26, 42, 11. SAUCER 100K: wire
+# code 73 is BONUS 4's line J11-14/J12-12 (by6803.c 10), not the printed
+# J12-14 (GameNames.psd1 Lamps comment).
+$ExpectedSaucerLamps = [ordered]@{ 'Saucer 2X' = 9 + 48; 'Saucer 3X' = 25 + 48; 'Saucer 5X' = 41 + 48; 'Saucer 100,000' = 10 + 48
+                                   'Bonus Multiplier 2X' = 26 + 48; 'Bonus Multiplier 3X' = 42 + 48; 'Bonus Multiplier 5X' = 11 + 48 }
 
 # ---- Pure table checks (no emulator). ----
 
@@ -110,6 +116,8 @@ $badSpin = @(); foreach ($k in $ExpectedSpinnerLamps.Keys) { if ($N.Lamps[$k] -n
 Test-EbcItem -Name 'Spinner value lamps are J10-17, J10-3 and J10-9 phase B' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badSpin.Count -eq 0) ("wrong: " + ($badSpin -join '; ')) }
 $badChamp = @(); foreach ($k in $ExpectedChampLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedChampLamps[$k]) { $badChamp += "$k=$($N.Lamps[$k]) (expected $($ExpectedChampLamps[$k]))" } }
 Test-EbcItem -Name 'C-H-A-M-P and outlane lamps are J10 phase B pins' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badChamp.Count -eq 0) ("wrong: " + ($badChamp -join '; ')) }
+$badSaucer = @(); foreach ($k in $ExpectedSaucerLamps.Keys) { if ($N.Lamps[$k] -ne $ExpectedSaucerLamps[$k]) { $badSaucer += "$k=$($N.Lamps[$k]) (expected $($ExpectedSaucerLamps[$k]))" } }
+Test-EbcItem -Name 'Saucer and bonus multiplier lamps are J12 phase B pins' -Doc 'OPS manual lamp driver locations; pinmame by6803.c connector table' -Body { Assert-EbcTrue ($badSaucer.Count -eq 0) ("wrong: " + ($badSaucer -join '; ')) }
 Test-EbcItem -Name 'Rebound sound is 0x22' -Doc 'GAME_RULE_TRACES.md Switch 07: Rebound' -Body { Assert-EbcEqual -Expected $ExpectedReboundSound -Actual $N.Sounds.Rebound -What 'Sounds.Rebound' }
 
 # ---- Play checks (one boot). ----
