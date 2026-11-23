@@ -6,6 +6,7 @@
   sound $2A; the rest is 7.
 - Probes 444, 555, 777 and 888 must not count.
 - An untagged clause scores 321.
+- Index 6543 and placeholder 3 must not count.
 
 ## Next section
 

@@ -21,6 +21,11 @@ $Rules = 'src/8bc-deluxe/gamerules.md "Existing rules established in the origina
 
 # "Hole / saucer": the 100,000 playfield award is scaled to 10,000 displayed.
 $Award100K = 100000 / 10
+# "Collect 100,000, verify it awards 10,000 at 1x": the playfield multiplier
+# when the first 100,000 is collected, from the CHAMP completion state 10C0
+# (bit 10 = double, bit 20 = triple; GAME_RULE_TRACES.md "Playfield Scores
+# Double and Triple"). This file completes no C-H-A-M-P.
+$CollectAt = 1
 # "The inserts represent 7x as 2x+5x, 8x as 3x+5x, and 10x as 2x+3x+5x, with
 # the complete combination and 100,000 blinking in phase."
 $Combo = @{ 2 = @('2X'); 3 = @('3X'); 5 = @('5X'); 100 = @('100,000'); 7 = @('2X', '5X', '100,000'); 8 = @('3X', '5X', '100,000'); 10 = @('2X', '3X', '5X', '100,000') }
@@ -91,12 +96,14 @@ function Invoke-SpinnerTransition {
 function Invoke-Transition { if (((Get-Location) -band 3) -eq 2) { Invoke-SpinnerTransition } else { Invoke-OrbitTransition } }
 # A saucer hit: score, the 7B-7D announcements, then the inserts and the
 # earned multiplier.
+function Get-Playfield { $c = Get-EbcChampState; if ($c -band 0x20) { 3 } elseif ($c -band 0x10) { 2 } else { 1 } }
 function Invoke-Saucer {
+    $playfield = Get-Playfield
     $seen = Get-EbcEventCount
     $d = Invoke-EbcScoredHit 'Saucer' -AfterSolenoid 'Saucer'
     Step-EbcFrames -Frames 30
     $ann = @(Get-Commands $seen | Where-Object { $_ -ge 0x7B -and $_ -le 0x7D } | ForEach-Object { '{0:X2}' -f $_ })
-    [PSCustomObject]@{ Score = $d; Announce = ($ann -join ' '); Inserts = (Get-Inserts); Earned = (Get-Earned) }
+    [PSCustomObject]@{ Score = $d; Announce = ($ann -join ' '); Inserts = (Get-Inserts); Earned = (Get-Earned); Playfield = $playfield }
 }
 
 function Show([string]$What) { [PSCustomObject]@{ What = $What; Inserts = (Get-Inserts); Earned = (Get-Earned) } }
@@ -161,8 +168,8 @@ Test-EbcItem -Name 'While 100,000 is already lit, another active collect changes
     Assert-EbcEqual -Expected $want -Actual $seen -What 'inserts after a transition while an award is lit'
 }
 Test-EbcItem -Name 'Collecting 100,000 awards 10,000 at 1x and every next-award lamp turns off' -Doc "$Doc; $Hole" -Body {
-    $seen = "score $($c1.Score), announcements [$($c1.Announce)], inserts $($c1.Inserts), earned $($c1.Earned)x"
-    Assert-EbcEqual -Expected "score $Award100K, announcements [], inserts dark, earned 5x" -Actual $seen -What 'the first 100,000'
+    $seen = "playfield $($c1.Playfield)x: score $($c1.Score), announcements [$($c1.Announce)], inserts $($c1.Inserts), earned $($c1.Earned)x"
+    Assert-EbcEqual -Expected "playfield ${CollectAt}x: score $Award100K, announcements [], inserts dark, earned 5x" -Actual $seen -What 'the first 100,000'
 }
 Test-EbcItem -Name 'The first qualifying transition blinks 7x+100,000 (2x+5x+100,000 lamps) while bonus remains 5x; its collection earns 7x and darkens the combination' -Doc "$Doc; $Hole" -Body {
     $seen = "$($t7.What): $($t7.Inserts), earned $($t7.Earned)x; collected: score $($c7.Score), inserts $($c7.Inserts), earned $($c7.Earned)x"

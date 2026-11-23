@@ -106,8 +106,9 @@ try {
         'MISSING 444 :: clause 2 (Probes 444, 555, 777 and) :: tagged 8bc-deluxe/a.tests.ps1', 'MISSING 555 :: clause 2 (Probes 444, 555, 777 and) :: tagged 8bc-deluxe/a.tests.ps1',
         'MISSING 777 :: clause 2 (Probes 444, 555, 777 and) :: tagged 8bc-deluxe/a.tests.ps1', 'MISSING 888 :: clause 2 (Probes 444, 555, 777 and) :: tagged 8bc-deluxe/a.tests.ps1',
         'MISSING 321 :: clause 3 (An untagged clause scores 321.) :: tagged by no file',
-        'Deluxe coverage: 12 clause numbers in 3 clauses, 6 covered, 6 missing, 0 bad tags, 1 test files')
-    Write-Check 'Deluxe coverage: asserted clause numbers covered; -What, name, measurement, filter, message, constant comparison and untagged clause missing; section bounded' ((($cov -join '|') -eq ($covWant -join '|')) -and $covCode -eq 1) ("exit $covCode; output:`n" + ($cov -join "`n"))
+        'MISSING 6543 :: clause 4 (Index 6543 and placeholder 3) :: tagged 8bc-deluxe/a.tests.ps1', 'MISSING 3 :: clause 4 (Index 6543 and placeholder 3) :: tagged 8bc-deluxe/a.tests.ps1',
+        'Deluxe coverage: 14 clause numbers in 4 clauses, 6 covered, 8 missing, 0 bad tags, 1 test files')
+    Write-Check 'Deluxe coverage: asserted clause numbers covered; -What, name, measurement, filter, message, constant comparison, list index, format placeholder and untagged clause missing; section bounded' ((($cov -join '|') -eq ($covWant -join '|')) -and $covCode -eq 1) ("exit $covCode; output:`n" + ($cov -join "`n"))
     Write-Check 'Compared scenario: Normalize applies' (@($cmp | Where-Object { $_ -like 'PASS *two-trees :: Normalize hides the tree' }).Count -eq 1) $cmpAll
 }
 finally {

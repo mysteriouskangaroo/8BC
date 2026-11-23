@@ -43,7 +43,10 @@
 #   5. A number occurs as a numeric constant, as the value of arithmetic over
 #      constants, or as a whole number in a string's literal text (for
 #      example '120K+240K blinking in phase'); the $(...) parts of a string
-#      are followed as expressions, not read as text.
+#      are followed as expressions, not read as text, and -f placeholders
+#      ({3}, {0:X2}) are not text.
+#   6. An index expression ($list[6543]) contributes its list, never its
+#      index.
 # The test name, -Doc and an assertion's -What text are never expected
 # values. Because arithmetic is evaluated, a number matches through the
 # doc's one-tenth scale only when the test writes that arithmetic (5000 / 10
@@ -109,16 +112,19 @@ function Test-HasVariable($a) {
     @($a.FindAll({ param($n) $n -is [Management.Automation.Language.VariableExpressionAst] -and (Get-VarName $n) -notin @('true', 'false', 'null') }, $true)).Count -gt 0
 }
 
+# A string's text with its -f placeholders ({3}, {0:X2}, {1,-8}) blanked.
+function Remove-Placeholders([string]$t) { $t -replace '\{\d+(,-?\d+)?(:[^}]*)?\}', ' ' }
+
 # Visits an expected-value AST by rules 2-5, adding to $script:Facts.
 function Invoke-Visit($a) {
     if ($null -eq $a) { return }
     if ($a -is [Management.Automation.Language.AssignmentStatementAst] -or $a -is [Management.Automation.Language.FunctionDefinitionAst] -or $a -is [Management.Automation.Language.TypeExpressionAst]) { return }
-    if ($a -is [Management.Automation.Language.StringConstantExpressionAst]) { $script:Facts.Strings.Add([string]$a.Value); return }
+    if ($a -is [Management.Automation.Language.StringConstantExpressionAst]) { $script:Facts.Strings.Add((Remove-Placeholders ([string]$a.Value))); return }
     if ($a -is [Management.Automation.Language.ConstantExpressionAst]) { $v = Get-Folded $a; if ($null -ne $v) { $script:Facts.Constants.Add($v) }; return }
     if ($a -is [Management.Automation.Language.ExpandableStringExpressionAst]) {
         $chars = $a.Extent.Text.ToCharArray(); $start = $a.Extent.StartOffset
         foreach ($n in $a.NestedExpressions) { for ($i = $n.Extent.StartOffset - $start; $i -lt $n.Extent.EndOffset - $start; $i++) { $chars[$i] = ' ' } }
-        $script:Facts.Strings.Add((-join $chars))
+        $script:Facts.Strings.Add((Remove-Placeholders (-join $chars)))
         foreach ($n in $a.NestedExpressions) { Invoke-Visit $n }
         return
     }
@@ -151,6 +157,7 @@ function Invoke-Visit($a) {
         Invoke-Visit $a.Left; Invoke-Visit $a.Right
         return
     }
+    if ($a -is [Management.Automation.Language.IndexExpressionAst]) { Invoke-Visit $a.Target; return }
     if ($a -is [Management.Automation.Language.InvokeMemberExpressionAst]) { Invoke-Visit $a.Expression; foreach ($x in @($a.Arguments)) { Invoke-Visit $x }; return }
     if ($a -is [Management.Automation.Language.MemberExpressionAst]) { Invoke-Visit $a.Expression; return }
     foreach ($c in @($script:Children[$a])) { if ($null -ne $c) { Invoke-Visit $c } }
