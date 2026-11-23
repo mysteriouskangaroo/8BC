@@ -128,6 +128,28 @@ drain and ball transitions, scoring, tilt, switches, lamps, displays, sounds,
 and all service tests. Before burning an EPROM, review timing-sensitive
 interrupt and momentary-solenoid changes separately.
 
+Game tests
+----------
+
+Run the scripted game tests for this tree from the repository root:
+
+  pwsh tools/Invoke-GameTests.ps1 -Tree originals
+
+It builds the tree, then runs each test file against the packaged
+eballchp.zip. Run one file, folder or glob with -Path:
+
+  pwsh tools/Invoke-GameTests.ps1 -Tree originals -Path <file>
+
+Tests in tests/compare/ run only when every tree named on the file's
+"# Trees:" line is selected, so the default command (all three trees) runs
+them and -Tree originals alone does not. The result lines are written to
+build/game-tests/report.txt.
+
+A pass proves that the scripted scenarios gave the expected switch, lamp,
+solenoid, sound-command, display and RAM results in libpinmame. It does not
+prove ball physics, real switch timing, or hardware I/O timing and safety. A
+FAIL may be a doc/ROM mismatch awaiting a ruling.
+
 Source maintenance
 ------------------
 
