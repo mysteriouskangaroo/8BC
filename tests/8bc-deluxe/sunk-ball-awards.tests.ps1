@@ -47,11 +47,12 @@ $FirstBall = @{ 1 = 1; 2 = 9; 3 = 1; 4 = 9 }
 # shoot prompts for ball 1-15 (prompt - 40 = ball).
 $PromptLow = 0x41; $PromptHigh = 0x4F
 # 5,000 DROP TARGET 3 (GameNames.psd1 Lamps, from the manual's lamp table).
-# The original ROM flashes it while the reset target 3 is worth 5,000 and
-# darkens it when that target is hit (GAME_RULE_TRACES.md "Pool-ball drop
-# targets": D034 updates the 5,000 lamp effect through 10BF; measured the
-# same in the originals tree); "retains the physical 5,000 lamp effect" means
-# Deluxe must do the same.
+# "Retains the physical 5,000 lamp effect" means the original ROM's effect:
+# the lamp flashes while the reset target 3 is worth 5,000 and goes dark when
+# that target is hit (GAME_RULE_TRACES.md "Pool-ball drop targets": D034
+# updates it through 10BF). tests/compare/original-vs-deluxe-5000-lamp.tests.ps1
+# shows the original ROM and Deluxe light it identically frame by frame; this
+# file checks the flash and the dark lamp on Deluxe in a four-player game.
 $Lamp5000 = Get-EbcLampNumber '5,000 Drop Target 3'
 $LampSampleFrames = 32
 

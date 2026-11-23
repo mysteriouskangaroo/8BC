@@ -127,7 +127,8 @@
     # J13-10, phase A; by6803.c converts J13-10 to 46, phase A unchanged.
     # Measured: tests/8bc-deluxe/sunk-ball-awards.tests.ps1 (46 flashes once
     # Drop Target 3,11 is reset with ball 3 sunk, and goes dark when the reset
-    # target is hit; the original ROM does the same). Checked in
+    # target is hit) and tests/compare/original-vs-deluxe-5000-lamp.tests.ps1
+    # (the original ROM lights it identically). Checked in
     # names.tests.ps1 "5,000 drop target 3 lamp is J13-10 phase A".
     Lamps = @{
         'Bonus 120,000'         = 77
