@@ -5,9 +5,9 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # their operator settings. Two one-player games by play, one with both recall
 # settings on and one with both off, each set through the service menu.
 #
-# Measured on the original ROM (same play, scratch probe): register 48 = 0
-# shows no orbit value on ball 2 after a 30,000 ball 1, and 48 = 1 shows
-# 30,000.
+# On the original ROM, register 48 = 0 resets a 30,000 orbit value at the
+# next ball and 48 = 1 keeps it: tests/compare/original-vs-deluxe-orbit-recall
+# .tests.ps1 plays both settings on both trees.
 #
 # Ball 1 of each game moves every state away from its start: an orbit collect
 # (the location becomes spinner inactive, the orbit value 30,000), a new
