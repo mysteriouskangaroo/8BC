@@ -50,7 +50,7 @@ for ($g = 0; $g -lt $Games; $g++) {
     $score = [long](Get-EbcScoreBufferText (Get-EbcRamAddress 'ScoreBuffer1'))
     Step-EbcFrames -Frames $SettleFrames
     $r = [PSCustomObject]@{
-        Game = $g + 1; Outcome = $outcome; EndFrame = $end; Score = $score; Tens = [int](($score / 10) % 10)
+        Game = $g + 1; Outcome = $outcome; EndFrame = $end; Score = $score; Tens = [int]([Math]::Floor($score / 10) % 10)
         Digit = ((Read-EbcByte $MatchAt) -band $MatchMask) -shr 4
         Shown = Get-EbcDisplayText (Get-EbcNames).Displays.Status
         Award = (Get-EbcCredits) - $credits
