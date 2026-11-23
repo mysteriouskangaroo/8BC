@@ -10,6 +10,7 @@ $Doc = 'OPS manual p. 1-3/1-4, REGISTER 23 balls per game'
 $BallsRegister = 23
 $FactoryBalls = 3
 $NewBalls = 5
+$SecondRegister = 50
 # Presses this schedule needs (measured): the first self-test press at frame
 # 1500 enters keypad mode; keying 2, 3, Enter, 5, Enter is 5 key presses; one
 # Cancel leaves.
@@ -31,5 +32,16 @@ Test-EbcItem -Name 'Set-EbcAdjustment changes a setting' -Doc $Doc -Body {
     $null = Start-EbcPlay
     $balls = Complete-EbcGame
     Assert-EbcEqual -Expected $NewBalls -Actual $balls -What 'balls in a one-player game'
+}
+# Manual p. 1-4: a stored register stays selected for corrections; p. 1-3:
+# Clear (KEYBD/CLR) shows 00, ready for another register number.
+Test-EbcItem -Name 'Set-EbcAdjustment sets two registers in one session' -Doc $Doc -Body {
+    Enter-EbcServiceMode | Out-Null
+    Assert-EbcEqual -Expected $ExpectedKeyPresses -Actual (Set-EbcAdjustment -Number $BallsRegister -Value $FactoryBalls) -What 'key presses for register 23 (status 00)'
+    # Register 50 = 1 keeps the Squawk & Talk board selected (manual p. 1-10;
+    # a fresh NVRAM already has it). Clear, 5, 0, Enter, 1, Enter.
+    Assert-EbcEqual -Expected ($ExpectedKeyPresses + 1) -Actual (Set-EbcAdjustment -Number $SecondRegister -Value 1) -What 'key presses for register 50 (Clear first)'
+    Assert-EbcEqual -Expected $FactoryBalls -Actual (Get-BallsSetting) -What 'balls-per-game byte after both entries'
+    Exit-EbcServiceMode | Out-Null
 }
 Complete-EbcTests

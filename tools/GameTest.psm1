@@ -462,11 +462,21 @@ function Invoke-EbcKey([Parameter(Mandatory = $true)][string]$Key) {
 # the register number's digits then Enter show the number on the match/credit
 # display and the value on Player 1; the value's digits (shown on Player 2)
 # then Enter store it, and Player 1 shows it. Throws when a display disagrees.
-# Returns the number of key presses.
+# A stored register stays selected, and further digits correct its value
+# (manual p. 1-4); so when the match/credit display is not 00, Clear is
+# pressed first to return it to 00 (manual p. 1-3: KEYBD/CLR displays 00;
+# measured: after storing register 24, keying 2, 6, Enter changes register
+# 24's value instead of selecting 26). Returns the number of key presses.
 function Set-EbcAdjustment {
     param([Parameter(Mandatory = $true)][ValidateRange(1, 99)][int]$Number,
           [Parameter(Mandatory = $true)][ValidateRange(0, 9999999)][long]$Value)
     $presses = 0
+    if ((Get-EbcStatusText) -ne '00') {
+        Invoke-EbcKey 'Clear'; $presses++
+        Step-EbcFrames -Frames 60
+        $status = Get-EbcStatusText
+        if ($status -ne '00') { throw "Set-EbcAdjustment: status display '$status' after Clear, expected '00'." }
+    }
     $digits = '{0:D2}' -f $Number
     foreach ($c in $digits.ToCharArray()) { Invoke-EbcKey ([string]$c); $presses++ }
     Invoke-EbcKey 'Enter'; $presses++
