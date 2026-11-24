@@ -362,8 +362,10 @@ The three physical paths that end an active collect call
 `DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION` only after storing the next
 inactive state: either orbit chase advances to spinner inactive, and spinner
 first-pulse collection advances the main location to orbit inactive. That same
-pulse loads `10FC`, creating a separate spinner-collecting scoring overlay;
-every continuing pulse retains the lit value and refreshes that timer. Because
+pulse sets the active flag at `10FC` and loads the big-endian 16-bit inactivity
+timer at `1117-1118` with `0258`, creating a separate spinner-collecting scoring
+overlay for approximately ten seconds; every continuing pulse retains the lit
+value and refreshes the full timer. Because
 the location is already orbit inactive, a newly sunk pool ball can activate it
 before the spinner stops. Timer expiration ends only the overlay and never
 overwrites the possibly reactivated orbit state. The helper requires both

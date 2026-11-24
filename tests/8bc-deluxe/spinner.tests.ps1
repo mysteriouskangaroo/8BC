@@ -51,16 +51,20 @@ $TierSound = @{ 10 = $Sound100; 100 = $Sound1K; 300 = $Sound3K; 400 = $Sound3K; 
 # awards 250 at 1x, 500 at 2x, 750 at 3x.
 $LetterAward = @{ 1 = 250; 2 = 500; 3 = 750 }
 # CHAMP completions 2 and 4 light 2x and 3x (gamerules.md "CHAMP").
-# "about three seconds" / "about two seconds": FramesPerSecond x 3 or x 2,
-# +- 20% (the brief's timing windows).
+# The preview is about three seconds. Spinner collecting now uses a 600-tick
+# hardware timeout (about ten seconds). DELUXE_PERIODIC_TICK runs twice per
+# libpinmame video frame, so the expected emulator duration is 300 frames.
 $Fps = (Get-EbcNames).FramesPerSecond
 $PreviewMin = [int]($Fps * 3 * 0.8); $PreviewMax = [int]($Fps * 3 * 1.2)
-$StopMin = [int]($Fps * 2 * 0.8); $StopMax = [int]($Fps * 2 * 1.2)
-# Pulses 40 frames apart keep spinning; four of them span 160 frames, longer
-# than the longest stop the doc allows ($StopMax), so they score only if each
+$SpinnerCollectingTicks = 0x0258
+$PeriodicTicksPerFrame = 2
+$StopFrames = [int]($SpinnerCollectingTicks / $PeriodicTicksPerFrame)
+$StopMin = [int]($StopFrames * 0.8); $StopMax = [int]($StopFrames * 1.2)
+# Pulses 200 frames apart keep spinning; four of them span 800 frames, longer
+# than the longest emulated stop window ($StopMax), so they score only if each
 # refreshes the timer. A pulse $StopMin - 1 frames after the last is still
-# within "roughly two seconds"; one $StopMax + 6 frames after is past it.
-$RefreshGap = 40
+# within the ten-second hardware timeout; one $StopMax + 6 frames after is past it.
+$RefreshGap = 200
 $GapsAt100 = @(0, $RefreshGap, $RefreshGap, $RefreshGap, $RefreshGap, ($StopMin - 1), ($StopMax + 6))
 # Register 49 (OPS manual p. 1-5, "Spinner start at": 1 = 1000 points). The
 # doc starts every ball at the printed 1,000; the setting is made explicit.
@@ -68,9 +72,11 @@ $StartRegister = 49
 $StartSetting = 1
 # Timers read only, to find frames: the spinner preview (src/8bc-deluxe/asm/
 # symbols.inc DELUXE_SPINNER_PREVIEW_TIMER, 1114) and spinner collecting
-# (DELUXE_SPINNER_COLLECTING_TIMER, 10FC).
+# active flag (DELUXE_SPINNER_COLLECTING_ACTIVE, 10FC) and big-endian 16-bit
+# inactivity timer (DELUXE_SPINNER_COLLECTING_TIMER, 1117-1118).
 $PreviewTimer = 0x1114
-$CollectingTimer = 0x10FC
+$CollectingActive = 0x10FC
+$CollectingTimer = 0x1117
 # Frames read after a letter hit: past any preview.
 $WatchFrames = [int]($Fps * 3 * 1.2) + 90
 # The preview's unlit pulse comes this many frames after the preview starts.
@@ -90,6 +96,7 @@ $ResetBy = @{}; foreach ($s in $standups.Keys) { $ResetBy[$standups[$s]] = $s }
 $LetterOf = @{ E = 'Drop Target "E"'; I = 'Drop Target "I"'; G = 'Drop Target "G"'; H = 'Drop Target "H"'; T = 'Drop Target "T"' }
 
 function Get-Pattern($Lamps) { (@($Lamps | ForEach-Object { if (Get-EbcLamp -Number $_) { '#' } else { '.' } }) -join '') }
+function Get-CollectingTimer { $b = Read-EbcRam -Address $CollectingTimer -Count 2; (([int]$b[0]) -shl 8) -bor ([int]$b[1]) }
 function ConvertTo-Spin([string]$p) { $v = 0; for ($k = 0; $k -lt 3; $k++) { if ($p[$k] -eq '#') { $v += $SpinValues[$k] } }; $v }
 # The value the spinner lamps show, sampled for $LampSampleFrames frames:
 # the value when the lamps are steady, else 'blinking' or 'dark'.
@@ -142,7 +149,7 @@ function Invoke-Pulses([int[]]$Gaps, [string]$Sink, [int]$SinkAt = -1) {
         if ($Sink -and $k -eq $SinkAt) { $atSink = Get-Total; Set-EbcSwitch -Number (Get-EbcSwitch $Sink) -Closed $true }
         if ($Sink -and $k -eq $SinkAt + 4) { Set-EbcSwitch -Number (Get-EbcSwitch $Sink) -Closed $false }
         Step-EbcFrames -Frames 1
-        $timer += Read-EbcByte $CollectingTimer
+        $timer += Get-CollectingTimer
         $arrows += Get-ArrowsLit
     }
     $tail = Get-EbcEventCount
@@ -158,7 +165,7 @@ function Invoke-Pulses([int[]]$Gaps, [string]$Sink, [int]$SinkAt = -1) {
 function Invoke-Pulse { $r = Invoke-Pulses @(0); Step-EbcFrames -Frames 30; $r.Pulses[0] }
 # Steps until spinner collecting has ended (the collecting timer at 0), then
 # 30 frames more.
-function Wait-SpinnerStopped { for ($k = 0; (Read-EbcByte $CollectingTimer) -ne 0; $k++) { if ($k -gt 1200) { throw 'spinner collecting did not end within 1,200 frames' }; Step-EbcFrames -Frames 1 }; Step-EbcFrames -Frames 30 }
+function Wait-SpinnerStopped { for ($k = 0; (Read-EbcByte $CollectingActive) -ne 0; $k++) { if ($k -gt 1200) { throw 'spinner collecting did not end within 1,200 frames' }; Step-EbcFrames -Frames 1 }; Step-EbcFrames -Frames 30 }
 # A newly sunk ball through $Group; throws if it sank nothing new.
 function Invoke-Sink([string]$Group) {
     $sunk = Get-EbcSunkBalls
@@ -332,7 +339,7 @@ $Collected = $script:Collected
 # frames from that pulse's closure (read only, reported with the stop item).
 $lastLit = @($seq100.Pulses | Where-Object { $_.Score -eq 100 })[-1].At
 $stopFrames = -1; for ($k = $lastLit; $k -lt $seq100.Timer.Count; $k++) { if ($seq100.Timer[$k] -eq 0) { $stopFrames = $k - $lastLit + 1; break } }
-Write-Host ("spinner collecting ended {0} frames after the last lit pulse (DELUXE_SPINNER_COLLECTING_TICKS 78 at 2 ticks per frame); previews lit runs (from the letter's closure, +frames): I [{1}], G [{2}], G at 2x [{3}]" -f $stopFrames, (Format-Runs $p1), (Format-Runs $p3), (Format-Runs $p4))
+Write-Host ("spinner collecting ended {0} frames after the last lit pulse (DELUXE_SPINNER_COLLECTING_TICKS 0258 at 2 ticks per frame); previews lit runs (from the letter's closure, +frames): I [{1}], G [{2}], G at 2x [{3}]" -f $stopFrames, (Format-Runs $p1), (Format-Runs $p3), (Format-Runs $p4))
 
 Test-EbcItem -Name 'Spinner values and lamps advance through the weighted binary states (printed 1,000 -> 3,000 -> 4,000 -> 5,000 -> 6,000 -> 8,000 -> 9,000, scoring 100 -> 300 -> 400 -> 500 -> 600 -> 800 -> 900), and the visible lamp combinations include both 8K and 9K' -Doc "$Doc; $Spin" -Body {
     # The value each activation shows (one new letter between activations),
@@ -431,7 +438,7 @@ Test-EbcItem -Name 'Every continuing spinner pulse retains its lit value and mul
     $want = @(0..4 | ForEach-Object { "1x pulse at +$($_ * $RefreshGap): 100" }) + @(0..2 | ForEach-Object { "2x pulse at +$($_ * $RefreshGap): 1800" }) + @(0..2 | ForEach-Object { "3x pulse at +$($_ * $RefreshGap): 2700" })
     Assert-EbcEqual -Expected $want -Actual $seen -What 'continuing pulses'
 }
-Test-EbcItem -Name "Roughly two seconds with no pulse ends spinner scoring (timing window: $StopMin-$StopMax frames)" -Doc "$Doc; $Spin" -Body {
+Test-EbcItem -Name "Roughly ten hardware seconds with no pulse ends spinner scoring (libpinmame timing window: $StopMin-$StopMax frames)" -Doc "$Doc; $Spin" -Body {
     # A pulse $($StopMin - 1) frames after the last is inside the window, so
     # still lit; one $($StopMax + 6) frames after that is past it.
     $seen = @($seq100.Pulses[5..6] | ForEach-Object { "pulse $($_.At - $seq100.At[[Array]::IndexOf($seq100.At, $_.At) - 1]) frames after the previous: $($_.Score)" })

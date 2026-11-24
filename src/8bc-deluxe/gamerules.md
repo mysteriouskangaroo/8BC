@@ -192,7 +192,7 @@ completion milestones, or the C/P anti-shatz latch.
   1,000 sound; printed 3,000 and 4,000 use the 3,000 sound; and printed 5,000,
   6,000, 8,000, and 9,000 use the 5,000 sound.
 - While spinner is collecting, every pulse retains the displayed value and
-  playfield multiplier and refreshes the approximately two-second stop timer.
+  playfield multiplier and refreshes the approximately ten-second stop timer.
 - When that timer expires with no further pulse, the spinner is considered to
   have stopped. Expiration ends only the spinner scoring overlay; it does not
   overwrite the orbit location, which may already have been activated by a
@@ -583,7 +583,7 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   the displayed value while immediately making the orbit location inactive.
   Before the spinner stops, sink a new pool ball and verify the orbit collect
   lights. Verify every continuing spinner pulse retains its lit value and
-  multiplier and refreshes the stop timer. Roughly two seconds with no pulse
+  multiplier and refreshes the stop timer. Roughly ten seconds with no pulse
   must end only spinner scoring without clearing or moving the orbit state.
 - Verify the saucer displays and collects 2x, then 3x, then 5x without any
   collect transition changing or skipping those steps. Verify collecting 5x

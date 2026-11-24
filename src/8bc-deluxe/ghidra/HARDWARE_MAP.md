@@ -100,7 +100,7 @@ parallel arrays; active-player mirrors and temporary work remain shared.
 | Address | Storage role | Meaning |
 | --- | --- | --- |
 | `10FB` | Live rule state | Collect location in bits 0-1; active flag in bit 2; terminal saucer waiting flag in bit 6; collect-deactivation authorization in bit 7 |
-| `10FC` | Timer | Spinner inactivity countdown |
+| `10FC` | Live rule state | Spinner-collecting active flag; zero makes spinner pulses unlit unless the main collect location is spinner-active |
 | `10FD` | Current ball | C-H-A-M-P completion count for the current ball |
 | `10FE` | Live rule state | Spinner weighted binary value mask (`$20/$40/$80`) |
 | `10FF` | Live rule state | Retained orbit-value low nibble while inactive orbit lamps are hidden |
@@ -116,7 +116,8 @@ parallel arrays; active-player mirrors and temporary work remain shared.
 | `1113` | Lamp-overlay state | Called-ball lamp ID whose reversible flash overlay is applied |
 | `1114` | Timer | Temporary spinner-value preview countdown |
 | `1115` | Timer | Temporary orbit-value preview countdown after a right-orbit collect |
-| `1116-1118` | Unassigned | No Deluxe symbol; do not claim without a fresh original-ROM trace |
+| `1116` | Sound context | Nonzero only around a terminal right-orbit Special so the common sound hook sends `$6F` twice |
+| `1117-1118` | Timer | Big-endian 16-bit spinner-collecting inactivity countdown; reloaded to `$0258` by each registered pulse |
 | `1119-111E` | Lamp-output scratch | Six-byte Phase-B copy for player-specific rack/B-A-L-L "more" blinks |
 | `111F-1125` | Display-overlay scratch | Seven-digit sunk-ball award in canonical ones-first display format |
 | `1126` | Timer | Sunk-ball award display countdown |

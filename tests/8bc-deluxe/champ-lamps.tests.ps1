@@ -50,7 +50,7 @@ $OutlaneLamps = @((Get-EbcLampNumber 'Left Outlane'), (Get-EbcLampNumber 'Right 
 $SpinLamps = @('Spinner 1,000', 'Spinner 3,000', 'Spinner 5,000' | ForEach-Object { Get-EbcLampNumber $_ })
 $Knocker = Get-EbcSolenoid 'Knocker'
 $Fps = (Get-EbcNames).FramesPerSecond
-$SpinnerStopFrames = $Fps * 3
+$SpinnerStopFrames = $Fps * 11
 $LampSampleFrames = 32
 $WatchFrames = 420
 

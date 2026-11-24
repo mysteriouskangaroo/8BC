@@ -35,8 +35,9 @@ The fix then goes in that file.
    - The spinner's E-I-G-H-T preview lasts 90 frames, against "about three
      seconds". The source comment calls its `$BF` constant 3.2 s; it runs
      1.6 s.
-   - Spinner collecting ends 61 frames after the last pulse, against "roughly
-     two seconds".
+   - Spinner collecting now ends about 301 frames after the last pulse (the
+     `$0258` timer runs for about 5 emulator seconds), against the requested
+     "roughly ten seconds" on physical hardware.
 
    Should the constants be doubled, or the doc changed? Tests:
    `tests/8bc-deluxe/sunk-ball-awards.tests.ps1`,

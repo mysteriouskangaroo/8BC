@@ -11,11 +11,15 @@ DELUXE_PERIODIC_TICK:
 ; then execute that displaced load last so C151 sees the same X value and
 ; condition codes as canonical.
         PSHA
-        LDAA DELUXE_SPINNER_COLLECTING_TIMER
+        TST DELUXE_SPINNER_COLLECTING_ACTIVE
         BEQ DELUXE_SPINNER_PREVIEW_TICK
-        DECA
-        STAA DELUXE_SPINNER_COLLECTING_TIMER
+        LDX DELUXE_SPINNER_COLLECTING_TIMER
+        BEQ DELUXE_SPINNER_COLLECTING_EXPIRED
+        DEX
+        STX DELUXE_SPINNER_COLLECTING_TIMER
         BNE DELUXE_SPINNER_PREVIEW_TICK
+DELUXE_SPINNER_COLLECTING_EXPIRED:
+        JSR DELUXE_CLEAR_SPINNER_COLLECTING
 ; Spinner collecting is independent of the current collect location. The first
 ; pulse already advanced that location to orbit inactive, and a new pool ball
 ; may since have activated the orbit. Expiration ends only the spinner scoring
@@ -28,7 +32,7 @@ DELUXE_PERIODIC_TICK:
         CLR $10b1
         CLR $10b2
 ; Keep the following routines at their established addresses.
-        dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01
+        dc.b $01,$01
 DELUXE_SPINNER_PREVIEW_TICK:
 ; A newly collected E-I-G-H-T letter starts this roughly 3.2-second lamp-only
 ; preview while the spinner collect is inactive. Bit 4 supplies a roughly
@@ -145,7 +149,7 @@ DELUXE_INITIALIZE_BALL:
         JSR DELUXE_CANCEL_SUNK_BALL_SCORE_DISPLAY
         LDAA #DELUXE_COLLECT_OPENING_ORBIT
         STAA DELUXE_COLLECT_STATE
-        CLR DELUXE_SPINNER_COLLECTING_TIMER
+        JSR DELUXE_CLEAR_SPINNER_COLLECTING
         CLR DELUXE_SPINNER_PREVIEW_TIMER
         CLR DELUXE_ORBIT_PREVIEW_TIMER
         CLR DELUXE_CHAMP_COMPLETION_COUNT
@@ -215,12 +219,14 @@ DELUXE_SPINNER_QUEUE_SOUND:
 ; the orbit in the meantime. The weighted bits are worth 1k, 3k, and 5k.
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
-        TST DELUXE_SPINNER_COLLECTING_TIMER
+        TST DELUXE_SPINNER_COLLECTING_ACTIVE
         BNE DELUXE_REFRESH_SPINNER_COLLECTING_TIMER
         JSR DELUXE_BEGIN_SPINNER_COLLECTING
 DELUXE_REFRESH_SPINNER_COLLECTING_TIMER:
-        LDAA #DELUXE_SPINNER_COLLECTING_TICKS
-        STAA DELUXE_SPINNER_COLLECTING_TIMER
+; Keep the following fixed-address score path in place while a tail helper
+; reloads the new 16-bit ten-second timer and its one-byte active flag.
+        JSR DELUXE_RELOAD_SPINNER_COLLECTING_TIMER
+        dc.b $01,$01
         CLRB
         LDAA DELUXE_SPINNER_VALUE_MASK
         BITA #DELUXE_SPINNER_1000_LAMP
@@ -1827,7 +1833,7 @@ DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE:
 ; post-hit collecting timer is running. This keeps sound, scoring, and E-I-G-H-T
 ; lamp updates on the lit spinner path while allowing the orbit location to
 ; advance and reactivate concurrently.
-        LDAA DELUXE_SPINNER_COLLECTING_TIMER
+        LDAA DELUXE_SPINNER_COLLECTING_ACTIVE
         BNE DELUXE_SPINNER_COLLECT_TEST_TRUE
         LDAA DELUXE_COLLECT_STATE
         ANDA #DELUXE_COLLECT_STATE_MASK
@@ -1882,6 +1888,26 @@ DELUXE_STARTUP_MUSIC_TEST_PENDING:
         STAA PENDING_SOUND_COMMAND
         CLR DELUXE_STARTUP_MUSIC_PENDING
 DELUXE_STARTUP_MUSIC_TICK_DONE:
+        RTS
+
+DELUXE_CLEAR_SPINNER_COLLECTING:
+; Keep the public active flag and private big-endian countdown synchronized.
+; Ball initialization uses this helper too, so a drain cannot leave a stale
+; timeout visible to diagnostics even though the flag is authoritative.
+        CLR DELUXE_SPINNER_COLLECTING_ACTIVE
+        CLR DELUXE_SPINNER_COLLECTING_TIMER
+        CLR DELUXE_SPINNER_COLLECTING_TIMER+1
+        RTS
+
+DELUXE_RELOAD_SPINNER_COLLECTING_TIMER:
+; $0258 ticks is approximately ten seconds at the physical machine's periodic
+; gameplay cadence. Each registered spinner pulse reloads the entire window.
+        LDAA #DELUXE_SPINNER_COLLECTING_TICKS_HIGH
+        STAA DELUXE_SPINNER_COLLECTING_TIMER
+        LDAA #DELUXE_SPINNER_COLLECTING_TICKS_LOW
+        STAA DELUXE_SPINNER_COLLECTING_TIMER+1
+        LDAA #$01
+        STAA DELUXE_SPINNER_COLLECTING_ACTIVE
         RTS
 
 DELUXE_AWARD_CURRENT_ORBIT_VALUE_AGAIN:

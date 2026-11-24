@@ -57,9 +57,9 @@ CALLED_BALL_SPEECH_DELAY_TIMER                equ $10B3
 ; parallel persistent values for players 1-4; the other bytes hold active-
 ; player, per-ball, and temporary bonus/display state.
 DELUXE_COLLECT_STATE                         equ $10FB
-; Zero means spinner active but not yet hit. The first registered pulse loads
-; this timer and therefore enters spinner collecting; later pulses refresh it.
-DELUXE_SPINNER_COLLECTING_TIMER              equ $10FC
+; Zero means spinner active but not yet hit. The first registered pulse sets
+; this flag and loads the private 16-bit timer at 1117; later pulses refresh it.
+DELUXE_SPINNER_COLLECTING_ACTIVE             equ $10FC
 DELUXE_CHAMP_COMPLETION_COUNT                equ $10FD
 DELUXE_SPINNER_VALUE_MASK                    equ $10FE
 DELUXE_ORBIT_VALUE_STATE                     equ $10FF
@@ -81,6 +81,9 @@ DELUXE_ORBIT_PREVIEW_TIMER                   equ $1115
 ; Nonzero only while the terminal right orbit is collecting its Special. The
 ; sound hook uses it to send "Super" twice; award processing remains single.
 DELUXE_DOUBLE_RIGHT_ORBIT_SPECIAL_SOUND      equ $1116
+; Big-endian 16-bit spinner-collecting inactivity countdown. The periodic
+; gameplay hook runs at about 60 Hz on hardware; $0258 is about ten seconds.
+DELUXE_SPINNER_COLLECTING_TIMER              equ $1117
 DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1119
 ; Temporary sunk-ball award display. The seven digit bytes use the canonical
 ; player-score layout (ones first, digit in the high nibble). While active,
@@ -158,7 +161,9 @@ DELUXE_SPINNER_1000_LAMP                     equ $20
 DELUXE_SPINNER_3000_LAMP                     equ $40
 DELUXE_SPINNER_5000_LAMP                     equ $80
 DELUXE_SPINNER_ALL_VALUE_LAMPS               equ $E0
-DELUXE_SPINNER_COLLECTING_TICKS              equ $78
+DELUXE_SPINNER_COLLECTING_TICKS              equ $0258
+DELUXE_SPINNER_COLLECTING_TICKS_HIGH         equ $02
+DELUXE_SPINNER_COLLECTING_TICKS_LOW          equ $58
 ; $BF is about 3.2 seconds at this tick rate and begins bit 4 at the start of
 ; a complete visible blink phase instead of entering halfway through one.
 DELUXE_SPINNER_PREVIEW_TICKS                 equ $BF

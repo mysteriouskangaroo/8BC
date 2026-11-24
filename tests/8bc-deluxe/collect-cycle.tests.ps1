@@ -26,10 +26,9 @@ $OrbitActiveMin = 10000 / 10
 # 1,000) and only rises.
 $SpinnerInactive = 10
 $SpinnerActiveMin = 1000 / 10
-# "Spinner": about two seconds with no pulse ends spinner collecting. Waited
-# after a first pulse before the spinner is read again: FramesPerSecond x 3,
-# well past 2 seconds + 20%.
-$StopWaitFrames = (Get-EbcNames).FramesPerSecond * 3
+# "Spinner": about ten hardware seconds with no pulse ends spinner collecting.
+# Wait eleven nominal seconds before reading it again, safely past the timeout.
+$StopWaitFrames = (Get-EbcNames).FramesPerSecond * 11
 
 # Pool balls by drop group in this file's sink order (drop-targets.tests.ps1:
 # group 25 sinks ball 1 then 2, group 28 ball 4 then 5). A group's second
