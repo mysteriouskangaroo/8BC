@@ -102,7 +102,11 @@ function Get-Flashing {
         foreach ($b in $NumberedBalls) { if (Get-EbcLamp -Number $LampOf[$b]) { $lit[$b]++ } }
         if (Get-EbcLamp -Number $Lamp5000) { $k5++ }
     }
-    [PSCustomObject]@{ Flashing = @($NumberedBalls | Where-Object { $lit[$_] -gt 0 -and $lit[$_] -lt $LampSampleFrames }); Lamp5000 = $k5 }
+    [PSCustomObject]@{
+        Flashing = @($NumberedBalls | Where-Object { $lit[$_] -gt 0 -and $lit[$_] -lt $LampSampleFrames })
+        LitCounts = $lit
+        Lamp5000 = $k5
+    }
 }
 function Start-Turn {
     $script:TurnSeen = Get-EbcEventCount
@@ -266,6 +270,19 @@ Test-EbcItem -Name 'No sunk ball keeps the called indication' -Doc "$Doc; $Calle
     $want = @("after ball $($p1[0].Call): flashing sunk []", "after balls $(($p1[0..2] | ForEach-Object { $_.Call }) -join ', ') and $($wrong.Balls -join ''): flashing sunk []")
     Assert-EbcEqual -Expected $want -Actual $seen -What 'sunk balls among the flashing numbered lamps'
 
+}
+Test-EbcItem -Name 'Collected called-ball target lamps are forced dark' -Doc "$Doc; $Called" -Body {
+    $firstSunk = @($p1[0].Call)
+    $laterSunk = @($p1[0..2] | ForEach-Object { $_.Call }) + $wrong.Balls
+    $seen = @(
+        "after ball $($p1[0].Call): lit sunk [$(@($firstSunk | Where-Object { $fAfter1.LitCounts[$_] -gt 0 }) -join ', ')]",
+        "after balls $(($laterSunk) -join ', '): lit sunk [$(@($laterSunk | Where-Object { $fAfter3.LitCounts[$_] -gt 0 }) -join ', ')]"
+    )
+    $want = @(
+        "after ball $($p1[0].Call): lit sunk []",
+        "after balls $(($laterSunk) -join ', '): lit sunk []"
+    )
+    Assert-EbcEqual -Expected $want -Actual $seen -What 'collected numbered target lamps sampled after called sinks'
 }
 Test-EbcItem -Name 'An incorrect sink leaves or moves the flash only as dictated by the next spoken call' -Doc "$Doc; $Called" -Body {
     $seen = "calls spoken after the incorrect sink [$($callsAfterWrong -join ', ')]; flashing [$($fWrong.Flashing -join ', ')]"

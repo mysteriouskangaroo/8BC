@@ -187,8 +187,13 @@ the ROM serializer at `E107-E1EF` map targets 1-7 to `103B` bits 0-6 and
 targets 9-15 to `103C` bits 0-6. Called speech IDs `51-57` select the first
 byte and `59-5F` select the second; the low three ID bits select the exact lamp
 bit. The five shared 5,000 target lamps remain at `103F` bits 0-4. A ball
-already set in `10C3` is omitted, so a sunk ball cannot continue carrying the
-called indication. The complete physical and emulator mapping is recorded in
+already set in `10C3` is masked out of the active player's numbered-target
+shadow after every called-lamp edge. This both omits the called overlay and
+forces the collected target dark when the original steady lamp state would
+otherwise relight it. Odd players mask `103B` (balls 1-7) and even players mask
+`103C` (balls 9-15). The live Phase-A output is active-low, so the helper ORs
+the sunk bits into the selected shadow; unsunk lamp effects and bit 7 remain
+unchanged. The complete physical and emulator mapping is recorded in
 [HARDWARE_MAP.md](HARDWARE_MAP.md).
 
 ## Deluxe Phase-B "more" indicators

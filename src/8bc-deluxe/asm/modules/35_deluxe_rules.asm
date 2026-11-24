@@ -1674,7 +1674,10 @@ DELUXE_FLASH_DROP_TARGET_LAMPS:
 ; reversible overlay on exactly one individually
 ; numbered called-ball lamp. Recording the ID whose XOR is currently applied
 ; lets the next edge restore the original shadow state before changing calls or
-; ending the flash. Entry X is 103A; preserve X and B for C1B3 onward.
+; ending the flash. Finally, mask every ball already recorded in 10C3 out of
+; the active player's numbered-target bank. This prevents the original lamp
+; state from turning a collected called ball steadily on after its XOR overlay
+; is removed. Entry X is 103A; preserve X and B for C1B3 onward.
         LDAA $05,X
         EORA DROP_TARGET_5000_LAMP_FLASH_MASK
         STAA $05,X
@@ -1712,6 +1715,7 @@ DELUXE_CALLED_BALL_LAMP_MASK_READY:
         LDAA CALLED_POOL_BALL_SOUND_ID
         STAA DELUXE_CALLED_BALL_FLASH_APPLIED_ID
 DELUXE_CALLED_BALL_FLASH_DONE:
+        JSR DELUXE_FORCE_SUNK_BALL_LAMPS_DARK
         PULX
         PULB
         RTS
@@ -1738,6 +1742,25 @@ DELUXE_CALLED_BALL_XOR_MASK_READY:
         TBA
         EORA $00,X
         STAA $00,X
+        RTS
+
+DELUXE_FORCE_SUNK_BALL_LAMPS_DARK:
+; 10C3 uses the same low-seven-bit order as each player's numbered target
+; lamp bank. Preserve unsunk lamp effects, including the current called-ball
+; overlay, while forcing every collected ball dark. Odd players shoot solids
+; 1-7 in 103B; even players shoot stripes 9-15 in 103C. These Phase-A shadow
+; bits are active-low at the live lamp output, so setting each sunk bit is the
+; force-off operation. OR leaves unsunk bits and the unrelated bit 7 unchanged.
+        LDAA SUNK_POOL_BALLS_1_TO_7
+        LDAB.w $008f
+        LSRB
+        BCS DELUXE_FORCE_SUNK_SOLID_BALL_LAMPS_DARK
+        ORAA DROP_TARGET_BALLS_9_TO_15_LAMP_SHADOW
+        STAA DROP_TARGET_BALLS_9_TO_15_LAMP_SHADOW
+        RTS
+DELUXE_FORCE_SUNK_SOLID_BALL_LAMPS_DARK:
+        ORAA DROP_TARGET_BALLS_1_TO_7_LAMP_SHADOW
+        STAA DROP_TARGET_BALLS_1_TO_7_LAMP_SHADOW
         RTS
 
 DELUXE_PREPEND_STARTUP_SUPER:

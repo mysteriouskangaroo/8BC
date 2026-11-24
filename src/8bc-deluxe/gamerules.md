@@ -268,9 +268,10 @@ completion milestones, or the C/P anti-shatz latch.
   lamp-flash cadence. Balls 1-7 use the seven solid-ball target lamps and balls
   9-15 use the seven stripe-ball target lamps. The five shared 5,000 target
   lamps retain their original behavior and are not used for this indication.
-  After the ball is sunk, its numbered target lamp stops carrying the called
-  indication; the next spoken selection moves the flash to the newly called
-  target.
+  After a ball is sunk, its numbered target lamp is forced dark even if the
+  original steady lamp state would otherwise relight it. The center sunk-ball
+  indication remains authoritative, and the next spoken selection moves the
+  flash to the newly called target.
 - Called ball score begins at a 5,000 playfield value, displayed as 500 under
   Deluxe's divide-by-ten score scale. Every successful called ball advances the
   next value by 5,000 playfield points: 5,000, 10,000, 15,000, and so on
@@ -499,8 +500,9 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
 - Verify the individually numbered physical drop-target lamp for the spoken
   ball flashes: targets 1-7 for solids and 9-15 for stripes. Verify the five
   shared 5,000 target lamps retain their original behavior, no sunk ball keeps
-  the called indication, and an incorrect sink leaves or moves it only as
-  dictated by the next spoken call.
+  the called indication, every collected ball's numbered target remains dark,
+  and an incorrect sink leaves or moves the call only as dictated by the next
+  spoken selection.
 - Complete a rack with the lit 8-ball and verify it awards the current Called
   ball value, then advances that player's next value by 5,000 playfield
   points. Verify the old called lamp is restored and the new rack immediately
