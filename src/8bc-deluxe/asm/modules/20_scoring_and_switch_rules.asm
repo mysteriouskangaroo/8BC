@@ -260,7 +260,9 @@ STORE_CHAMP_COMPLETION_STATE:
         dc.b $C6,$0A,$BD,$C9,$19                             ; $CCCF original E-I-G-H-T completion delay
         JSR DELUXE_AFTER_EIGHT_WORD_COMPLETION                ; $CCD4: count every awarded B-A-L-L letter
         dc.b $F6,$10,$45,$C8,$1F,$F7,$10,$45                 ; $CCD7 original E-I-G-H-T reset continues
-        dc.b $CE,$10,$3A,$E6,$07,$CA,$F8,$58,$E7,$07,$F6,$10,$BE,$C5,$80,$27 ; $CCDF data/unclassified
+        dc.b $CE,$10,$3A,$E6,$07,$CA,$F8,$58,$E7,$07             ; $CCDF original B-A-L-L lamp shift
+        JMP DELUXE_AWARD_BALL_LETTER_COMPLETION                   ; $CCE9 independent repeating Extra Ball/Special awards
+        dc.b $C5,$80,$27                                         ; $CCEC superseded original one-shot award test
         dc.b $33,$B6,$10,$3A,$85,$02,$27,$20,$C4,$7F,$F7,$10,$BE,$F6,$10,$3E ; $CCEF data/unclassified
         dc.b $CA,$80,$F7,$10,$3E,$CE,$16,$BF,$BD,$F6,$C9,$BD,$C1,$D6,$B6,$10 ; $CCFF data/unclassified
         dc.b $C1,$8A,$80,$B7,$10,$C1,$20,$09,$CE,$16,$BF,$BD,$F6,$C9,$BD,$C1 ; $CD0F data/unclassified

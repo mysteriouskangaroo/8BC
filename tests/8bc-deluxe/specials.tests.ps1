@@ -5,8 +5,8 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 #
 # Routes collected (the five Special registers, OPS manual p. 1-12: 120K,
 # E-I-G-H-T, roll-up lanes, left outlane, right outlane):
-#   E-I-G-H-T (completions 2 and 3; completion 1 awards an Extra Ball,
-#     manual p. 1-11): 1x and 2x in game 1, 3x in game 2.
+#   E-I-G-H-T (completion 2 and later; in register-43 B mode odd completions
+#     also award an Extra Ball): 1x and 2x in game 1, 3x in game 2.
 #   Roll-up lanes (orbit) at 100,000: 2x in game 1, 3x in game 2, 1x in
 #     game 3. Its
 #     already-collected latch (10A0 bit 20) stays set on later balls of the
@@ -170,14 +170,17 @@ $r = @()
 Start-Game 1
 $e1 = Invoke-EightRound
 $e2 = Invoke-EightRound
-$r += [PSCustomObject]@{ Route = 'E-I-G-H-T'; Special = $e2.Last; Base = $e1.Last }
+$r += [PSCustomObject]@{ Route = 'E-I-G-H-T'; Special = $e2.Last; Base = $e1.Last; ConcurrentExtraBallScore = 0 }
 Invoke-OrbitTo100K
 Invoke-Completions 2
 $r += Invoke-OrbitSpecial
 $e3 = Invoke-EightRound                                          # completion 3 at 2x
-$r += [PSCustomObject]@{ Route = 'E-I-G-H-T'; Special = $e3.Last; Base = $e3.Before }
+$r += [PSCustomObject]@{ Route = 'E-I-G-H-T'; Special = $e3.Last; Base = $e3.Before; ConcurrentExtraBallScore = 5000 }
 # ---- Game 1, next ball: the recalled 100,000 orbit, then 3x and the left
 # outlane Special, then the right outlane ----
+# Completion 3 now awards the repeating B-mode Extra Ball. The first drain
+# consumes it; the second reaches the next numbered ball for the recall check.
+Invoke-Drain
 Invoke-Drain
 Invoke-ToActiveOrbit
 $laterShown = Get-ArrowValue
@@ -226,9 +229,12 @@ Test-EbcItem -Name 'The paired 120K games score their seven sinks identically' -
     Assert-EbcEqual -Expected @($pairs | ForEach-Object { $_.SinksB }) -Actual @($pairs | ForEach-Object { $_.SinksA }) -What 'scores after each sink, register 44 = 1 against 44 = 0'
 }
 Test-EbcItem -Name 'Collecting each available special at 1x, 2x, and 3x adds respectively 25,000, 50,000, and 75,000' -Doc "$Doc; $Specials" -Body {
-    $seen = @($r | ForEach-Object { "$($_.Route) special at $($_.Special.M)x: additional $($_.Special.Score - $_.Base.Score)" })
+    $seen = @($r | ForEach-Object {
+        $extra = if ($_.PSObject.Properties['ConcurrentExtraBallScore']) { $_.ConcurrentExtraBallScore } else { 0 }
+        "$($_.Route) special at $($_.Special.M)x: additional $($_.Special.Score - $_.Base.Score - $extra)"
+    })
     $want = @($r | ForEach-Object { "$($_.Route) special at $($_.Special.M)x: additional $($Additional[$_.Special.M])" })
-    Assert-EbcEqual -Expected $want -Actual $seen -What ('score change with the special minus without (' + (($r | ForEach-Object { "$($_.Route) $($_.Special.Score) - $($_.Base.Score)" }) -join '; ') + ')')
+    Assert-EbcEqual -Expected $want -Actual $seen -What ('score change with the special minus without and minus any simultaneous Extra Ball award (' + (($r | ForEach-Object { "$($_.Route) $($_.Special.Score) - $($_.Base.Score)" }) -join '; ') + ')')
     Assert-EbcEqual -Expected @('1x', '2x', '3x') -Actual @($r | ForEach-Object { "$($_.Special.M)x" } | Sort-Object -Unique) -What 'multipliers covered'
 }
 Test-EbcItem -Name 'The original special award and knocker behavior still occur exactly once' -Doc "$Doc; $Specials; $Manual" -Body {

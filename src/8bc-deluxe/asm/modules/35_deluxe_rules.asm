@@ -1055,19 +1055,11 @@ DELUXE_RUN_BALL_BONUS_PASS:
 
 DELUXE_AFTER_EIGHT_WORD_COMPLETION:
 ; CCD4 is reached exactly once after all five E-I-G-H-T targets have completed
-; and the original animation is about to award the next B-A-L-L lamp. Count
-; every such completion even after the four physical lamps are saturated.
-        JSR $d21f
-        PSHA
-        LDAA DELUXE_COMPLETED_BALL_LETTERS
-        CMPA #$ff
-        BEQ DELUXE_AFTER_EIGHT_WORD_COUNTED
-        INCA
-        STAA DELUXE_COMPLETED_BALL_LETTERS
-DELUXE_AFTER_EIGHT_WORD_COUNTED:
-        JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
-        PULA
-        RTS
+; and the original animation is about to award the next B-A-L-L lamp. Keep
+; this established 20-byte expansion slot fixed; the extended counter and
+; pending-award work lives at the free-space tail.
+        JMP DELUXE_AFTER_EIGHT_WORD_COMPLETION_EXTENDED
+        ds.b 17,$01
 
 DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
 ; The canonical new-game loop at C4E6 visits player numbers 4, 3, 2, and 1 and
@@ -1968,6 +1960,105 @@ DELUXE_AWARD_ORBIT_20000_AGAIN:
 DELUXE_AWARD_ORBIT_10000_AGAIN:
         JSR $c9a4
         JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+
+DELUXE_AFTER_EIGHT_WORD_COMPLETION_EXTENDED:
+; Count every completed E-I-G-H-T word, including those beyond the four
+; physical B-A-L-L inserts. Leave the new count pending until CCE9, after the
+; canonical lamp shift. A saturated $FF counter is not a new letter and
+; therefore queues no awards.
+        JSR $d21f
+        PSHA
+        CLR DELUXE_BALL_LETTER_AWARD_PENDING
+        LDAA DELUXE_COMPLETED_BALL_LETTERS
+        CMPA #$ff
+        BEQ DELUXE_AFTER_EIGHT_WORD_COUNTED
+        INCA
+        STAA DELUXE_COMPLETED_BALL_LETTERS
+        STAA DELUXE_BALL_LETTER_AWARD_PENDING
+DELUXE_AFTER_EIGHT_WORD_COUNTED:
+        JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
+        PULA
+        RTS
+
+DELUXE_AWARD_BALL_LETTER_COMPLETION:
+; CCE9 enters after the original routine has shifted the physical B-A-L-L
+; lamps for this completed E-I-G-H-T word. Register 43 selects whether Extra
+; Ball falls on B/odd counts (packed $168B bit $40 set) or A/even counts
+; (clear). From A/count 2 onward, every new letter also collects a Special,
+; independently, so the two awards may occur on the same completion.
+        LDAA DELUXE_BALL_LETTER_AWARD_PENDING
+        BEQ DELUXE_BALL_LETTER_AWARDS_DONE
+        LDAA X_BALL_OPTION_PACKED_REGISTER
+        BITA #X_BALL_AT_B_SETTING_BIT
+        BEQ DELUXE_TEST_A_MODE_EXTRA_BALL
+        LDAA DELUXE_BALL_LETTER_AWARD_PENDING
+        BITA #$01
+        BNE DELUXE_COLLECT_REPEATING_EXTRA_BALL
+        BRA DELUXE_TEST_REPEATING_BALL_SPECIAL
+DELUXE_TEST_A_MODE_EXTRA_BALL:
+        LDAA DELUXE_BALL_LETTER_AWARD_PENDING
+        BITA #$01
+        BNE DELUXE_TEST_REPEATING_BALL_SPECIAL
+DELUXE_COLLECT_REPEATING_EXTRA_BALL:
+; Reproduce CD2D-CD38's canonical Extra Ball collection: force the steady
+; Extra Ball lamp shadow off, show its award message, then enter the original
+; Extra Ball award path at C1E9. The qualifier bit is rebuilt below.
+        LDAA $10c1
+        ANDA #$7f
+        STAA $10c1
+        LDAA HOLE_BONUS_LAMP_SHADOW
+        ORAA #BALL_EXTRA_BALL_QUALIFIED_STATE
+        STAA HOLE_BONUS_LAMP_SHADOW
+        LDX #$16e2
+        JSR $f6c9
+        JSR $c1e9
+DELUXE_TEST_REPEATING_BALL_SPECIAL:
+        LDAA DELUXE_BALL_LETTER_AWARD_PENDING
+        CMPA #$02
+        BCS DELUXE_UPDATE_REPEATING_BALL_QUALIFIERS
+; Reproduce the canonical E-I-G-H-T Special collection display and enter the
+; common Deluxe Special path, including sound, points, operator award, and
+; knocker. This is deliberately independent of the Extra Ball branch above.
+        LDX #$16bf
+        JSR $f6c9
+        JSR SPECIAL_COLLECT_WITH_SOUND
+DELUXE_UPDATE_REPEATING_BALL_QUALIFIERS:
+; The E-I-G-H-T Special is available for the next letter after B and remains
+; available thereafter. Keep its base shadow off so $10BE bit 7 supplies the
+; blink. Likewise, set the Extra Ball qualifier only when the *next* count has
+; the parity selected by register 43.
+        LDAA $103e
+        ORAA #$80
+        STAA $103e
+        LDAA $10be
+        ORAA #$80
+        STAA $10be
+        LDAA HOLE_BONUS_LAMP_SHADOW
+        ORAA #BALL_EXTRA_BALL_QUALIFIED_STATE
+        STAA HOLE_BONUS_LAMP_SHADOW
+        LDAA $10c1
+        ANDA #$7f
+        STAA $10c1
+        LDAA X_BALL_OPTION_PACKED_REGISTER
+        BITA #X_BALL_AT_B_SETTING_BIT
+        BEQ DELUXE_QUALIFY_NEXT_A_MODE_EXTRA_BALL
+; In B mode an even current count means the next, odd count awards Extra Ball.
+        LDAA DELUXE_BALL_LETTER_AWARD_PENDING
+        BITA #$01
+        BEQ DELUXE_QUALIFY_NEXT_EXTRA_BALL
+        BRA DELUXE_BALL_LETTER_AWARDS_DONE
+DELUXE_QUALIFY_NEXT_A_MODE_EXTRA_BALL:
+; In A mode an odd current count means the next, even count awards Extra Ball.
+        LDAA DELUXE_BALL_LETTER_AWARD_PENDING
+        BITA #$01
+        BEQ DELUXE_BALL_LETTER_AWARDS_DONE
+DELUXE_QUALIFY_NEXT_EXTRA_BALL:
+        LDAA $10c1
+        ORAA #BALL_EXTRA_BALL_QUALIFIED_STATE
+        STAA $10c1
+DELUXE_BALL_LETTER_AWARDS_DONE:
+        CLR DELUXE_BALL_LETTER_AWARD_PENDING
+        JMP $cd46
 
 DELUXE_RULES_END:
 ; Preserve the canonical $FF fill up to the fixed interrupt module at $E000.

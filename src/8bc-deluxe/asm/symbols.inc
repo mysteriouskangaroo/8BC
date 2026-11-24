@@ -112,6 +112,15 @@ DELUXE_HOLE_NEXT_BONUS_MULTIPLIER               equ $114B
 ; means the one-shot is complete.
 DELUXE_STARTUP_MUSIC_GUARD_TIMER                 equ $114C
 DELUXE_STARTUP_MUSIC_PENDING                     equ $114E
+; Nonzero only between the completed-word counter hook at CCD4 and the
+; post-lamp-shift award dispatcher at CCE9. The value is the newly collected
+; B-A-L-L count, allowing a saturated $FF counter to suppress repeat awards.
+DELUXE_BALL_LETTER_AWARD_PENDING                 equ $114F
+
+; OPS manual register 43, "X-Ball Option": bit 6 set means the Extra Ball
+; starts flashing and is collected with B; clear delays it until A.
+X_BALL_OPTION_PACKED_REGISTER                    equ $168B
+X_BALL_AT_B_SETTING_BIT                          equ $40
 
 PLAYER_SCORE_DISPLAY_START                    equ $1046
 PLAYER_SCORE_DISPLAY_END                      equ $1062

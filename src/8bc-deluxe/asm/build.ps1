@@ -126,7 +126,7 @@ $canonicalPlayerRecordCount = 4
 $canonicalPlayerRecordEnd = $canonicalPlayerRecordStart +
     ($canonicalPlayerRecordStride * $canonicalPlayerRecordCount) - 1
 $deluxeRamStart = Get-DasmSymbolAddress 'DELUXE_COLLECT_STATE'
-$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_STARTUP_MUSIC_PENDING'
+$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_BALL_LETTER_AWARD_PENDING'
 if ($deluxeRamStart -ne ($canonicalPlayerRecordEnd + 1)) {
     throw "Deluxe RAM must begin at $('$' + ($canonicalPlayerRecordEnd + 1).ToString('X4')) immediately after the four canonical player slots; found $('$' + $deluxeRamStart.ToString('X4'))."
 }
@@ -185,6 +185,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xCC85; Opcode = 0xBD; Target = 'DELUXE_AWARD_SCALED_2500'; Name = 'scaled 2,500-point E-I-G-H-T target award' }
     @{ Address = 0xCC91; Opcode = 0x7E; Target = 'DELUXE_RECORD_NEW_EIGHT_LETTER'; Name = 'new E-I-G-H-T letter spinner advancement' }
     @{ Address = 0xCCD4; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_WORD_COMPLETION'; Name = 'completed E-I-G-H-T word B-A-L-L counter' }
+    @{ Address = 0xCCE9; Opcode = 0x7E; Target = 'DELUXE_AWARD_BALL_LETTER_COMPLETION'; Name = 'repeating B-A-L-L Extra Ball/Special dispatcher' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
     @{ Address = 0xD553; Bytes = [byte[]](0xC6, 0x03, 0x7E, 0xC9, 0xA6); Name = 'CHAMP 30,000 base through playfield multiplier' }
     @{ Address = 0xD936; Bytes = [byte[]](0x86, 0x08);       Name = 'approximately 33-percent-faster sunk-ball bonus-step delay' }

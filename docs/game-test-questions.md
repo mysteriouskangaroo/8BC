@@ -132,8 +132,6 @@ values.
 3. **Adjustment numbers.** Page 1-11 gives the spinner start as adjustment 46,
    but the page 1-5 table gives 49, and 49 is the one that works. Page 1-10
    titles adjustment 29 as replays, but pages 1-5 and 1-9 give Match.
-4. **Extra Ball on the first E-I-G-H-T completion.** Page 1-11 says the first
-   completion also awards an Extra Ball. This is untested. Should it be?
 5. **6803 port numbering.** Both `HARDWARE_MAP.md` files call `0002` "port 2",
    but on the 6803, `0002` is the port 1 data register.
 

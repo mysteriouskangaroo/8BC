@@ -422,6 +422,33 @@ handler continues to authorize the accumulated award solely from `10FB`, so a
 spinner pulse during the preview follows the unlit 10-point path. Activating
 spinner clears `1114` before displaying `10FE` steadily.
 
+## Repeating B-A-L-L Extra Ball and Special awards
+
+The completed-word hook at `CCD4` increments the authoritative active-player
+B-A-L-L count at `1104`, writes it through to the selected player's byte at
+`110A-110D`, and copies the new nonzero count to the transient award byte at
+`114F`. If the counter is already saturated at `$FF`, `114F` stays zero so a
+later E-I-G-H-T completion cannot repeatedly collect awards for a count that
+did not advance.
+
+After the canonical physical-lamp shift, the variation jump at `CCE9` replaces
+the original one-shot `$10BE/$10C1` state machine with
+`DELUXE_AWARD_BALL_LETTER_COMPLETION`. OPS manual register 43 is packed in
+`$168B` bit `$40`: set is the B/start-of-game mode, clear is the A/delayed
+mode. The handler tests `1104 & 1`; B mode awards Extra Ball on odd counts,
+while A mode awards it on even counts. It enters the canonical Extra Ball
+award path at `C1E9`, preserving the original ball-management behavior.
+
+Independently, every new count of two or greater enters the Special collector
+at `C1D6`. Thus count 3 in B mode and count 2 in A mode execute both award
+paths. The common Deluxe hook at `C1DB` still adds multiplier-aware Special
+points exactly once, and the canonical operator award and knocker remain in
+the same call. `$10C1` bit 7 is rebuilt to blink Extra Ball when the *next*
+count has the selected parity; `$10BE` bit 7 remains set after B so the
+E-I-G-H-T Special indication stays qualified from A onward. These bytes remain
+per-player through the original save/restore slots, but award authority is the
+stable Deluxe count rather than either blinking output state.
+
 ## Playfield Scores Double and Triple
 
 The authoritative gameplay byte is `CHAMP_COMPLETION_STATE` at `10C0`. New

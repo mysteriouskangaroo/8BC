@@ -349,6 +349,15 @@ completion milestones, or the C/P anti-shatz latch.
 - Every completed E-I-G-H-T target set still lights the next physical B-A-L-L
   letter, and also increments the active player's B-A-L-L counter. Completions
   beyond the four physical B-A-L-L inserts continue increasing this counter.
+- Operator register 43 retains its B/A Extra Ball choice across the unlimited
+  counter. With the B setting (`1`), odd-numbered B-A-L-L letters (1, 3, 5,
+  ...) award an Extra Ball. With the A setting (`0`), even-numbered letters
+  (2, 4, 6, ...) award it. The test is the low bit of the authoritative
+  per-player count, not the four-lamp output pattern.
+- A Special is collected on A/count 2 and every later B-A-L-L letter. This is
+  independent of the Extra Ball parity test: a matching completion awards
+  both, including count 3 in B mode and count 2 in A mode. The Special keeps
+  its original sound, operator-selected award, knocker, and Deluxe points.
 - The four B-A-L-L inserts retain their original visual progression through
   four completions. Beginning with that player's fifth completed letter, all
   four inserts blink together to signify that the stored total contains more
@@ -619,6 +628,11 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   credit display changes to `05` after the rack
   bonus. At 1x, verify those five letters contribute 25,000, plus 1,000 for
   each partial E-I-G-H-T letter; repeat at 2x/3x/5x/7x/8x/10x to confirm multiplication.
+- With register 43 set to B, verify B-A-L-L counts 1, 3, and 5 award Extra
+  Balls, counts 2 and 4 do not, and every count from 2 onward awards a Special;
+  counts 3 and 5 must award both. With register 43 set to A, verify Extra Balls
+  instead occur on counts 2 and 4 while the same count-2-and-later Special rule
+  remains active, so counts 2 and 4 award both.
 - In a four-player game, give Player 1 four completed racks and five B-A-L-L
   letters, then play through Players 2-4. Verify Player 1's next ball restores
   `04` racks and `05` B-A-L-L letters for display and bonus, resumes both blink
