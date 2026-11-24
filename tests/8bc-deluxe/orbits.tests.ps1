@@ -29,12 +29,10 @@ $Unlit = 500
 $CenterSound = 0x31
 # "Required gameplay verification": the left collect advances the printed
 # value by 10,000 (Deluxe 1,000), the right by 20,000 (Deluxe 2,000),
-# saturating at 100,000/Special. A collect scores the current printed value
-# / 10 ("Existing rules": printed 10,000 scores 1,000; 100,000 scores 10,000).
+# saturating at 100,000/Special. Left scores the current printed value / 10;
+# right scores twice that amount.
 $LeftStep = 10000
 $RightStep = 20000
-$DeluxeLeftStep = 10000 / 10
-$DeluxeRightStep = 20000 / 10
 $Terminal = 100000
 # Activating promotes the 5,000 baseline to the printed 10,000.
 $FirstValue = 10000
@@ -53,7 +51,7 @@ $RightSound = 0x2A
 # "Back-to-back": no other command between them and at most 30 frames apart
 # (the brief's continuous-flow gap).
 $BackToBackFrames = 30
-# "Right orbit": the terminal collector's loud $6F is suppressed for this hit.
+# "Right orbit": the terminal collector sends $6F twice consecutively.
 $SpecialSound = 0x6F
 # "Specials": collecting any special also awards 25,000 at 1x, in addition to
 # the orbit's own 10,000 ("Existing rules").
@@ -65,6 +63,8 @@ $BlinkMin = [int]($Fps * 3 * 0.8); $BlinkMax = [int]($Fps * 3 * 1.2)
 # (fresh NVRAM holds FF and the special never lights; tests/originals/rollovers).
 $SpecialRegister = 51
 $SpecialSetting = 0
+$AwardRegister = 25
+$AwardReplay = 3
 # The orbit preview timer (src/8bc-deluxe/asm/symbols.inc
 # DELUXE_ORBIT_PREVIEW_TIMER, 1115), read only to find the frame the preview
 # starts after the chase.
@@ -139,6 +139,7 @@ function Invoke-Collect([string]$Side, [int]$Frames = 420) {
     $addr = Get-EbcRamAddress "ScoreBuffer$p"
     $read = { $t = Get-EbcScoreBufferText $addr; if ($t -eq '') { [long]0 } else { [long]$t } }
     $before = & $read
+    $credits = Get-EbcCredits
     $seen = Get-EbcEventCount
     $n = Get-EbcSwitch "$Side Rollover Button"
     $trace = @(); $previewAt = -1; $lastLit = -1
@@ -163,7 +164,7 @@ function Invoke-Collect([string]$Side, [int]$Frames = 420) {
     }
     $all = @(Get-Commands $seen)
     [PSCustomObject]@{
-        Side = $Side; Shown = $shown; Award = (& $read) - $before
+        Side = $Side; Shown = $shown; Award = (& $read) - $before; Credits = (Get-EbcCredits) - $credits
         Commands = @($all | Where-Object { $_.B -lt 0x41 -or $_.B -gt 0x80 }); AllCommands = $all; Trace = $trace; PreviewAt = $previewAt; LastLit = $lastLit
         Knocks = @(Get-EbcEvents -Since $seen | Where-Object { $_ -match "^\d+ sol $Knocker 1$" }).Count
     }
@@ -192,12 +193,14 @@ function Format-Collect($c) {
     "{0} collect of {1}: award {2}, chase {3}, preview shows {4}, arrows dark after {5}" -f $c.Side, $c.Shown, $c.Award, (Test-Chase $c), (Get-PreviewValue $c), ($c.Trace[-1] -eq '....')
 }
 function Want-Collect([string]$Side, [int]$From, [int]$To) {
-    "{0} collect of {1}: award {2}, chase True, preview shows {3}, arrows dark after True" -f $Side, $From, ($From / 10), $To
+    $award = if ($Side -eq 'Right') { $From / 5 } else { $From / 10 }
+    "{0} collect of {1}: award {2}, chase True, preview shows {3}, arrows dark after True" -f $Side, $From, $award, $To
 }
 
 Start-EbcGame
 Enter-EbcServiceMode | Out-Null
 Set-EbcAdjustment -Number $SpecialRegister -Value $SpecialSetting | Out-Null
+Set-EbcAdjustment -Number $AwardRegister -Value $AwardReplay | Out-Null
 Exit-EbcServiceMode | Out-Null
 Add-EbcCredit | Out-Null
 Start-EbcPlay | Out-Null
@@ -234,7 +237,7 @@ Test-EbcItem -Name 'Unlit left and right orbit shots score 500 without advancing
     $want = @(('center rollover sounds [{0:X2}]' -f $CenterSound)) + @('Left', 'Right' | ForEach-Object { "$_ unlit: $Unlit, sounds [{0:X2}]" -f $CenterSound }) + @("first activation shows $FirstValue")
     Assert-EbcEqual -Expected $want -Actual $seen -What 'unlit orbit shots at the start of ball 1'
 }
-Test-EbcItem -Name 'The left rollover advances the printed value by 10,000 (Deluxe 1,000) and the right by 20,000 (Deluxe 2,000), each scoring the current value, finishing the upward arrow chase and hiding the arrows' -Doc "$Doc; $Left; $Right; $Rules" -Body {
+Test-EbcItem -Name 'The left rollover advances by 10,000 and scores the current value; the right advances by 20,000 and scores double the current value, with one chase and preview' -Doc "$Doc; $Left; $Right; $Rules" -Body {
     $seen = @($c | ForEach-Object { Format-Collect $_ })
     $want = @(
         (Want-Collect 'Left' $FirstValue ($FirstValue + $LeftStep)),
@@ -245,12 +248,10 @@ Test-EbcItem -Name 'The left rollover advances the printed value by 10,000 (Delu
         (Want-Collect 'Right' 90000 $Terminal))
     Assert-EbcEqual -Expected $want -Actual $seen -What 'collects on ball 1 (each value shown is the previous preview)'
 }
-Test-EbcItem -Name 'The left rollover advances the Deluxe value by 1,000 and the right by 2,000' -Doc "$Doc; $Left; $Right" -Body {
-    # Each collect scores the current Deluxe value, so the next collect's
-    # award grows by the step of the collect before it.
-    $steps = @(for ($k = 0; $k -lt 5; $k++) { "{0} collect: next award +{1}" -f $c[$k].Side, ($c[$k + 1].Award - $c[$k].Award) })
-    $want = @('Left', 'Right', 'Right', 'Right', 'Left' | ForEach-Object { "{0} collect: next award +{1}" -f $_, $(if ($_ -eq 'Left') { $DeluxeLeftStep } else { $DeluxeRightStep }) })
-    Assert-EbcEqual -Expected $want -Actual $steps -What 'award differences between successive collects on ball 1'
+Test-EbcItem -Name 'Every active right rollover award is exactly twice the lit arrow value under the Deluxe scale' -Doc "$Doc; $Right" -Body {
+    $seen = @($c | Where-Object { $_.Side -eq 'Right' } | ForEach-Object { "shown $($_.Shown), award $($_.Award)" })
+    $want = @($c | Where-Object { $_.Side -eq 'Right' } | ForEach-Object { "shown $($_.Shown), award $($_.Shown / 5)" })
+    Assert-EbcEqual -Expected $want -Actual $seen -What 'right-side score before each 20,000 advance'
 }
 Test-EbcItem -Name 'A right advance from 90,000 stops at 100,000/Special with no wrap' -Doc "$Doc; $Right" -Body {
     Assert-EbcEqual -Expected $Terminal -Actual (Get-PreviewValue $c[5]) -What 'value previewed after the right collect of 90,000 (90,000 + 20,000 saturates)'
@@ -310,19 +311,20 @@ Test-EbcItem -Name 'The special indication is hidden while neither orbit is acti
     $want = 'spinner inactive: dark; orbit inactive: dark; orbit active: flashing; after the collect: dark'
     Assert-EbcEqual -Expected $want -Actual $seen -What 'Rollover Lanes Special lamp with 100,000 retained'
 }
-Test-EbcItem -Name 'The active orbit collects the printed 100,000/Special for 10,000 Deluxe points' -Doc "$Doc; $Rules; $Right; $Specials" -Body {
-    # The orbit's 10,000 plus the 25,000 every special collect adds
-    # ("Specials"), with the special award's knocker once and no $6F.
+Test-EbcItem -Name 'The active right orbit at 100,000 scores double arrow value and retains one complete Special award' -Doc "$Doc; $Rules; $Right; $Specials" -Body {
+    # Double the orbit's 10,000 plus one copy of the 25,000 Special points;
+    # register 25 = replay proves the original adjustment award ran once.
     $six = @($special.AllCommands | Where-Object { $_.B -eq $SpecialSound }).Count
-    $seen = "value shown $($special.Shown); score $($special.Award); knocks $($special.Knocks); `$6F sent $six"
-    $want = "value shown $Terminal; score $($Terminal / 10 + $SpecialPoints); knocks 1; `$6F sent 0"
+    $seen = "value shown $($special.Shown); score $($special.Award); credits +$($special.Credits); `$6F sent $six"
+    $want = "value shown $Terminal; score $(2 * ($Terminal / 10) + $SpecialPoints); credits +1; `$6F sent 2"
     Assert-EbcEqual -Expected $want -Actual $seen -What "right collect at 100,000 (commands [$(Format-Commands $special.Commands)])"
 }
-Test-EbcItem -Name 'At 100,000 the right collect uses the left collect''s single sound, without $2A or $6F' -Doc "$Doc; $Right" -Body {
+Test-EbcItem -Name 'At 100,000 the right collect keeps the left collect sound, omits $2A, and sends two consecutive $6F Super commands' -Doc "$Doc; $Right" -Body {
     $leftCmds = Format-Commands @($c | Where-Object { $_.Side -eq 'Left' } | Select-Object -First 1).Commands
-    $six = @($special.AllCommands | Where-Object { $_.B -eq $SpecialSound }).Count
-    $seen = "commands [$(Format-Commands $special.Commands)], `$6F sent $six"
-    Assert-EbcEqual -Expected "commands [$leftCmds], `$6F sent 0" -Actual $seen -What 'right collect at 100,000 against the first left collect'
+    $six = @($special.AllCommands | Where-Object { $_.B -eq $SpecialSound })
+    $backToBack = $six.Count -eq 2 -and ($six[1].F - $six[0].F) -le $BackToBackFrames
+    $seen = "commands [$(Format-Commands $special.Commands)], `$6F sent $($six.Count), back-to-back $backToBack"
+    Assert-EbcEqual -Expected "commands [$leftCmds], `$6F sent 2, back-to-back True" -Actual $seen -What 'right collect at 100,000 against the first left collect'
     Assert-EbcEqual -Expected ('{0:X2}' -f $LeftSound) -Actual $leftCmds -What 'the left collect''s commands'
 }
 Test-EbcItem -Name 'A right advance from 100,000 stays at 100,000/Special, and a later orbit activation restores 100,000' -Doc "$Doc; $Right; $Left" -Body {
@@ -345,8 +347,8 @@ Test-EbcItem -Name 'Either rollover collects during both the opening and the rep
     # Ball 1: left in the opening stage, right and left in the repeating
     # stage (above). Ball 2: right in the opening stage, scoring the value its
     # arrows show, then spinner inactive.
-    $seen = "opening right collect: shows a value $($open.Shown -ge $FirstValue), award = shown / 10 $($open.Award -eq $open.Shown / 10), chase $(Test-Chase $open); spinner $spin4"
-    $want = "opening right collect: shows a value True, award = shown / 10 True, chase True; spinner $SpinnerUnlit"
+    $seen = "opening right collect: shows a value $($open.Shown -ge $FirstValue), award = shown / 5 $($open.Award -eq $open.Shown / 5), chase $(Test-Chase $open); spinner $spin4"
+    $want = "opening right collect: shows a value True, award = shown / 5 True, chase True; spinner $SpinnerUnlit"
     Assert-EbcEqual -Expected $want -Actual $seen -What "ball 2 opening stage (shown $($open.Shown), award $($open.Award))"
 }
 Complete-EbcTests

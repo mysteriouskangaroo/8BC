@@ -204,16 +204,17 @@ completion milestones, or the C/P anti-shatz latch.
 
 - Activating either encoded orbit stage from the original 5,000 baseline lights
   the printed 10,000 value. A higher retained orbit value is preserved.
-- During any active orbit stage, switch 13 awards the same shared
-  orbit value as the left side and runs the original fast upward arrow-chase
+- During any active orbit stage, switch 13 awards **double** the shared
+  orbit value shown by the lit arrows and runs the original fast upward arrow-chase
   collect animation. Before the value is maxed, its existing sound command
   `$2A` is sent twice back-to-back before scoring and the chase, distinguishing
   an advance-plus-collect from an ordinary right-orbit hit. At the terminal
   value, `$29` replaces `$2A` before the switch sound is queued; after the gate,
   the path preserves the same B state used by the working left-orbit collect
-  sound instead of forcing another selector. It also suppresses the canonical
-  terminal collector's separate loud `$6F` request for this hit only; the
-  Special award, latch, adjustment, and knocker still run normally.
+  sound instead of forcing another selector. The terminal collector sends
+  `$6F` twice consecutively ("Super, Super"). The Special points, original
+  adjustment-controlled award, knocker, collected latch, and lamp cleanup each
+  run once.
   Only after that animation finishes does it advance the printed value by
   20,000 (2,000 Deluxe points) and move to
   **spinner inactive**. The newly advanced arrow value then blinks for
@@ -407,6 +408,9 @@ completion milestones, or the C/P anti-shatz latch.
   playfield value: 25,000 at 1x, 50,000 at 2x, or 75,000 at 3x.
 - These points are additional to the original adjustment-controlled special
   award and do not replace its sound, animation, or knocker behavior.
+- The terminal active right orbit is the sound-only exception: its normal
+  single Special award is accompanied by two consecutive `$6F` "Super"
+  commands.
 - The points are awarded only when a lit special is actually collected, not
   when a special is lit or while its qualification state is retained.
 - ROM trace: most special collectors enter at `$C1D6`, which plays sound `$6F`,
@@ -527,13 +531,13 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
 - Verify unlit left/right orbit shots score 500 without advancing their value
   and use the same sound as the playfield's 500-point center rollover. Verify
   the active left collect retains its original side-specific sound and the
-  active right collect sends its original `$2A` sound twice back-to-back before
-  the terminal value, then uses the left orbit's single `$29` collect sound once
-  the value is maxed.
+  active right collect scores double the lit arrow value and sends its original
+  `$2A` sound twice back-to-back before the terminal value, then uses the left
+  orbit's single `$29` collect sound once the value is maxed.
 - Verify either rollover can collect during both the opening and repeating
-  active orbit stages. Both sides must score the current value, finish the
-  original fast upward arrow chase, hide the active orbit indication, and move
-  to spinner inactive.
+  active orbit stages. The left must score the current value and the right must
+  score twice that value; both must finish the original fast upward arrow chase,
+  hide the active orbit indication, and move to spinner inactive.
 - Verify the left rollover advances the shared printed value by 10,000 / Deluxe
   value by 1,000, uses only its normal single collect sound, and blinks the
   new value for approximately three seconds. Verify the right rollover advances
@@ -554,8 +558,9 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   100,000/special terminal state and does not consume the special. Verify the
   special indication is hidden whenever neither orbit is active, begins
   blinking when the collect activates at either orbit, and hides again when
-  that orbit collect advances. Verify the printed 100,000/special behavior
-  occurs when the active orbit collects it and awards 10,000 Deluxe points.
+  that orbit collect advances. Verify a terminal active right-orbit collection
+  awards the 10,000 Deluxe arrow value twice, performs its normal single
+  Special award, and sends `$6F` twice consecutively.
 - Verify spinner values and lamps advance through the weighted binary states,
   active spins receive 2x/3x, and an unlit spin remains 10. Verify the score /
   original-sound tiers are 10 -> 100 sound, 100 -> 1K sound, 300/400 -> 3K
@@ -634,7 +639,9 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   sound, score gate, and momentary-solenoid behavior.
 - Collect each available special at 1x, 2x, and 3x and verify its additional
   score is respectively 25,000, 50,000, and 75,000 while the original
-  special award and knocker behavior still occur exactly once.
+  special award and knocker behavior still occur exactly once. The terminal
+  right-orbit Special is tested separately and intentionally sends its sound
+  command twice while retaining one award.
 - Verify drain/new-ball resets collect location, spinner value, saucer
   qualification, CHAMP count, and multiplier while respecting existing
   operator settings for retained CHAMP letters and orbit value.

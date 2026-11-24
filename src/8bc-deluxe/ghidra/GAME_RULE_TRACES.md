@@ -286,15 +286,19 @@ immediately before `CB5C`. At terminal value `00`, command `29` is substituted
 before the pending command is queued, but no selector is reloaded after the
 gate. The right path therefore enters the helper once with the same post-gate B
 state as the working left collect sound path. Before entering the canonical
-terminal collector, it sets the one-shot byte at `1116`. The context-aware hook
-at `C1D6` consumes that byte and skips only the otherwise independent `$6F`
-Special sound, then continues at `C1DB`; the Special score, collected latch,
-operator adjustment, and knocker behavior remain intact. Every other Special
-request still sends `$6F`. The helper accepts the routine's next low-nibble value from `1044`
+terminal collector, it sets the context byte at `1116`. The context-aware hook
+at `C1D6` sends `$6F` twice consecutively, then the common hook at `C1DB` adds
+the Deluxe Special points once and runs the original adjustment-controlled
+Special/knocker continuation once. The canonical collector changes its
+collected latch and lamp state once. Every other Special retains one sound.
+Before every right-side call to `CB5C`, Deluxe dispatches one
+additional score award from retained value `10FF`; `CB5C` then awards the same
+shown value again. The helper accepts the routine's next low-nibble value from `1044`
 and copies it to retained Deluxe state `10FF`, advancing the printed value by
 10,000 playfield points. The left path now keeps that one canonical step. The
 right path applies one additional state-only step after the canonical routine,
-so it advances 20,000 without scoring or replaying the chase twice.
+so it advances 20,000 and scores the pre-advance arrow value twice without
+replaying the chase.
 
 The retained encodings for 10K through 100K are
 `E,D,B,7,6,5,3,2,1,0`. `DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_STEP` handles the

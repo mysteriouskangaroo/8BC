@@ -357,7 +357,7 @@ DELUXE_HANDLE_RIGHT_ORBIT:
 DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT:
 ; Keep the orbit stage active while the original handler runs its fast upward
 ; arrow chase. Advance to spinner inactive only after that animation returns.
-        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+        JMP DELUXE_AWARD_CURRENT_ORBIT_VALUE_AGAIN
 
 DELUXE_HANDLE_LEFT_ORBIT:
         LDAA DELUXE_COLLECT_STATE
@@ -386,7 +386,8 @@ DELUXE_SCORE_ACTIVE_LEFT_ORBIT:
         BRA DELUXE_FINISH_ACTIVE_ORBIT_WITH_PREVIEW
 
 DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
-; Finish the original chase before moving the sequence to spinner inactive.
+; Award a second copy of the currently lit arrow value, then finish the
+; original score/chase before moving the sequence to spinner inactive.
 ; Preserve only the two saucer flags, and darken the spinner value lamps until
 ; a newly sunk ball activates that location; sunk balls are never queued. Once
 ; the chase advances the orbit value, preview that new value with the same
@@ -397,7 +398,8 @@ DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
 ; Send the existing right-orbit command twice back-to-back before scoring and
 ; the chase. C27E clobbers B, so reload the selector for the second send inside
 ; DELUXE_RUN_ORIGINAL_LIT_ORBIT. At the terminal value, there is no advance to
-; announce: use the left orbit's single collect sound instead.
+; announce: use the left orbit's single collect sound instead, then let the
+; Special sound hook send $6F twice while award processing remains canonical.
         LDAA DELUXE_ORBIT_VALUE_STATE
         BEQ DELUXE_RUN_TERMINAL_RIGHT_ORBIT
         LDAA #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
@@ -406,14 +408,14 @@ DELUXE_SCORE_ACTIVE_RIGHT_ORBIT:
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
         BRA DELUXE_AFTER_RIGHT_ORBIT_SCORE
 DELUXE_RUN_TERMINAL_RIGHT_ORBIT:
-; The canonical terminal collector independently requests loud Special sound
-; $6F after the normal orbit sound. Suppress only that one request so this hit
-; retains the same ding as the left rollover while all Special award, latch,
-; adjustment, and knocker processing still runs.
+; Mark only the canonical terminal collection reached by this right rollover.
+; The context-aware sound hook sends "Super" twice. The canonical Special
+; points, adjustment-controlled award, knocker, latch, and lamp cleanup still
+; run exactly once.
         LDAA #$01
-        STAA DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND
+        STAA DELUXE_DOUBLE_RIGHT_ORBIT_SPECIAL_SOUND
         BSR DELUXE_RUN_ORIGINAL_LIT_ORBIT
-        CLR DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND
+        CLR DELUXE_DOUBLE_RIGHT_ORBIT_SPECIAL_SOUND
 DELUXE_AFTER_RIGHT_ORBIT_SCORE:
         BSR DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_STEP
 DELUXE_FINISH_ACTIVE_ORBIT_WITH_PREVIEW:
@@ -1803,16 +1805,20 @@ DELUXE_START_BACKGROUND_MUSIC_NOW:
         JMP $c28d
 
 DELUXE_HANDLE_SPECIAL_COLLECT_SOUND:
-; C1D6 routes every normal Special sound request here. A maxed right-orbit
-; collect sets a one-shot flag immediately around the canonical orbit routine;
-; consume it by skipping only command $6F and continue at the common Special
-; award path. All other collectors reproduce the original sound call.
-        TST DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND
+; C1D6 routes every normal Special sound request here. A terminal right-orbit
+; collect keeps its context flag set around the canonical orbit routine: send
+; $6F twice consecutively before entering the common Deluxe Special-points
+; hook. Every
+; other collector reproduces the original single sound call.
+        TST DELUXE_DOUBLE_RIGHT_ORBIT_SPECIAL_SOUND
         BEQ DELUXE_PLAY_NORMAL_SPECIAL_SOUND
-        CLR DELUXE_SUPPRESS_NEXT_SPECIAL_SOUND
+        LDAA #SQUAWK_TALK_SUPER_COMMAND
+        JSR $c27e
+        LDAA #SQUAWK_TALK_SUPER_COMMAND
+        JSR $c27e
         JMP SPECIAL_COLLECT_COMMON
 DELUXE_PLAY_NORMAL_SPECIAL_SOUND:
-        LDAA #$6f
+        LDAA #SQUAWK_TALK_SUPER_COMMAND
         JSR $c27e
         JMP SPECIAL_COLLECT_COMMON
 
@@ -1848,7 +1854,7 @@ DELUXE_AWARD_SPECIAL_POINTS:
 ; scaled 25,000 through the same multiplier-aware helpers used by normal
 ; scoring: 10,000 + 10,000 + 5,000 gives 25K/50K/75K at 1x/2x/3x.
 ; Then execute C1DB's displaced instruction and resume the original special
-; processing, including its adjustment-controlled award and knocker behavior.
+; processing, including its single adjustment-controlled award and knocker.
         JSR $c96c
         JSR $c96c
         JSR $c994
@@ -1877,6 +1883,65 @@ DELUXE_STARTUP_MUSIC_TEST_PENDING:
         CLR DELUXE_STARTUP_MUSIC_PENDING
 DELUXE_STARTUP_MUSIC_TICK_DONE:
         RTS
+
+DELUXE_AWARD_CURRENT_ORBIT_VALUE_AGAIN:
+; DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT jumps here without growing or moving the
+; established rules that follow it. Award the shown value once, then enter the
+; existing right-side path; canonical CB5C supplies the identical second copy
+; and its one chase. Retained encodings are E,D,B,7,6,5,3,2,1,0 for 10K..100K.
+        LDAA DELUXE_ORBIT_VALUE_STATE
+        BEQ DELUXE_AWARD_ORBIT_100000_AGAIN
+        CMPA #$01
+        BEQ DELUXE_AWARD_ORBIT_90000_AGAIN
+        CMPA #$02
+        BEQ DELUXE_AWARD_ORBIT_80000_AGAIN
+        CMPA #$03
+        BEQ DELUXE_AWARD_ORBIT_70000_AGAIN
+        CMPA #$05
+        BEQ DELUXE_AWARD_ORBIT_60000_AGAIN
+        CMPA #$06
+        BEQ DELUXE_AWARD_ORBIT_50000_AGAIN
+        CMPA #$07
+        BEQ DELUXE_AWARD_ORBIT_40000_AGAIN
+        CMPA #$0b
+        BEQ DELUXE_AWARD_ORBIT_30000_AGAIN
+        CMPA #$0d
+        BEQ DELUXE_AWARD_ORBIT_20000_AGAIN
+        CMPA #$0e
+        BEQ DELUXE_AWARD_ORBIT_10000_AGAIN
+; Invalid/off encodings are not reachable while an orbit collect is active.
+; Skip the extra award rather than inventing one if RAM is corrupt.
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_100000_AGAIN:
+        JSR $c96c
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_90000_AGAIN:
+        JSR $c984
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_80000_AGAIN:
+        JSR $c988
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_70000_AGAIN:
+        JSR $c98c
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_60000_AGAIN:
+        JSR $c990
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_50000_AGAIN:
+        JSR $c994
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_40000_AGAIN:
+        JSR $c998
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_30000_AGAIN:
+        JSR $c99c
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_20000_AGAIN:
+        JSR $c9a0
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
+DELUXE_AWARD_ORBIT_10000_AGAIN:
+        JSR $c9a4
+        JMP DELUXE_SCORE_ACTIVE_RIGHT_ORBIT
 
 DELUXE_RULES_END:
 ; Preserve the canonical $FF fill up to the fixed interrupt module at $E000.
