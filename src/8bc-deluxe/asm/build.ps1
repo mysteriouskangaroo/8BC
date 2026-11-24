@@ -126,7 +126,7 @@ $canonicalPlayerRecordCount = 4
 $canonicalPlayerRecordEnd = $canonicalPlayerRecordStart +
     ($canonicalPlayerRecordStride * $canonicalPlayerRecordCount) - 1
 $deluxeRamStart = Get-DasmSymbolAddress 'DELUXE_COLLECT_STATE'
-$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_HOLE_NEXT_BONUS_MULTIPLIER'
+$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_STARTUP_MUSIC_PENDING'
 if ($deluxeRamStart -ne ($canonicalPlayerRecordEnd + 1)) {
     throw "Deluxe RAM must begin at $('$' + ($canonicalPlayerRecordEnd + 1).ToString('X4')) immediately after the four canonical player slots; found $('$' + $deluxeRamStart.ToString('X4'))."
 }
@@ -156,6 +156,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xE111; Opcode = 0xBD; Target = 'DELUXE_SELECT_PHASE_B_LAMP_OUTPUT'; Name = 'output-only extended rack/B-A-L-L indicators' }
     @{ Address = 0xC1BC; Opcode = 0xBD; Target = 'DELUXE_APPLY_HOLE_FLASH_MASK'; Name = 'authorized saucer 100K flash gate' }
     @{ Address = 0xC46D; Opcode = 0x7E; Target = 'DELUXE_PREPEND_STARTUP_SUPER'; Name = 'startup Super speech prefix' }
+    @{ Address = 0xC562; Opcode = 0x7E; Target = 'DELUXE_START_OR_DEFER_BACKGROUND_MUSIC'; Name = 'startup-safe first-ball background music' }
     @{ Address = 0xC4E6; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_PLAYER_BONUS_RECORD'; Name = 'four-player Deluxe bonus-record initialization' }
     @{ Address = 0xC521; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_BALL'; Name = 'new-ball initialization' }
     @{ Address = 0xC529; Bytes = [byte[]](0x20);             Name = 'original spinner preset bypass' }

@@ -7,8 +7,9 @@
 
 DELUXE_PERIODIC_TICK:
 ; C14E calls this in place of its original LDX $10B3. Preserve A, process the
-; spinner-collecting overlay and value-preview timers, then execute that displaced
-; load last so C151 sees the same X value and condition codes as canonical.
+; startup-music guard, spinner-collecting overlay and value-preview timers,
+; then execute that displaced load last so C151 sees the same X value and
+; condition codes as canonical.
         PSHA
         LDAA DELUXE_SPINNER_COLLECTING_TIMER
         BEQ DELUXE_SPINNER_PREVIEW_TICK
@@ -27,7 +28,7 @@ DELUXE_PERIODIC_TICK:
         CLR $10b1
         CLR $10b2
 ; Keep the following routines at their established addresses.
-        dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01
+        dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01
 DELUXE_SPINNER_PREVIEW_TICK:
 ; A newly collected E-I-G-H-T letter starts this roughly 3.2-second lamp-only
 ; preview while the spinner collect is inactive. Bit 4 supplies a roughly
@@ -69,6 +70,7 @@ DELUXE_ORBIT_PREVIEW_HIDE:
 DELUXE_ORBIT_PREVIEW_FINISHED:
         JSR DELUXE_HIDE_ORBIT_PREVIEW_VALUE
 DELUXE_PERIODIC_AWARD_DISPLAY_TICK:
+        JSR DELUXE_TICK_STARTUP_MUSIC_GUARD
         JSR DELUXE_UPDATE_SUNK_BALL_SCORE_DISPLAY
 DELUXE_PERIODIC_TICK_DONE:
         PULA
@@ -1765,13 +1767,40 @@ DELUXE_FORCE_SUNK_SOLID_BALL_LAMPS_DARK:
 
 DELUXE_PREPEND_STARTUP_SUPER:
 ; C45B has confirmed that speech is enabled, and C462-C46B has completed the
-; canonical pre-announcement delay. Send "Super", restore C46D's displaced
-; adjustment load immediately, then resume the canonical "Eight Ball, 3 Ball"
-; / "Eight Ball, 5 Ball" selector without an added inter-command pause.
+; canonical pre-announcement delay. Start and arm the first-ball music guard,
+; send "Super", restore C46D's displaced adjustment load immediately, then
+; resume the canonical "Eight Ball, 3 Ball" / "Eight Ball, 5 Ball" selector
+; without an added inter-command pause. DELUXE_PERIODIC_TICK keeps this private
+; counter running after the machine enters attract.
+        LDX #DELUXE_STARTUP_MUSIC_GUARD_TICKS
+        STX DELUXE_STARTUP_MUSIC_GUARD_TIMER
+        LDAA #$02
+        STAA DELUXE_STARTUP_MUSIC_PENDING
         LDAA #SQUAWK_TALK_SUPER_COMMAND
         JSR $c27e
         LDAB $161f
         JMP $c470
+
+DELUXE_START_OR_DEFER_BACKGROUND_MUSIC:
+; C562 reaches this only after the canonical music-enable adjustment check.
+; State 2 means startup speech armed this one-shot. A zero interrupt-driven
+; guard proves a normal late Start no longer needs protection. A genuinely
+; rapid Start records one pending request; the periodic gameplay hook transmits
+; $11 exactly once after the guard reaches zero. State zero sends immediately
+; for all later balls.
+        LDAA DELUXE_STARTUP_MUSIC_PENDING
+        CMPA #$02
+        BNE DELUXE_START_BACKGROUND_MUSIC_NOW
+        CLR DELUXE_STARTUP_MUSIC_PENDING
+        LDX DELUXE_STARTUP_MUSIC_GUARD_TIMER
+        BEQ DELUXE_START_BACKGROUND_MUSIC_NOW
+        LDAA #$01
+        STAA DELUXE_STARTUP_MUSIC_PENDING
+        RTS
+DELUXE_START_BACKGROUND_MUSIC_NOW:
+        CLR DELUXE_STARTUP_MUSIC_PENDING
+        LDAA #$11
+        JMP $c28d
 
 DELUXE_HANDLE_SPECIAL_COLLECT_SOUND:
 ; C1D6 routes every normal Special sound request here. A maxed right-orbit
@@ -1825,6 +1854,29 @@ DELUXE_AWARD_SPECIAL_POINTS:
         JSR $c994
         LDX #$165f
         JMP $c1de
+
+DELUXE_TICK_STARTUP_MUSIC_GUARD:
+; Called from the periodic tail using three bytes reclaimed from its reserved
+; padding, leaving every established Deluxe entry point at its prior address.
+; Decrement the guard here, then enqueue only after observing both expiry and
+; C562's pending request. Waiting for the canonical queue slot avoids blocking
+; this gameplay tick inside the low-level sound sender.
+        LDX DELUXE_STARTUP_MUSIC_GUARD_TIMER
+        BEQ DELUXE_STARTUP_MUSIC_TEST_PENDING
+        DEX
+        STX DELUXE_STARTUP_MUSIC_GUARD_TIMER
+        BNE DELUXE_STARTUP_MUSIC_TICK_DONE
+DELUXE_STARTUP_MUSIC_TEST_PENDING:
+        LDAA DELUXE_STARTUP_MUSIC_PENDING
+        CMPA #$01
+        BNE DELUXE_STARTUP_MUSIC_TICK_DONE
+        LDAA PENDING_SOUND_COMMAND
+        BNE DELUXE_STARTUP_MUSIC_TICK_DONE
+        LDAA #$11
+        STAA PENDING_SOUND_COMMAND
+        CLR DELUXE_STARTUP_MUSIC_PENDING
+DELUXE_STARTUP_MUSIC_TICK_DONE:
+        RTS
 
 DELUXE_RULES_END:
 ; Preserve the canonical $FF fill up to the fixed interrupt module at $E000.

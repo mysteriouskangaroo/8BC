@@ -22,6 +22,12 @@ as a Deluxe score of 9,999,999.
   "Eight Ball, 3 Ball" or "Eight Ball, 5 Ball" boot announcement with
   "Super". The original pre-announcement delay and 3/5-ball selection are
   preserved, but no additional delay is inserted between the two commands.
+- The original first-ball background-music command can otherwise collide with
+  that announcement when Start is pressed immediately after boot. Deluxe uses
+  a roughly three-second periodic startup guard to recognize that rapid
+  Start, then sends command `$11` once when the guard expires. Starting
+  after the startup guard, and starting every later ball, retains the original
+  immediate command.
 
 Printed playfield inserts retain their physical legends. In this document,
 phrases such as the **100,000 insert** identify that lamp or feature; an

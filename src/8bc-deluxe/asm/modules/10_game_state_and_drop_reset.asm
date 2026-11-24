@@ -89,7 +89,7 @@ START_BALL_STATE:
         COMB                         ; $C55D: $53
         ANDB #$10                    ; $C55E: $C4,$10
         BNE $c565                    ; $C560: $26,$03
-        JMP $c28d                    ; $C562: $7E,$C2,$8D
+        JMP DELUXE_START_OR_DEFER_BACKGROUND_MUSIC ; $C562: first-ball music waits out boot speech when necessary
         RTS                          ; $C565: $39
         dc.b $C6,$02                                         ; $C566 unconfirmed: LDAB #$2
         dc.b $37                                             ; $C568 unconfirmed: PSHB

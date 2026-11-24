@@ -102,6 +102,11 @@ DELUXE_CHAMP_INLANE_REARMED                    equ $1148
 DELUXE_HOLE_BONUS_MULTIPLIER                    equ $1149
 DELUXE_BONUS_MULTIPLIER_PASSES_REMAINING        equ $114A
 DELUXE_HOLE_NEXT_BONUS_MULTIPLIER               equ $114B
+; The Deluxe periodic guard begins with the startup announcement. State 2 at
+; 114E means boot-armed, state 1 means the music request is pending, and zero
+; means the one-shot is complete.
+DELUXE_STARTUP_MUSIC_GUARD_TIMER                 equ $114C
+DELUXE_STARTUP_MUSIC_PENDING                     equ $114E
 
 PLAYER_SCORE_DISPLAY_START                    equ $1046
 PLAYER_SCORE_DISPLAY_END                      equ $1062
@@ -159,6 +164,9 @@ DELUXE_ORBIT_PREVIEW_TICKS                   equ DELUXE_SPINNER_PREVIEW_TICKS
 ; The gameplay periodic hook runs at about 60 Hz. $B4 is roughly three
 ; seconds; bit 4 supplies a clearly visible roughly half-second blink cycle.
 DELUXE_SUNK_BALL_SCORE_DISPLAY_TICKS          equ $B4
+; DELUXE_PERIODIC_TICK runs twice per 60 Hz video frame in libpinmame.
+; 360 ticks therefore leave roughly three seconds for the startup speech.
+DELUXE_STARTUP_MUSIC_GUARD_TICKS              equ $0168
 DELUXE_CALLED_BALL_INITIAL_500S                equ $01
 DELUXE_CALLED_BALL_MAXIMUM_500S                equ $0A
 DELUXE_SUNK_BALL_SCORE_BLINK_BIT              equ $10

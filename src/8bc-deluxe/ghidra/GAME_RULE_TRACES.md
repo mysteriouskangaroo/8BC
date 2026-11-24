@@ -37,6 +37,32 @@ command and sends it at `$C47A`. The final sound-board sequence is therefore
 announcement. The sender at `$C28D-$C2B1` writes the low nibble through 6803
 port 2, strobes port 3 bit 4, then writes the high nibble.
 
+## Startup-safe first-ball background music
+
+The canonical ball-start path sends command `$18` at `$C4F6-$C4FA`, then
+loads background-music command `$11` at `$C558`. After the music-enable test
+at `$C55A-$C560`, `$C562` originally jumped directly to the nibble sender at
+`$C28D`. That transport has no sound-board busy acknowledgement or retry, so
+a Start pressed while the boot announcement is still playing can lose the
+only `$11` request for that ball.
+
+`DELUXE_PREPEND_STARTUP_SUPER` loads 360 ticks at `$114C-$114D` and arms state
+`$02` at `$114E` immediately before sending the startup speech. The existing
+Deluxe periodic hook at `$C14E` decrements that private guard twice per
+libpinmame video frame, including through attract. It does not alter the
+hardware I/O interrupts. After a normal wait the guard is already zero before
+Start; a rapid Start can still reach `$C562` with a short remainder.
+
+The replacement `$C562` hook consumes the armed state and tests the guard. If
+it is already zero, the game started normally and `$11` is sent immediately.
+If it remains nonzero, Start was pressed inside the startup window; `$C562`
+changes `$114E` to pending state `$01` and returns without touching the sound
+board. The same periodic hook later expires the guard, waits for the canonical
+pending-sound slot at `$1024` to be free, queues `$11`, and consumes its own
+pending flag. The original sound service performs the hardware transfer in its
+normal context. State remains zero thereafter, so later balls follow the
+canonical immediate path.
+
 ## Switch 07: Rebound
 
 Switch 07 is a useful first complete rule trace because the manual explicitly
