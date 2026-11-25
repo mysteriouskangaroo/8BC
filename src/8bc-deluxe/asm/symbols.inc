@@ -122,6 +122,12 @@ DELUXE_BALL_LETTER_AWARD_PENDING                 equ $114F
 ; using a per-player array. The canonical turn-state tuple remains the ball-end
 ; authority; the periodic hook rearms it until every stacked award is used.
 DELUXE_STACKED_EXTRA_BALLS                        equ $1150
+; One remembered H/A/M skill-shot target per player, followed by the active
+; ball's output-only target and its big-endian two-second countdown.
+DELUXE_PLAYER_CHAMP_SKILL_TARGETS                  equ $1151
+DELUXE_CHAMP_SKILL_ACTIVE_TARGET                   equ $1155
+DELUXE_CHAMP_SKILL_TIMER                           equ $1156
+DELUXE_CHAMP_SKILL_TIMER_LOW                       equ $1157
 
 GAME_TURN_STATE_FLAGS                             equ $009A
 EXTRA_BALL_SAME_TURN_STATE                         equ $80
@@ -155,6 +161,14 @@ DELUXE_COLLECT_DEACTIVATION_AUTHORIZED       equ $80
 DELUXE_CHAMP_INLANE_LOCKED                   equ $00
 DELUXE_CHAMP_INLANE_ARMED                    equ $01
 DELUXE_CHAMP_INLANE_MASK                     equ $11
+DELUXE_CHAMP_SKILL_LANE_MASK                 equ $0E
+DELUXE_CHAMP_SKILL_H_TARGET                  equ $02
+DELUXE_CHAMP_SKILL_A_TARGET                  equ $04
+DELUXE_CHAMP_SKILL_M_TARGET                  equ $08
+; The gameplay periodic hook runs twice per 60 Hz libpinmame frame; $00F0 is
+; therefore approximately two seconds there. Physical timing still requires
+; confirmation on the machine.
+DELUXE_CHAMP_SKILL_TARGET_TICKS              equ $00F0
 
 HOLE_BONUS_2X_STATE                          equ $01
 HOLE_BONUS_3X_STATE                          equ $02

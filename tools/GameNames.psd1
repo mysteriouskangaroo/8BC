@@ -317,6 +317,10 @@
         CHAMP_COMPLETION_STATE            = 0x10C0
         SUNK_POOL_BALLS_1_TO_7            = 0x10C3
         DROP_TARGET_SWITCH_CLOSURE_LATCHES = 0x10C5
+        DELUXE_STACKED_EXTRA_BALLS        = 0x1150
+        DELUXE_PLAYER_CHAMP_SKILL_TARGETS = 0x1151
+        DELUXE_CHAMP_SKILL_ACTIVE_TARGET  = 0x1155
+        DELUXE_CHAMP_SKILL_TIMER          = 0x1156
         WORK_RAM_U4_6116_END              = 0x17FF
 
         # Credits: two digit bytes, ones first, digit in the high nibble, F =

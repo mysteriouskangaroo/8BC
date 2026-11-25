@@ -387,6 +387,25 @@ completion milestones, or the C/P anti-shatz latch.
 
 ## CHAMP
 
+### CHAMP H-A-M skill shot
+
+- Every served ball starts a new skill-shot opportunity, including every
+  stacked Extra Ball. One of the H, A, or M top-lane inserts blinks as the
+  current target. The target begins at H in a new game, advances H -> A -> M
+  -> H in approximately two-second steps, and remembers its last position
+  independently for each player between balls.
+- The first H, A, or M rollover ends that ball's opportunity. Rolling the
+  blinking target awards one complete CHAMP milestone after the lane's normal
+  score, plays the normal C-H-A-M-P-complete sound, and flashes all five green
+  CHAMP inserts with the normal completed-CHAMP celebration. The prior partial
+  C-H-A-M-P letter state is restored when the celebration finishes. The
+  resolving H/A/M does not force the initial Called Ball prompt to start, so
+  that speech cannot replace the completion sound; Called Ball remains on its
+  original ball-start countdown.
+- Rolling a different H, A, or M is a miss: the skill shot ends and that lane
+  follows the normal new/already-collected letter rule. C and P do not end the
+  opportunity.
+
 - Only the C and P return lanes use the anti-shatz latch. The first new C or P
   of each ball is available immediately. After one is awarded, another new C
   or P requires either thumper/pop bumper, the saucer, either orbit rollover,
@@ -439,7 +458,7 @@ completion milestones, or the C/P anti-shatz latch.
 The original player records occupy four 13-byte slots at `$10C7-$10FA`.
 Each slot contains nine saved bytes plus four reserved stride bytes; the exact
 per-player and per-field layout is in [HARDWARE_MAP.md](ghidra/HARDWARE_MAP.md#u4-ram-canonical-per-player-record-slots).
-Deluxe begins at the next byte and uses `$10FB-$114B` for active state,
+Deluxe begins at the next byte and uses `$10FB-$1157` for active state,
 temporary bonus/display work, and parallel per-player counters. The
 [authoritative Deluxe allocation](ghidra/HARDWARE_MAP.md#u4-ram-deluxe-allocation)
 lists every assigned address, storage role, active-player mirror, reserved gap,
@@ -654,6 +673,13 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   and CHAMP does not change spinner value. At the fifth and later completions,
   verify the milestone portion is 90K at 3x; including the completing CHAMP
   lane's normal 9K, the full switch-event score movement is 99K.
+- On a newly served normal ball and Extra Ball, verify one H/A/M target blinks,
+  advances H -> A -> M at approximately two seconds per target, and resumes
+  each player's independently remembered position. Verify the first wrong
+  H/A/M ends the opportunity and processes normally, while C/P do not end it.
+  Hit the blinking target with three recalled CHAMP letters present and verify
+  one completion milestone is awarded while the exact three-letter bitmap is
+  unchanged.
 - Verify lighting the outlane specials on completion 5 does not enter the
   Special-collection path: no separate Special points, sound, knocker, or
   adjustment-controlled award may occur until an outlane Special is collected.

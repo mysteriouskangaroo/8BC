@@ -75,6 +75,7 @@ DELUXE_ORBIT_PREVIEW_FINISHED:
         JSR DELUXE_HIDE_ORBIT_PREVIEW_VALUE
 DELUXE_PERIODIC_AWARD_DISPLAY_TICK:
         JSR DELUXE_TICK_STARTUP_MUSIC_GUARD
+        JSR DELUXE_TICK_CHAMP_SKILL_SHOT
         JSR DELUXE_PERIODIC_FINALIZE
 DELUXE_PERIODIC_TICK_DONE:
         PULA
@@ -86,7 +87,10 @@ DELUXE_SELECT_PHASE_B_LAMP_OUTPUT:
 ; loading X with 1040 directly. Outside an active rack/B-A-L-L "more"
 ; indication, retain the original fast path. Otherwise copy the six Phase-B
 ; shadow bytes and change only the applicable bonus-lamp output bits. The
-; C-H-A-M-P byte at 1040 is always copied unchanged.
+; skill shot also requires the copy path so its H/A/M blink can remain an
+; output-only overlay on the authoritative C-H-A-M-P byte at 1040.
+        LDAA DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        BNE DELUXE_COPY_PHASE_B_LAMPS
         LDAA DELUXE_COMPLETED_EIGHT_BALL_RACKS
         CMPA #DELUXE_RACK_MORE_THRESHOLD
         BCC DELUXE_COPY_PHASE_B_LAMPS
@@ -132,6 +136,17 @@ DELUXE_APPLY_BALL_MORE_LAMP_OUTPUT:
         EORA #DELUXE_BALL_MORE_LAMP_MASK
         STAA $01,X
 DELUXE_PHASE_B_OUTPUT_READY_WITH_MORE:
+; Blink exactly the current H/A/M skill target without changing 1040. XORing
+; the saved output copy works whether that letter was already collected or
+; not; the canonical flash phase supplies a visible on/off cadence.
+        LDAA DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        BEQ DELUXE_PHASE_B_OUTPUT_READY
+        LDAA DELUXE_MORE_LAMPS_FLASH_PHASE
+        BEQ DELUXE_PHASE_B_OUTPUT_READY
+        LDAA $00,X
+        EORA DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        STAA $00,X
+DELUXE_PHASE_B_OUTPUT_READY:
         RTS
 
 DELUXE_USE_LIVE_PHASE_B_LAMPS:
@@ -185,7 +200,7 @@ DELUXE_INITIALIZE_BALL:
         LDAA CHAMP_LANE_STATE
         ORAA #DELUXE_SPINNER_ALL_VALUE_LAMPS
         STAA CHAMP_LANE_STATE
-        RTS
+        JMP DELUXE_START_CHAMP_SKILL_SHOT
 
 DELUXE_HANDLE_SPINNER:
 ; Switch 32. Select the original sound for the current value tier before the
@@ -1081,6 +1096,7 @@ DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
         CLR DELUXE_COMPLETED_BALL_LETTERS
         LDAA #DELUXE_CALLED_BALL_INITIAL_500S
         STAA DELUXE_CALLED_BALL_SCORE_500S
+        JSR DELUXE_INITIALIZE_ACTIVE_PLAYER_CHAMP_SKILL_TARGET
         JSR DELUXE_SAVE_ACTIVE_PLAYER_BONUS_COUNTERS
         JMP $c58c
 
@@ -1143,6 +1159,28 @@ DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER_LOOP:
         INX
         DECB
         BNE DELUXE_SELECT_ACTIVE_PLAYER_RACK_COUNTER_LOOP
+        RTS
+
+DELUXE_INITIALIZE_ACTIVE_PLAYER_CHAMP_SKILL_TARGET:
+; The C4E6 new-game loop visits all four 1-based player numbers. Each player
+; begins a new game on H; later balls read that player's continuously updated
+; H/A/M position from this parallel four-byte array.
+        PSHA
+        BSR DELUXE_SELECT_ACTIVE_PLAYER_CHAMP_SKILL_TARGET
+        LDAA #DELUXE_CHAMP_SKILL_H_TARGET
+        STAA $00,X
+        PULA
+        RTS
+
+DELUXE_SELECT_ACTIVE_PLAYER_CHAMP_SKILL_TARGET:
+        PSHB
+        LDX #DELUXE_PLAYER_CHAMP_SKILL_TARGETS-1
+        LDAB.w $008f
+DELUXE_SELECT_ACTIVE_PLAYER_CHAMP_SKILL_TARGET_LOOP:
+        INX
+        DECB
+        BNE DELUXE_SELECT_ACTIVE_PLAYER_CHAMP_SKILL_TARGET_LOOP
+        PULB
         RTS
 
 DELUXE_BEGIN_BALL_LETTER_BONUS_PASS:
@@ -1577,6 +1615,103 @@ DELUXE_LOAD_LIVE_ORBIT_STATE_FOR_SAVE:
         LDAA SHARED_ORBIT_VALUE_LAMP_STATE
         RTS
 
+DELUXE_HANDLE_CHAMP_LANE_AFTER_SCORE:
+; CADD jumps here after the common CHAMP lane score. Only H/A/M can resolve
+; the ball-start skill shot. The first such rollover ends the opportunity.
+; A matching lane advances one complete CHAMP milestone but deliberately does
+; not touch 1040, preserving the player's exact partial-letter progress. A
+; miss falls through to the original new/already-collected letter test.
+        BITA #DELUXE_CHAMP_SKILL_LANE_MASK
+        BEQ DELUXE_CHAMP_SKILL_CONTINUE_NORMAL_LANE
+        TST DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        BEQ DELUXE_CHAMP_SKILL_CONTINUE_NORMAL_LANE
+        CMPA DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        BNE DELUXE_CHAMP_SKILL_MISSED
+        JSR DELUXE_END_CHAMP_SKILL_SHOT
+        LDAA #$34
+        JSR $c27e
+; Reproduce the canonical completed-CHAMP lamp celebration without consuming
+; the player's partial word. Save the complete shared byte (including the
+; spinner lamp bits), begin from all five green CHAMP inserts collected, run
+; the original nine toggle/delay phases, then restore the exact saved byte.
+        LDAA CHAMP_LANE_STATE
+        PSHA
+        ORAA #$1f
+        STAA CHAMP_LANE_STATE
+        LDAA #$09
+DELUXE_CHAMP_SKILL_FLASH_LOOP:
+        LDAB #$0c
+        JSR $c919
+        LDAB CHAMP_LANE_STATE
+        EORB #$1f
+        STAB CHAMP_LANE_STATE
+        DECA
+        BNE DELUXE_CHAMP_SKILL_FLASH_LOOP
+        PULA
+        STAA CHAMP_LANE_STATE
+        JSR DELUXE_ADVANCE_CHAMP
+        RTS
+DELUXE_CHAMP_SKILL_MISSED:
+        JSR DELUXE_END_CHAMP_SKILL_SHOT
+DELUXE_CHAMP_SKILL_CONTINUE_NORMAL_LANE:
+        LDX #CHAMP_LANE_STATE
+        BITA $00,X
+        BNE DELUXE_CHAMP_SKILL_LANE_DONE
+        JMP DELUXE_ACCEPT_NEW_CHAMP_LETTER
+DELUXE_CHAMP_SKILL_LANE_DONE:
+        JMP CHAMP_LANE_HANDLER_DONE
+
+DELUXE_START_CHAMP_SKILL_SHOT:
+; Called by every per-ball initialization, including stacked Extra Balls.
+; Resume this player's remembered H/A/M position and restart its full two-
+; second dwell. Invalid/uninitialized state safely migrates to H.
+        JSR DELUXE_SELECT_ACTIVE_PLAYER_CHAMP_SKILL_TARGET
+        LDAA $00,X
+        CMPA #DELUXE_CHAMP_SKILL_H_TARGET
+        BEQ DELUXE_START_CHAMP_SKILL_SHOT_VALID
+        CMPA #DELUXE_CHAMP_SKILL_A_TARGET
+        BEQ DELUXE_START_CHAMP_SKILL_SHOT_VALID
+        CMPA #DELUXE_CHAMP_SKILL_M_TARGET
+        BEQ DELUXE_START_CHAMP_SKILL_SHOT_VALID
+        LDAA #DELUXE_CHAMP_SKILL_H_TARGET
+        STAA $00,X
+DELUXE_START_CHAMP_SKILL_SHOT_VALID:
+        STAA DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        LDX #DELUXE_CHAMP_SKILL_TARGET_TICKS
+        STX DELUXE_CHAMP_SKILL_TIMER
+        RTS
+
+DELUXE_TICK_CHAMP_SKILL_SHOT:
+; H, A, and M each own one two-second interval. Store every transition in the
+; active player's parallel byte so a drain, player change, and later return
+; resume exactly where that player left off.
+        LDAA DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        BEQ DELUXE_TICK_CHAMP_SKILL_SHOT_DONE
+        LDX DELUXE_CHAMP_SKILL_TIMER
+        BEQ DELUXE_ADVANCE_CHAMP_SKILL_TARGET
+        DEX
+        STX DELUXE_CHAMP_SKILL_TIMER
+        BNE DELUXE_TICK_CHAMP_SKILL_SHOT_DONE
+DELUXE_ADVANCE_CHAMP_SKILL_TARGET:
+        ASLA
+        CMPA #$10
+        BCS DELUXE_STORE_CHAMP_SKILL_TARGET
+        LDAA #DELUXE_CHAMP_SKILL_H_TARGET
+DELUXE_STORE_CHAMP_SKILL_TARGET:
+        STAA DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        JSR DELUXE_SELECT_ACTIVE_PLAYER_CHAMP_SKILL_TARGET
+        STAA $00,X
+        LDX #DELUXE_CHAMP_SKILL_TARGET_TICKS
+        STX DELUXE_CHAMP_SKILL_TIMER
+DELUXE_TICK_CHAMP_SKILL_SHOT_DONE:
+        RTS
+
+DELUXE_END_CHAMP_SKILL_SHOT:
+        CLR DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        CLR DELUXE_CHAMP_SKILL_TIMER
+        CLR DELUXE_CHAMP_SKILL_TIMER_LOW
+        RTS
+
 DELUXE_ACCEPT_NEW_CHAMP_LETTER:
 ; CAE4 reaches here only after the lane has scored and the original 1040 test
 ; has proved that this CHAMP letter is new. A contains the letter bit: C=$01,
@@ -1635,13 +1770,29 @@ DELUXE_PREPARE_PLAYFIELD_SWITCH_HANDLER_TABLE:
 ; switch event. B is the even byte offset into C011's handler-pointer table.
 ; First update the invisible CHAMP anti-shatz rearm latch from the verified
 ; shot whitelist. The accepted switch still reaches its original handler.
+; Outhole is offset zero. Freeze the remembered H/A/M target as soon as the
+; ball drains so it cannot continue cycling during bonus or player transition.
+        TSTB
+        BNE DELUXE_PREPARE_PLAYFIELD_SWITCH_SKILL_ACTIVE
+        JSR DELUXE_END_CHAMP_SKILL_SHOT
+DELUXE_PREPARE_PLAYFIELD_SWITCH_SKILL_ACTIVE:
         BSR DELUXE_REARM_CHAMP_INLANES_FOR_MEANINGFUL_SWITCH
 ; While no called ball has yet been selected, expire the ball-start speech
-; delay on the first genuine scoring/playfield closure. Deliberately exclude
+; delay on the first genuine scoring/playfield closure. A live skill shot's
+; resolving H/A/M closure (handler offsets 48/4A/4C) is deliberately exempt:
+; its CHAMP-complete sound and lamp celebration take priority, while Called
+; Ball remains on the original ball-start countdown. Deliberately also exclude
 ; Outhole (offset 00), Credit (04), coin/tilt/slam/unused cabinet positions
 ; (10-14, 1A-1E), Lane Change cabinet (3C), and unused switches 38-40 (40-44).
 ; The accepted switch still reaches its original handler after this returns.
 ; Once 10C4 is nonzero, all later reminder timing remains canonical.
+        TST DELUXE_CHAMP_SKILL_ACTIVE_TARGET
+        BEQ DELUXE_FIRST_SWITCH_CALL_DELAY_FILTER
+        CMPB #$48                    ; switch 20 M Top Lane
+        BCS DELUXE_FIRST_SWITCH_CALL_DELAY_FILTER
+        CMPB #$4e                    ; through switch 18 H Top Lane
+        BCS DELUXE_FIRST_SWITCH_CALL_DELAY_DONE
+DELUXE_FIRST_SWITCH_CALL_DELAY_FILTER:
         LDAA CALLED_POOL_BALL_SOUND_ID
         BNE DELUXE_FIRST_SWITCH_CALL_DELAY_DONE
         CMPB #$02
@@ -2005,6 +2156,7 @@ DELUXE_START_NEW_GAME:
 ; A new game cannot inherit unused awards from the preceding game. Tail-call
 ; the displaced canonical initializer so its RTS still returns to C4A7.
         CLR DELUXE_STACKED_EXTRA_BALLS
+        JSR DELUXE_END_CHAMP_SKILL_SHOT
         JMP $eefb
 
 DELUXE_BEGIN_BALL:

@@ -325,6 +325,25 @@ function Invoke-EbcScoredHit {
 # is not returned.
 function Complete-EbcChamp {
     param($RearmWith)
+    # Deluxe begins every served ball with a live H/A/M skill shot. Tests that
+    # call this helper are asking for one ordinary CHAMP completion, not an
+    # accidental skill award. End the opportunity with a different H/A/M lane
+    # first; that normal letter remains lit and the five-lane pass below still
+    # advances CHAMP exactly once.
+    if ($script:Tree -eq '8bc-deluxe') {
+        $skill = Read-EbcByte (Get-EbcRamAddress 'DELUXE_CHAMP_SKILL_ACTIVE_TARGET')
+        if ($skill -ne 0) {
+            # Choose the previous lane in the H -> A -> M cycle. If the timer
+            # crosses its boundary between this RAM read and switch dispatch,
+            # the target advances to the next lane and this is still a miss.
+            $miss = switch ($skill) {
+                0x02 { '"M" Top Lane' }
+                0x04 { '"H" Top Lane' }
+                0x08 { '"A" Top Lane' }
+            }
+            Invoke-EbcScoredHit $miss | Out-Null
+        }
+    }
     foreach ($lane in @('"C" Return Lane', '"H" Top Lane', '"A" Top Lane', '"M" Top Lane', '"P" Return Lane')) {
         if ($RearmWith -and $lane -eq '"P" Return Lane') { Invoke-EbcScoredHit $RearmWith | Out-Null }
         Invoke-EbcScoredHit $lane

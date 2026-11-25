@@ -126,7 +126,7 @@ $canonicalPlayerRecordCount = 4
 $canonicalPlayerRecordEnd = $canonicalPlayerRecordStart +
     ($canonicalPlayerRecordStride * $canonicalPlayerRecordCount) - 1
 $deluxeRamStart = Get-DasmSymbolAddress 'DELUXE_COLLECT_STATE'
-$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_STACKED_EXTRA_BALLS'
+$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_CHAMP_SKILL_TIMER_LOW'
 if ($deluxeRamStart -ne ($canonicalPlayerRecordEnd + 1)) {
     throw "Deluxe RAM must begin at $('$' + ($canonicalPlayerRecordEnd + 1).ToString('X4')) immediately after the four canonical player slots; found $('$' + $deluxeRamStart.ToString('X4'))."
 }
@@ -145,7 +145,8 @@ $deluxeHookChecks = @(
     @{ Address = 0xC1D6; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPECIAL_COLLECT_SOUND'; Name = 'context-aware Special sound gate' }
     @{ Address = 0xC1D9; Bytes = [byte[]](0x01, 0x01); Name = 'Special sound gate fixed-address padding' }
     @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
-    @{ Address = 0xD415; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_FINALIZE'; Name = 'periodic stacked Extra Ball same-turn latch guard' }
+    @{ Address = 0xD415; Opcode = 0xBD; Target = 'DELUXE_TICK_CHAMP_SKILL_SHOT'; Name = 'periodic H/A/M skill-shot timer' }
+    @{ Address = 0xD418; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_FINALIZE'; Name = 'periodic stacked Extra Ball same-turn latch guard' }
     @{ Address = 0xC220; Bytes = [byte[]](0xFF, 0x00, 0x8B, 0xFE, 0x10, 0x1D, 0xE5, 0x00, 0x26, 0x06, 0xEA, 0x00, 0xE7, 0x00, 0x20, 0x02, 0x86, 0x20); Name = 'canonical award-history qualifier restored' }
     @{ Address = 0xC239; Opcode = 0xBD; Target = 'DELUXE_PREPARE_EXTRA_BALL_ACTION'; Name = 'common stacked Extra Ball request' }
     @{ Address = 0xC23C; Bytes = [byte[]](0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01); Name = 'stacked Extra Ball request fixed-address padding' }
@@ -153,11 +154,11 @@ $deluxeHookChecks = @(
     @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic spinner-collecting and display timers' }
     @{ Address = 0xD3B3; Bytes = [byte[]](0x7D, 0x10, 0xFC); Name = 'independent spinner collecting overlay active flag' }
     @{ Address = 0xD3B8; Bytes = [byte[]](0xFE, 0x11, 0x17); Name = '16-bit spinner collecting inactivity countdown' }
-    @{ Address = 0xD4C7; Opcode = 0xBD; Target = 'DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE'; Name = 'spinner sound accepts active or collecting overlay' }
-    @{ Address = 0xD4F8; Opcode = 0xBD; Target = 'DELUXE_BEGIN_SPINNER_COLLECTING'; Name = 'first spinner pulse releases orbit location immediately' }
-    @{ Address = 0xD4FB; Opcode = 0xBD; Target = 'DELUXE_RELOAD_SPINNER_COLLECTING_TIMER'; Name = 'first and continuing spinner pulse ten-second timer refresh' }
-    @{ Address = 0xD4FE; Bytes = [byte[]](0x01, 0x01); Name = 'spinner timer refresh fixed-address padding' }
-    @{ Address = 0xD515; Opcode = 0x7E; Target = 'AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER'; Name = 'spinner collecting retains lit multiplied scoring' }
+    @{ Address = 0xD4E2; Opcode = 0xBD; Target = 'DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE'; Name = 'spinner sound accepts active or collecting overlay' }
+    @{ Address = 0xD513; Opcode = 0xBD; Target = 'DELUXE_BEGIN_SPINNER_COLLECTING'; Name = 'first spinner pulse releases orbit location immediately' }
+    @{ Address = 0xD516; Opcode = 0xBD; Target = 'DELUXE_RELOAD_SPINNER_COLLECTING_TIMER'; Name = 'first and continuing spinner pulse ten-second timer refresh' }
+    @{ Address = 0xD519; Bytes = [byte[]](0x01, 0x01); Name = 'spinner timer refresh fixed-address padding' }
+    @{ Address = 0xD530; Opcode = 0x7E; Target = 'AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER'; Name = 'spinner collecting retains lit multiplied scoring' }
     @{ Address = 0xC1AC; Opcode = 0xBD; Target = 'DELUXE_FLASH_DROP_TARGET_LAMPS'; Name = 'canonical-cadence called drop-target lamp flash' }
     @{ Address = 0xE63A; Opcode = 0xBD; Target = 'DELUXE_PREPARE_PLAYFIELD_SWITCH_HANDLER_TABLE'; Name = 'first scoring switch starts called-ball selection' }
     @{ Address = 0xE111; Opcode = 0xBD; Target = 'DELUXE_SELECT_PHASE_B_LAMP_OUTPUT'; Name = 'output-only extended rack/B-A-L-L indicators' }
@@ -187,6 +188,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xC97E; Bytes = [byte[]](0x7C, 0x00, 0x98, 0x7E, 0xFA, 0x1A); Name = 'fixed scaled 100,000-point award unit' }
     @{ Address = 0xC9A6; Bytes = [byte[]](0xB6, 0x10, 0xC0, 0x84, 0x30); Name = 'multiplier-aware variable-thousands award entry' }
     @{ Address = 0xCAE4; Opcode = 0x7E; Target = 'DELUXE_ACCEPT_NEW_CHAMP_LETTER'; Name = 'C/P-only anti-shatz CHAMP acceptance gate' }
+    @{ Address = 0xCADD; Opcode = 0x7E; Target = 'DELUXE_HANDLE_CHAMP_LANE_AFTER_SCORE'; Name = 'H/A/M ball-start skill-shot gate' }
     @{ Address = 0xC7F0; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11, 0xCE, 0x05, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,500-point pool-ball drain bonus' }
     @{ Address = 0xC906; Bytes = [byte[]](0xCE, 0x10, 0x00, 0xBD, 0xF4, 0x11); Name = 'scaled 1,000-point E-I-G-H-T drain-bonus unit' }
     @{ Address = 0xCA3B; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPINNER'; Name = 'spinner switch handler' }
@@ -195,15 +197,15 @@ $deluxeHookChecks = @(
     @{ Address = 0xCCD4; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_WORD_COMPLETION'; Name = 'completed E-I-G-H-T word B-A-L-L counter' }
     @{ Address = 0xCCE9; Opcode = 0x7E; Target = 'DELUXE_AWARD_BALL_LETTER_COMPLETION'; Name = 'repeating B-A-L-L Extra Ball/Special dispatcher' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
-    @{ Address = 0xD553; Bytes = [byte[]](0xC6, 0x03, 0x7E, 0xC9, 0xA6); Name = 'CHAMP 30,000 base through playfield multiplier' }
-    @{ Address = 0xD936; Bytes = [byte[]](0x86, 0x08);       Name = 'approximately 33-percent-faster sunk-ball bonus-step delay' }
-    @{ Address = 0xDA13; Bytes = [byte[]](0xC6, 0x06);       Name = '33-percent-faster completed B-A-L-L bonus-step delay' }
+    @{ Address = 0xD56E; Bytes = [byte[]](0xC6, 0x03, 0x7E, 0xC9, 0xA6); Name = 'CHAMP 30,000 base through playfield multiplier' }
+    @{ Address = 0xD951; Bytes = [byte[]](0x86, 0x08);       Name = 'approximately 33-percent-faster sunk-ball bonus-step delay' }
+    @{ Address = 0xDA47; Bytes = [byte[]](0xC6, 0x06);       Name = '33-percent-faster completed B-A-L-L bonus-step delay' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
-    @{ Address = 0xD57D; Bytes = [byte[]](0xC1, 0x2A, 0x26, 0x0C, 0xB6, 0x10, 0xFF, 0x26, 0x07, 0xC6, 0x29, 0xBD, 0xCA, 0xAA, 0x20, 0x0A); Name = 'terminal right orbit substitutes left-orbit sound before queueing' }
-    @{ Address = 0xD5BD; Bytes = [byte[]](0x8D, 0x5D, 0x20, 0x1C); Name = 'left orbit original collect-sound pass-through and next-value preview' }
-    @{ Address = 0xD5C1; Bytes = [byte[]](0xB6, 0x10, 0xFF, 0x27, 0x0B, 0x86, 0x2A, 0xBD, 0xC2, 0x7E, 0xC6, 0x2A, 0x8D, 0x4D, 0x20, 0x0A); Name = 'normal right orbit retains double advance sound' }
-    @{ Address = 0xD5D1; Bytes = [byte[]](0x86, 0x01, 0xB7, 0x11, 0x16, 0x8D, 0x44, 0x7F, 0x11, 0x16, 0x8D, 0x1D); Name = 'terminal right orbit suppresses only loud Special sound' }
-    @{ Address = 0xD5FA; Bytes = [byte[]](0xB6, 0x10, 0xFF, 0x27, 0x1C, 0x81, 0x0D, 0x27, 0x0B, 0x81, 0x0B, 0x27, 0x0B, 0x81, 0x05, 0x27, 0x0B, 0x4A, 0x20, 0x0A, 0x86, 0x0B, 0x20, 0x06, 0x86, 0x07, 0x20, 0x02, 0x86, 0x03, 0xB7, 0x10, 0xFF, 0x39); Name = 'right orbit extra 10K step saturates at terminal state' }
+    @{ Address = 0xD598; Bytes = [byte[]](0xC1, 0x2A, 0x26, 0x0C, 0xB6, 0x10, 0xFF, 0x26, 0x07, 0xC6, 0x29, 0xBD, 0xCA, 0xAA, 0x20, 0x0A); Name = 'terminal right orbit substitutes left-orbit sound before queueing' }
+    @{ Address = 0xD5D8; Bytes = [byte[]](0x8D, 0x5D, 0x20, 0x1C); Name = 'left orbit original collect-sound pass-through and next-value preview' }
+    @{ Address = 0xD5DC; Bytes = [byte[]](0xB6, 0x10, 0xFF, 0x27, 0x0B, 0x86, 0x2A, 0xBD, 0xC2, 0x7E, 0xC6, 0x2A, 0x8D, 0x4D, 0x20, 0x0A); Name = 'normal right orbit retains double advance sound' }
+    @{ Address = 0xD5EC; Bytes = [byte[]](0x86, 0x01, 0xB7, 0x11, 0x16, 0x8D, 0x44, 0x7F, 0x11, 0x16, 0x8D, 0x1D); Name = 'terminal right orbit suppresses only loud Special sound' }
+    @{ Address = 0xD615; Bytes = [byte[]](0xB6, 0x10, 0xFF, 0x27, 0x1C, 0x81, 0x0D, 0x27, 0x0B, 0x81, 0x0B, 0x27, 0x0B, 0x81, 0x05, 0x27, 0x0B, 0x4A, 0x20, 0x0A, 0x86, 0x0B, 0x20, 0x06, 0x86, 0x07, 0x20, 0x02, 0x86, 0x03, 0xB7, 0x10, 0xFF, 0x39); Name = 'right orbit extra 10K step saturates at terminal state' }
     @{ Address = 0xCE08; Opcode = 0xBD; Target = 'DELUXE_AWARD_POOL_BALL_FIRST_SINK'; Name = 'normal/called-ball first-sink award' }
     @{ Address = 0xCE13; Opcode = 0x7E; Target = 'DELUXE_AFTER_FIRST_SINK'; Name = 'newly sunk ball handler' }
     @{ Address = 0xCFAE; Opcode = 0xBD; Target = 'DELUXE_AFTER_EIGHT_BALL'; Name = 'collected 8-ball activation handler' }

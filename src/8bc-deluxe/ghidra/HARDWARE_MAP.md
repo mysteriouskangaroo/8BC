@@ -94,7 +94,7 @@ speculative game-rule meaning.
 ### U4 RAM: Deluxe allocation
 
 Deluxe begins at `10FB`, the first byte after all four canonical slots. Its
-currently reserved envelope ends at `1150`. Persistent per-player values use
+currently reserved envelope ends at `1157`. Persistent per-player values use
 parallel arrays; active-player mirrors and temporary work remain shared.
 
 | Address | Storage role | Meaning |
@@ -134,6 +134,9 @@ parallel arrays; active-player mirrors and temporary work remain shared.
 | `114E` | Sound-request state | First-music one-shot state: `2` boot-armed, `1` request pending, `0` complete |
 | `114F` | Switch-event scratch | Newly collected B-A-L-L count pending the post-lamp-shift Extra Ball/Special parity dispatch; zero means no new count |
 | `1150` | Current-turn state | Shared saturating count of awarded Extra Balls not yet played; consumed in sequence before the turn can advance |
+| `1151-1154` | Persistent per-player array | Remembered H/A/M skill-shot target for Players 1-4 (`02` H, `04` A, `08` M) |
+| `1155` | Current ball | Active H/A/M skill-shot target; zero after the opportunity ends |
+| `1156-1157` | Timer | Big-endian countdown for the current target's approximately two-second dwell |
 
 The active-player mirrors at `1100`, `1104`, and `110E` are loaded from the
 selected player's array entries when the canonical restore path finishes and
@@ -163,6 +166,7 @@ because they are not four independent player values.
 | Deluxe completed racks | `1106` | `1107` | `1108` | `1109` | Four-byte parallel array |
 | Deluxe completed B-A-L-L letters | `110A` | `110B` | `110C` | `110D` | Four-byte parallel array |
 | Deluxe Called ball value | `110F` | `1110` | `1111` | `1112` | Four-byte parallel array |
+| Deluxe H/A/M skill target | `1151` | `1152` | `1153` | `1154` | Four-byte parallel array |
 
 The four reserved bytes in each canonical slot remain reserved. New
 persistent Deluxe fields should use another four-byte parallel array rather

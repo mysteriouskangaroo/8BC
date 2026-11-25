@@ -497,7 +497,9 @@ only the scoring states below to `10C0`:
 
 Switches 17 through 21 share the CHAMP-lane handler at `CAD4`. Each lane first
 receives its scaled 300-point award (original 3,000) through `C9F3`, using the multiplier that was
-already active. If the letter is new, the hook at `CAE4` checks its bit mask.
+already active. The hook at `CADD` first resolves the ball-start H/A/M skill
+shot described below. If normal letter handling continues and the letter is
+new, the hook at `CAE4` checks its bit mask.
 H (`02`), A (`04`), and M (`08`) always continue directly to the original
 recording path. Only C (`01`) and P (`10`) test
 `DELUXE_CHAMP_INLANE_REARMED` at `1148`. A locked C/P exits without changing
@@ -513,6 +515,44 @@ and E-I-G-H-T targets. It excludes slings, the rebound, CHAMP lanes, outlanes,
 cabinet/service and ball-management switches, and unused matrix positions. The
 first new C/P of a ball is armed by `DELUXE_INITIALIZE_BALL`; thereafter one
 qualifying shot permits one new C/P. H/A/M neither test nor consume this state.
+
+### Ball-start H-A-M skill shot
+
+`DELUXE_INITIALIZE_BALL` calls `DELUXE_START_CHAMP_SKILL_SHOT` for every ball
+served through `C4F6`, including stacked Extra Balls. The current 1-based
+player number in `008F` selects one remembered target byte at `1151-1154`.
+New-game initialization sets all four bytes to H (`02`). The active target at
+`1155` and big-endian timer at `1156-1157` are shared current-ball work only.
+
+The periodic hook decrements the timer and advances `02 -> 04 -> 08 -> 02`
+at approximately two-second intervals. Each transition is written immediately
+to the active player's byte, so another player's turn cannot overwrite it.
+The accepted Outhole event clears only the live target/timer, freezing the
+remembered position before bonus and player transition. Every next ball reloads
+that player's saved target and a full dwell timer.
+
+The Phase-B serializer at `E111` uses its scratch copy at `1119-111E` whenever
+the skill shot is active. On the canonical flash phase it XORs only the selected
+H/A/M bit in scratch byte `1119`; authoritative `CHAMP_LANE_STATE` at `1040`
+is never changed by the blink.
+
+After the common lane score, `CADD` routes through
+`DELUXE_HANDLE_CHAMP_LANE_AFTER_SCORE`. C and P continue without affecting the
+opportunity. The first H/A/M clears the live target and timer. A mismatch then
+rejoins the original already-collected/new-letter test. A match plays the
+CHAMP-completion sound, saves the complete `1040` byte, temporarily sets all
+five CHAMP bits, and executes the canonical nine-phase `0C`-delay toggle loop
+used at `CAF5-CB05`. It then restores the exact saved byte before calling
+`DELUXE_ADVANCE_CHAMP`, so the prior partial letters and the shared spinner-lamp
+bits both survive the visible all-green celebration. The matched lane is not
+separately added to partial letter progress.
+
+The accepted-switch hook at `E63A` normally clears the initial Called Ball
+delay on the first playfield closure. While the skill opportunity is live it
+exempts H/A/M handler offsets `48`, `4A`, and `4C`; the resolving lane therefore
+cannot make the `Get the ... ball` prompt replace the CHAMP-complete sound.
+Called Ball remains on its original ball-start countdown, while a later normal
+playfield closure after a miss retains the established immediate-call rule.
 
 When all five accepted letters are complete, the hook at `CB07` calls
 `DELUXE_ADVANCE_CHAMP`. Its first action rearms the C/P latch at `1148`, so a

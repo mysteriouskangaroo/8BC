@@ -77,7 +77,19 @@ function Get-Inserts {
 # the letter lamps, which light the letters still to be collected
 # (champ-lamps.tests.ps1).
 function Get-LetterState { $b = Read-EbcByte (Get-EbcRamAddress 'CHAMP_LANE_STATE'); (@(for ($k = 0; $k -lt 5; $k++) { if ($b -band (1 -shl $k)) { $Letters[$k] } }) -join '') }
-function Get-DarkLetters { Step-EbcFrames -Frames 1; (@($Letters | Where-Object { -not (Get-EbcLamp -Number $LetterLamp[$_]) }) -join '') }
+function Get-DarkLetters {
+    # The new-ball skill shot intentionally overlays a blink on one H/A/M
+    # lamp. For that one target, use the authoritative collected bit while
+    # checking drain recall; all other letters still come from live lamps.
+    Step-EbcFrames -Frames 1
+    $state = Read-EbcByte (Get-EbcRamAddress 'CHAMP_LANE_STATE')
+    $skill = Read-EbcByte (Get-EbcRamAddress 'DELUXE_CHAMP_SKILL_ACTIVE_TARGET')
+    (@(for ($k = 0; $k -lt $Letters.Count; $k++) {
+        $mask = 1 -shl $k
+        $dark = if ($skill -eq $mask) { ($state -band $mask) -ne 0 } else { -not (Get-EbcLamp -Number $LetterLamp[$Letters[$k]]) }
+        if ($dark) { $Letters[$k] }
+    }) -join '')
+}
 function Get-Multiplier { $c = Get-EbcChampState; if ($c -band 0x20) { 3 } elseif ($c -band 0x10) { 2 } else { 1 } }
 function Invoke-Hit([string]$Switch, [string]$After) { $d = if ($After) { Invoke-EbcScoredHit $Switch -AfterSolenoid $After } else { Invoke-EbcScoredHit $Switch }; Step-EbcFrames -Frames 30; $d }
 

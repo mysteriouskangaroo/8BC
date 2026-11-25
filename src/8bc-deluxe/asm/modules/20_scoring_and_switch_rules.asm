@@ -161,7 +161,7 @@ HANDLE_CHAMP_LANE_SWITCH:
         JSR AWARD_300_POINTS_WITH_PLAYFIELD_MULTIPLIER ; $CAD9: $BD,$C9,$F3
 ; CHAMP timing: score this lane with the currently active multiplier before advancing the completion state.
         PULA                         ; $CADC: $32
-        LDX #$1040                   ; $CADD: $CE,$10,$40
+        JMP DELUXE_HANDLE_CHAMP_LANE_AFTER_SCORE ; $CADD: skill-shot hit/miss before authoritative letter test
         BITA $0,X                    ; $CAE0: $A5,$00
         BNE $cad3                    ; $CAE2: $26,$EF
 ; The lane's normal score has already been awarded. Deluxe gates only C/P.

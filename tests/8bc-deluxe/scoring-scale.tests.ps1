@@ -145,9 +145,11 @@ Test-EbcItem -Name 'Carries use the ones digit across 9 -> 10, 99 -> 100 and 999
     Invoke-Bulk 'Rebound' 9
     # 99 = 10 + 50 (center rollover) + 39 x 1.
     $to99 = { Invoke-Bulk $Target500Switch 1; Invoke-Bulk 'Rebound' 39 }
-    # 999 = 100 + 300 + 300 (C and H lanes) + 100 + 100 (both stock thumpers)
-    #       + 50 (center rollover) + 49 x 1.
-    $to999 = { Invoke-Bulk '"C" Return Lane' 1; Invoke-Bulk '"H" Top Lane' 1; Invoke-Bulk 'Left Thumper Bumper' 1; Invoke-Bulk 'Right Thumper Bumper' 1; Invoke-Bulk $Target500Switch 1; Invoke-Bulk 'Rebound' 49 }
+    # 999 = 100 + 300 (C lane) + 100 + 100 (both stock thumpers) + 50
+    #       (center rollover) + 349 x 1. Deliberately avoid H/A/M here: every
+    #       served ball now has a live H/A/M skill shot, and this carry test is
+    #       establishing an exact low score before it tests that feature later.
+    $to999 = { Invoke-Bulk '"C" Return Lane' 1; Invoke-Bulk 'Left Thumper Bumper' 1; Invoke-Bulk 'Right Thumper Bumper' 1; Invoke-Bulk $Target500Switch 1; Invoke-Bulk 'Rebound' 349 }
     $reach = @{ 9 = {}; 99 = $to99; 999 = $to999 }
     $seen = @()
     foreach ($below in $Carries) {
