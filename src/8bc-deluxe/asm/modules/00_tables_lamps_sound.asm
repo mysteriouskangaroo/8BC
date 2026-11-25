@@ -164,13 +164,11 @@ SPECIAL_COLLECT_COMMON:
         dc.b $FE,$00,$8B                                     ; $C232 unconfirmed: LDX.w $008b
         dc.b $81,$20                                         ; $C235 unconfirmed: CMPA #$20
         dc.b $26,$10                                         ; $C237 unconfirmed: BNE $c249
-        dc.b $F6,$10,$3A                                     ; $C239 unconfirmed: LDAB LAMP_SHADOW_BANK_A_BYTE0
-        dc.b $C5,$02                                         ; $C23C unconfirmed: BITB #$2
-        dc.b $26,$09                                         ; $C23E unconfirmed: BNE $c249
-        dc.b $F6,$00,$9A                                     ; $C240 unconfirmed: LDAB.w $009a
-        dc.b $C5,$40                                         ; $C243 unconfirmed: BITB #$40
-        dc.b $26,$02                                         ; $C245 unconfirmed: BNE $c249
-        dc.b $86,$10                                         ; $C247 unconfirmed: LDAA #$10
+; C239 is reached with A=$20 for every requested Extra Ball. Canonical code
+; changed later requests to fallback action $10 while one was pending. Deluxe
+; counts each request and retains action $20 so every award actually stacks.
+        JSR DELUXE_PREPARE_EXTRA_BALL_ACTION                 ; $C239 common stacked Extra Ball request
+        dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01 ; $C23C-$C248 fixed-address padding
         dc.b $16                                             ; $C249 unconfirmed: TAB
         dc.b $7E,$F3,$5C                                     ; $C24A unconfirmed: JMP $f35c
         dc.b $B6,$00,$9A,$84,$BF,$B7,$00,$9A,$B6,$10,$3A,$84,$FC,$B7,$10,$3A ; $C24D data/unclassified

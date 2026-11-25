@@ -439,6 +439,24 @@ mode. The handler tests `1104 & 1`; B mode awards Extra Ball on odd counts,
 while A mode awards it on even counts. It enters the canonical Extra Ball
 award path at `C1E9`, preserving the original ball-management behavior.
 
+Both the direct B-A-L-L entry at `C1E9` and operator-configured
+Special-to-Extra-Ball awards reach `C239` with canonical action `$20` selected.
+Stock code used `$103A/$009A` to change later requests to fallback action `$10`
+while one Extra Ball was already pending. Deluxe replaces that suppression
+block with `DELUXE_PREPARE_EXTRA_BALL_ACTION`, which increments the shared
+saturating counter and retains `$20`; every request therefore continues through
+the original `C24D` `$009A/$103A` state changes and `$6E/$1A` sound sequence.
+The separate award-history qualifier at `C220-C231` remains canonical. At `C4F6`,
+`DELUXE_BEGIN_BALL` consumes one count when an Extra Ball is served. If the
+count remains nonzero, the normal periodic hook reached through `C14E`
+reasserts the non-audio state tuple from canonical
+Extra Ball action `C24D`: `$009A` bit 6 clear with bit 7 retained, plus `$103A`
+bits 0-1 clear. This is intentionally later than `C521`, because canonical
+transition code can still rewrite those bytes after per-ball initialization.
+The next drain therefore keeps the same player and ball number once for every
+stored award. The new-game hook at `C4A4` clears `1150`; ordinary player
+changes can occur only after the count has reached zero.
+
 Independently, every new count of two or greater enters the Special collector
 at `C1D6`. Thus count 3 in B mode and count 2 in A mode execute both award
 paths. The common Deluxe hook at `C1DB` still adds multiplier-aware Special

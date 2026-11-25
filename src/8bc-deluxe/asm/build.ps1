@@ -126,7 +126,7 @@ $canonicalPlayerRecordCount = 4
 $canonicalPlayerRecordEnd = $canonicalPlayerRecordStart +
     ($canonicalPlayerRecordStride * $canonicalPlayerRecordCount) - 1
 $deluxeRamStart = Get-DasmSymbolAddress 'DELUXE_COLLECT_STATE'
-$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_BALL_LETTER_AWARD_PENDING'
+$deluxeRamEnd = Get-DasmSymbolAddress 'DELUXE_STACKED_EXTRA_BALLS'
 if ($deluxeRamStart -ne ($canonicalPlayerRecordEnd + 1)) {
     throw "Deluxe RAM must begin at $('$' + ($canonicalPlayerRecordEnd + 1).ToString('X4')) immediately after the four canonical player slots; found $('$' + $deluxeRamStart.ToString('X4'))."
 }
@@ -145,6 +145,11 @@ $deluxeHookChecks = @(
     @{ Address = 0xC1D6; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPECIAL_COLLECT_SOUND'; Name = 'context-aware Special sound gate' }
     @{ Address = 0xC1D9; Bytes = [byte[]](0x01, 0x01); Name = 'Special sound gate fixed-address padding' }
     @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
+    @{ Address = 0xD415; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_FINALIZE'; Name = 'periodic stacked Extra Ball same-turn latch guard' }
+    @{ Address = 0xC220; Bytes = [byte[]](0xFF, 0x00, 0x8B, 0xFE, 0x10, 0x1D, 0xE5, 0x00, 0x26, 0x06, 0xEA, 0x00, 0xE7, 0x00, 0x20, 0x02, 0x86, 0x20); Name = 'canonical award-history qualifier restored' }
+    @{ Address = 0xC239; Opcode = 0xBD; Target = 'DELUXE_PREPARE_EXTRA_BALL_ACTION'; Name = 'common stacked Extra Ball request' }
+    @{ Address = 0xC23C; Bytes = [byte[]](0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01); Name = 'stacked Extra Ball request fixed-address padding' }
+    @{ Address = 0xC24D; Bytes = [byte[]](0xB6, 0x00, 0x9A, 0x84, 0xBF, 0xB7, 0x00, 0x9A, 0xB6, 0x10, 0x3A, 0x84, 0xFC, 0xB7, 0x10, 0x3A, 0x86, 0x6E, 0x8D, 0x1D, 0x86, 0x1A, 0x20, 0x19); Name = 'canonical Extra Ball state and sound action restored' }
     @{ Address = 0xC14E; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_TICK'; Name = 'periodic spinner-collecting and display timers' }
     @{ Address = 0xD3B3; Bytes = [byte[]](0x7D, 0x10, 0xFC); Name = 'independent spinner collecting overlay active flag' }
     @{ Address = 0xD3B8; Bytes = [byte[]](0xFE, 0x11, 0x17); Name = '16-bit spinner collecting inactivity countdown' }
@@ -160,6 +165,9 @@ $deluxeHookChecks = @(
     @{ Address = 0xC46D; Opcode = 0x7E; Target = 'DELUXE_PREPEND_STARTUP_SUPER'; Name = 'startup Super speech prefix' }
     @{ Address = 0xC562; Opcode = 0x7E; Target = 'DELUXE_START_OR_DEFER_BACKGROUND_MUSIC'; Name = 'startup-safe first-ball background music' }
     @{ Address = 0xC4E6; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_PLAYER_BONUS_RECORD'; Name = 'four-player Deluxe bonus-record initialization' }
+    @{ Address = 0xC4A4; Opcode = 0xBD; Target = 'DELUXE_START_NEW_GAME'; Name = 'new-game stacked Extra Ball reset' }
+    @{ Address = 0xC4F6; Opcode = 0xBD; Target = 'DELUXE_BEGIN_BALL'; Name = 'stacked Extra Ball consume and rearm' }
+    @{ Address = 0xC4F9; Bytes = [byte[]](0x01, 0x01); Name = 'stacked Extra Ball ball-start fixed-address padding' }
     @{ Address = 0xC521; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_BALL'; Name = 'new-ball initialization' }
     @{ Address = 0xC529; Bytes = [byte[]](0x20);             Name = 'original spinner preset bypass' }
     @{ Address = 0xC5B5; Opcode = 0xBD; Target = 'DELUXE_LOAD_ORBIT_STATE_FOR_SAVE'; Name = 'retained orbit-value player save' }

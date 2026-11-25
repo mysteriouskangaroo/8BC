@@ -116,6 +116,17 @@ DELUXE_STARTUP_MUSIC_PENDING                     equ $114E
 ; post-lamp-shift award dispatcher at CCE9. The value is the newly collected
 ; B-A-L-L count, allowing a saturated $FF counter to suppress repeat awards.
 DELUXE_BALL_LETTER_AWARD_PENDING                 equ $114F
+; Shared count of awarded Extra Balls that have not yet been played. Extra
+; Balls are always taken immediately before the game advances to another
+; player, so this state intentionally follows the current turn rather than
+; using a per-player array. The canonical turn-state tuple remains the ball-end
+; authority; the periodic hook rearms it until every stacked award is used.
+DELUXE_STACKED_EXTRA_BALLS                        equ $1150
+
+GAME_TURN_STATE_FLAGS                             equ $009A
+EXTRA_BALL_SAME_TURN_STATE                         equ $80
+EXTRA_BALL_TURN_ADVANCE_CLEAR_MASK                 equ $BF
+EXTRA_BALL_LAMP_STATE_CLEAR_MASK                   equ $FC
 
 ; OPS manual register 43, "X-Ball Option": bit 6 set means the Extra Ball
 ; starts flashing and is collected with B; clear delays it until A.

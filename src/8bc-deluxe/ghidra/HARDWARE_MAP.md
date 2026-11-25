@@ -94,7 +94,7 @@ speculative game-rule meaning.
 ### U4 RAM: Deluxe allocation
 
 Deluxe begins at `10FB`, the first byte after all four canonical slots. Its
-currently reserved envelope ends at `114F`. Persistent per-player values use
+currently reserved envelope ends at `1150`. Persistent per-player values use
 parallel arrays; active-player mirrors and temporary work remain shared.
 
 | Address | Storage role | Meaning |
@@ -133,6 +133,7 @@ parallel arrays; active-player mirrors and temporary work remain shared.
 | `114C-114D` | Boot-time timer | Deluxe-periodic three-second guard started with the startup announcement |
 | `114E` | Sound-request state | First-music one-shot state: `2` boot-armed, `1` request pending, `0` complete |
 | `114F` | Switch-event scratch | Newly collected B-A-L-L count pending the post-lamp-shift Extra Ball/Special parity dispatch; zero means no new count |
+| `1150` | Current-turn state | Shared saturating count of awarded Extra Balls not yet played; consumed in sequence before the turn can advance |
 
 The active-player mirrors at `1100`, `1104`, and `110E` are loaded from the
 selected player's array entries when the canonical restore path finishes and

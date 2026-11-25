@@ -175,11 +175,12 @@ Invoke-OrbitTo100K
 Invoke-Completions 2
 $r += Invoke-OrbitSpecial
 $e3 = Invoke-EightRound                                          # completion 3 at 2x
-$r += [PSCustomObject]@{ Route = 'E-I-G-H-T'; Special = $e3.Last; Base = $e3.Before; ConcurrentExtraBallScore = 5000 }
+$r += [PSCustomObject]@{ Route = 'E-I-G-H-T'; Special = $e3.Last; Base = $e3.Before; ConcurrentExtraBallScore = 0 }
 # ---- Game 1, next ball: the recalled 100,000 orbit, then 3x and the left
 # outlane Special, then the right outlane ----
-# Completion 3 now awards the repeating B-mode Extra Ball. The first drain
-# consumes it; the second reaches the next numbered ball for the recall check.
+# Completions 1 and 3 each award a B-mode Extra Ball. The first two drains play
+# those stacked awards; the third reaches the next numbered ball.
+Invoke-Drain
 Invoke-Drain
 Invoke-Drain
 Invoke-ToActiveOrbit

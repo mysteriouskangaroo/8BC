@@ -10,7 +10,7 @@ START_GAME_AND_INITIALIZE_FIRST_BALL:
         DEX                          ; $C49E: $09
         CPX #$82                     ; $C49F: $8C,$00,$82
         BNE $c49c                    ; $C4A2: $26,$F8
-        JSR $eefb                    ; $C4A4: $BD,$EE,$FB
+        JSR DELUXE_START_NEW_GAME    ; $C4A4 clear shared turn-scoped state, then run canonical initialization
         CLRA                         ; $C4A7: $4F
         STAA $10a0                   ; $C4A8: $B7,$10,$A0
         STAA SUNK_POOL_BALLS_1_TO_7  ; $C4AB: $B7,$10,$C3
@@ -44,8 +44,8 @@ START_GAME_AND_INITIALIZE_FIRST_BALL:
         JSR $f4ba                    ; $C4F3: $BD,$F4,$BA
 START_BALL_STATE:
 ; Per-ball initialization entry (also reached by the full new-game path at C498). It clears CHAMP_COMPLETION_STATE at C507, so playfield double/triple last only for the current ball, including later CHAMP completions on that ball.
-        LDAA #$18                    ; $C4F6: $86,$18
-        JSR $c27e                    ; $C4F8: $BD,$C2,$7E
+        JSR DELUXE_BEGIN_BALL        ; $C4F6 consume/rearm stacked Extra Ball state, then send canonical $18 sound
+        dc.b $01,$01                 ; $C4F9 fixed-address padding
         JSR $f4ee                    ; $C4FB: $BD,$F4,$EE
         BSR $c566                    ; $C4FE: $8D,$66
         JSR $c5d4                    ; $C500: $BD,$C5,$D4

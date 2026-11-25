@@ -354,6 +354,10 @@ completion milestones, or the C/P anti-shatz latch.
   ...) award an Extra Ball. With the A setting (`0`), even-numbered letters
   (2, 4, 6, ...) award it. The test is the low bit of the authoritative
   per-player count, not the four-lamp output pattern.
+- Extra Balls stack. Collecting several during one ball records every award;
+  each drain consumes one Extra Ball, and the game remains on the same player
+  and ball number until the stack is empty. The shared pending count saturates
+  at 255 rather than wrapping and is cleared at the start of a new game.
 - A Special is collected on A/count 2 and every later B-A-L-L letter. This is
   independent of the Extra Ball parity test: a matching completion awards
   both, including count 3 in B mode and count 2 in A mode. The Special keeps
@@ -633,6 +637,11 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   counts 3 and 5 must award both. With register 43 set to A, verify Extra Balls
   instead occur on counts 2 and 4 while the same count-2-and-later Special rule
   remains active, so counts 2 and 4 award both.
+- Collect multiple Extra Balls before draining in a multiplayer game. Verify
+  every award is played in sequence by the same player on the same displayed
+  ball, then the turn advances normally only after the pending stack is empty.
+  Repeat with Specials configured to award Extra Balls and verify a completion
+  that awards both a parity Extra Ball and a Special records both awards.
 - In a four-player game, give Player 1 four completed racks and five B-A-L-L
   letters, then play through Players 2-4. Verify Player 1's next ball restores
   `04` racks and `05` B-A-L-L letters for display and bonus, resumes both blink

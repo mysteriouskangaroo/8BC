@@ -75,7 +75,7 @@ DELUXE_ORBIT_PREVIEW_FINISHED:
         JSR DELUXE_HIDE_ORBIT_PREVIEW_VALUE
 DELUXE_PERIODIC_AWARD_DISPLAY_TICK:
         JSR DELUXE_TICK_STARTUP_MUSIC_GUARD
-        JSR DELUXE_UPDATE_SUNK_BALL_SCORE_DISPLAY
+        JSR DELUXE_PERIODIC_FINALIZE
 DELUXE_PERIODIC_TICK_DONE:
         PULA
         LDX $10b3
@@ -1980,6 +1980,64 @@ DELUXE_AFTER_EIGHT_WORD_COUNTED:
         PULA
         RTS
 
+DELUXE_PREPARE_EXTRA_BALL_ACTION:
+; C239 is reached only with canonical award action $20 selected. Count every
+; request, including later ones that stock code converted to fallback $10,
+; then keep A at $20 so the original C24D state/sound action executes each time.
+        JSR DELUXE_INCREMENT_EXTRA_BALL_STACK
+        LDAA #$20
+        RTS
+
+DELUXE_INCREMENT_EXTRA_BALL_STACK:
+; Preserve A so both the canonical adjustment dispatcher and the direct
+; B-A-L-L entry can continue with their original award-selection flags/value.
+        PSHA
+        LDAA DELUXE_STACKED_EXTRA_BALLS
+        CMPA #$ff
+        BEQ DELUXE_INCREMENT_EXTRA_BALL_STACK_DONE
+        INCA
+        STAA DELUXE_STACKED_EXTRA_BALLS
+DELUXE_INCREMENT_EXTRA_BALL_STACK_DONE:
+        PULA
+        RTS
+
+DELUXE_START_NEW_GAME:
+; A new game cannot inherit unused awards from the preceding game. Tail-call
+; the displaced canonical initializer so its RTS still returns to C4A7.
+        CLR DELUXE_STACKED_EXTRA_BALLS
+        JMP $eefb
+
+DELUXE_BEGIN_BALL:
+; Consume one shared award for the ball now being started. If another remains,
+; DELUXE_PERIODIC_FINALIZE keeps the canonical same-turn state armed throughout
+; the newly served ball after transition code has finished rewriting it.
+        LDAA DELUXE_STACKED_EXTRA_BALLS
+        BEQ DELUXE_BEGIN_BALL_SOUND
+        DECA
+        STAA DELUXE_STACKED_EXTRA_BALLS
+DELUXE_BEGIN_BALL_SOUND:
+        LDAA #$18
+        JMP $c27e
+
+DELUXE_PERIODIC_FINALIZE:
+; Retain the displaced award-display tick, then continuously reassert the
+; non-audio state tuple established by the canonical Extra Ball action at
+; C24D: $009A bit 6 clear with bit 7 retained, and $103A bits 0-1 clear.
+; Ball-transition code may rewrite these after C521, so the normal ~60 Hz
+; gameplay cadence is the first reliable point at which to keep them armed.
+        JSR DELUXE_UPDATE_SUNK_BALL_SCORE_DISPLAY
+        LDAA DELUXE_STACKED_EXTRA_BALLS
+        BEQ DELUXE_PERIODIC_FINALIZE_DONE
+        LDAA GAME_TURN_STATE_FLAGS
+        ANDA #EXTRA_BALL_TURN_ADVANCE_CLEAR_MASK
+        ORAA #EXTRA_BALL_SAME_TURN_STATE
+        STAA GAME_TURN_STATE_FLAGS
+        LDAA LAMP_SHADOW_BANK_A_BYTE0
+        ANDA #EXTRA_BALL_LAMP_STATE_CLEAR_MASK
+        STAA LAMP_SHADOW_BANK_A_BYTE0
+DELUXE_PERIODIC_FINALIZE_DONE:
+        RTS
+
 DELUXE_AWARD_BALL_LETTER_COMPLETION:
 ; CCE9 enters after the original routine has shifted the physical B-A-L-L
 ; lamps for this completed E-I-G-H-T word. Register 43 selects whether Extra
@@ -1987,7 +2045,9 @@ DELUXE_AWARD_BALL_LETTER_COMPLETION:
 ; (clear). From A/count 2 onward, every new letter also collects a Special,
 ; independently, so the two awards may occur on the same completion.
         LDAA DELUXE_BALL_LETTER_AWARD_PENDING
-        BEQ DELUXE_BALL_LETTER_AWARDS_DONE
+        BNE DELUXE_BALL_LETTER_AWARD_PENDING_VALID
+        JMP DELUXE_BALL_LETTER_AWARDS_DONE
+DELUXE_BALL_LETTER_AWARD_PENDING_VALID:
         LDAA X_BALL_OPTION_PACKED_REGISTER
         BITA #X_BALL_AT_B_SETTING_BIT
         BEQ DELUXE_TEST_A_MODE_EXTRA_BALL

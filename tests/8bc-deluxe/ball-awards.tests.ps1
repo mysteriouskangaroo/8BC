@@ -18,9 +18,11 @@ $XBallAtB = 1
 $XBallAtA = 0
 $SpecialModeRegister = 25
 $SpecialAwardsReplay = 3
+$SpecialAwardsExtraBall = 2
 $BallsPerGameRegister = 23
 $BallsPerGame = 5
 $ActiveBallLetters = 0x1104
+$StackedExtraBalls = 0x1150
 $SpecialSound = 0x6F
 $Knocker = Get-EbcSolenoid 'Knocker'
 
@@ -58,14 +60,14 @@ function Complete-EightWord {
     foreach ($letter in $LetterOf.Keys) { Invoke-EightLetter $letter }
 }
 
-function Start-AwardGame([int]$XBallSetting) {
+function Start-AwardGame([int]$XBallSetting, [int]$Players = 1, [int]$SpecialSetting = $SpecialAwardsReplay) {
     Enter-EbcServiceMode | Out-Null
     Set-EbcAdjustment -Number $XBallRegister -Value $XBallSetting | Out-Null
-    Set-EbcAdjustment -Number $SpecialModeRegister -Value $SpecialAwardsReplay | Out-Null
+    Set-EbcAdjustment -Number $SpecialModeRegister -Value $SpecialSetting | Out-Null
     Set-EbcAdjustment -Number $BallsPerGameRegister -Value $BallsPerGame | Out-Null
     Exit-EbcServiceMode | Out-Null
     Add-EbcCredit | Out-Null
-    Start-EbcPlay | Out-Null
+    Start-EbcPlay -Players $Players | Out-Null
     Step-EbcFrames -Frames 120
 }
 
@@ -98,6 +100,22 @@ function Invoke-MeasuredCompletion([int]$ExpectedCount) {
 
 function Format-Result($r) {
     "count $($r.Count): ball $($r.BallBefore)->$($r.BallAfter), credits +$($r.Credits), knocks $($r.Knocks), `$6F $($r.Sixf)"
+}
+
+function Invoke-StackedExtraBallDrains([int]$ExtraBalls) {
+    $result = @()
+    foreach ($drainNumber in 1..($ExtraBalls + 1)) {
+        if ($drainNumber -gt 1) {
+            Invoke-EbcScoredHit 'Rebound' | Out-Null
+            Step-EbcFrames -Frames 60
+        }
+        $outcome = Invoke-EbcDrain
+        if ($outcome -ne 'Served') { throw "stacked Extra Ball drain $drainNumber ended the game" }
+        Step-EbcFrames -Frames 120
+        $result += '{0}: player {1}, ball {2}, pending {3}' -f $drainNumber,
+            (Get-EbcCurrentPlayer), (Get-EbcBallInPlay), (Read-EbcByte $StackedExtraBalls)
+    }
+    $result
 }
 
 Start-EbcGame
@@ -163,6 +181,60 @@ Test-EbcItem -Name 'A mode still awards a Special on count 2 and every later cou
         'count 4: ball 3->3, credits +1, knocks 1, $6F 1'
     )
     Assert-EbcEqual -Expected $want -Actual $seen -What 'independent Special effects in A/even mode'
+}
+
+Complete-EbcGame | Out-Null
+Step-EbcFrames -Frames 300
+
+# Collect B, the second B, and the third B before draining. This proves the
+# common Extra Ball path retains all three awards instead of collapsing them
+# into the canonical one-bit flag. Scoring once on each served ball prevents
+# the stock no-score re-serve behavior from masking a consumed Extra Ball.
+Start-AwardGame $XBallAtB 2
+foreach ($count in 1..5) {
+    Complete-EightWord
+    Step-EbcFrames -Frames 60
+    Assert-EbcEqual -Expected $count -Actual (Read-EbcByte $ActiveBallLetters) -What "B-A-L-L count before stacked drain $count"
+}
+$stackBefore = Read-EbcByte $StackedExtraBalls
+$stackDrains = @(Invoke-StackedExtraBallDrains 3)
+
+Test-EbcItem -Name 'Three Extra Balls collected on one ball are played in sequence before the multiplayer turn advances' -Doc "$Doc; $Rules; $Trace" -Body {
+    Assert-EbcEqual -Expected 3 -Actual $stackBefore -What 'shared pending Extra Ball count after B-A-L-L counts 1 through 5'
+    $want = @(
+        '1: player 1, ball 1, pending 2',
+        '2: player 1, ball 1, pending 1',
+        '3: player 1, ball 1, pending 0',
+        '4: player 2, ball 1, pending 0'
+    )
+    Assert-EbcEqual -Expected $want -Actual $stackDrains -What 'stacked Extra Ball drain sequence'
+}
+
+Complete-EbcGame | Out-Null
+Step-EbcFrames -Frames 300
+
+# Register 25 = 2 converts each Special into an Extra Ball. In A mode count 2
+# awards both its parity Extra Ball and a Special Extra Ball, then count 3 adds
+# another Special Extra Ball. This exercises the configured-Special path before
+# it converges with B-A-L-L at the common C239 Extra Ball request.
+Start-AwardGame $XBallAtA 2 $SpecialAwardsExtraBall
+foreach ($count in 1..3) {
+    Complete-EightWord
+    Step-EbcFrames -Frames 60
+    Assert-EbcEqual -Expected $count -Actual (Read-EbcByte $ActiveBallLetters) -What "B-A-L-L count before Special Extra Ball stack $count"
+}
+$specialStackBefore = Read-EbcByte $StackedExtraBalls
+$specialStackDrains = @(Invoke-StackedExtraBallDrains 3)
+
+Test-EbcItem -Name 'Operator-configured Special Extra Balls share the stack, including a completion that awards two at once' -Doc "$Doc; $Rules; $Trace; $Manual" -Body {
+    Assert-EbcEqual -Expected 3 -Actual $specialStackBefore -What 'shared count after one parity and two Special Extra Ball awards'
+    $want = @(
+        '1: player 1, ball 1, pending 2',
+        '2: player 1, ball 1, pending 1',
+        '3: player 1, ball 1, pending 0',
+        '4: player 2, ball 1, pending 0'
+    )
+    Assert-EbcEqual -Expected $want -Actual $specialStackDrains -What 'Special Extra Ball stack drain sequence'
 }
 
 Complete-EbcTests
