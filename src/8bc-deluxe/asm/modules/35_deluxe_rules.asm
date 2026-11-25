@@ -374,7 +374,7 @@ DELUXE_HANDLE_RIGHT_ORBIT:
 ; value once; the right applies a second, saturating value step.
         CMPA #DELUXE_COLLECT_DUAL_ORBIT+DELUXE_COLLECT_ACTIVE
         BEQ DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT
-        JMP DELUXE_SCORE_UNLIT_ORBIT
+        JMP DELUXE_SCORE_UNLIT_RIGHT_ORBIT
 DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT:
 ; Keep the orbit stage active while the original handler runs its fast upward
 ; arrow chase. Advance to spinner inactive only after that animation returns.
@@ -540,27 +540,28 @@ DELUXE_SHOW_ORBIT_PREVIEW_VALUE:
         STAA SHARED_ORBIT_VALUE_LAMP_STATE
         RTS
 
+DELUXE_SCORE_UNLIT_RIGHT_ORBIT:
+; Below the terminal value, an inactive right rollover still awards only the
+; base 5,000 but advances the retained arrows one 10,000 step. Announce that
+; step with the right-orbit advance sound and blink the new numeric value; do
+; not change or activate the collect location. At 100,000/Special, take the
+; ordinary inactive path with its $31 sound and no new preview.
+        TST DELUXE_ORBIT_VALUE_STATE
+        BNE DELUXE_ADVANCE_UNLIT_RIGHT_ORBIT_TRAMPOLINE
+
 DELUXE_SCORE_UNLIT_ORBIT:
 ; The first original orbit score-table entry proves the printed base value is
 ; 5,000; Deluxe's global score scale makes the displayed award 500.
-; Bypassing CB5C prevents an unlit hit from advancing the shared value. Use
-; command $31 from the playfield's 500-point center rollover at CAA3 so the
-; inactive shot is audibly distinct from an active left/right orbit collect.
+; The inactive left side and a maxed inactive right side cannot advance the
+; retained value. Use command $31 from the playfield's 500-point center
+; rollover at CAA3 for those ordinary inactive scores.
         LDAA #CENTER_ROLLOVER_500_SOUND_COMMAND
+DELUXE_SEND_UNLIT_ORBIT_SOUND:
         JSR $c27e
         JMP AWARD_500_POINTS_WITH_PLAYFIELD_MULTIPLIER
 
-DELUXE_AWARD_SCALED_2500:
-; CC85 calls here for every E-I-G-H-T target hit. Pool-ball first sinks also
-; tail-call here when they do not match the currently spoken ball. Apply
-; Deluxe's global divide-by-ten score scale to the 2,500 playfield value: one
-; multiplier-aware 50-point award plus two multiplier-aware 100-point units
-; produces displayed scores of 250 / 500 / 750 at 1x / 2x / 3x. The later
-; already-sunk pool-ball path remains at D034 and still drives the physical
-; 5,000 lamp effect independently.
-        JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER
-        LDAB #$02
-        JMP AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER
+DELUXE_ADVANCE_UNLIT_RIGHT_ORBIT_TRAMPOLINE:
+        JMP DELUXE_ADVANCE_UNLIT_RIGHT_ORBIT
 
 DELUXE_AWARD_POOL_BALL_FIRST_SINK:
 ; CE08 enters with A equal to the single target bit for balls 1-7. Reproduce
@@ -1074,7 +1075,16 @@ DELUXE_AFTER_EIGHT_WORD_COMPLETION:
 ; this established 20-byte expansion slot fixed; the extended counter and
 ; pending-award work lives at the free-space tail.
         JMP DELUXE_AFTER_EIGHT_WORD_COMPLETION_EXTENDED
-        ds.b 17,$01
+DELUXE_ADVANCE_UNLIT_RIGHT_ORBIT:
+; Kept in the former alignment padding so the new inactive-right dispatcher
+; does not displace behavior-critical fixed-address Deluxe routines.
+        JSR DELUXE_ADVANCE_ORBIT_VALUE_EXTRA_STEP
+        LDAA #DELUXE_ORBIT_PREVIEW_TICKS
+        STAA DELUXE_ORBIT_PREVIEW_TIMER
+        JSR DELUXE_SHOW_ORBIT_PREVIEW_VALUE
+        LDAA #RIGHT_ORBIT_ACTIVE_SOUND_COMMAND
+        JMP DELUXE_SEND_UNLIT_ORBIT_SOUND
+        ds.b 1,$01
 
 DELUXE_INITIALIZE_PLAYER_BONUS_RECORD:
 ; The canonical new-game loop at C4E6 visits player numbers 4, 3, 2, and 1 and
@@ -2271,6 +2281,19 @@ DELUXE_QUALIFY_NEXT_EXTRA_BALL:
 DELUXE_BALL_LETTER_AWARDS_DONE:
         CLR DELUXE_BALL_LETTER_AWARD_PENDING
         JMP $cd46
+
+DELUXE_AWARD_SCALED_2500:
+; CC85 calls here for every E-I-G-H-T target hit. Pool-ball first sinks also
+; tail-call here when they do not match the currently spoken ball. Apply
+; Deluxe's global divide-by-ten score scale to the 2,500 playfield value: one
+; multiplier-aware 50-point award plus two multiplier-aware 100-point units
+; produces displayed scores of 250 / 500 / 750 at 1x / 2x / 3x. The later
+; already-sunk pool-ball path remains at D034 and still drives the physical
+; 5,000 lamp effect independently. This eight-byte helper was relocated into
+; the remaining expansion space to preserve all established fixed addresses.
+        JSR AWARD_50_POINTS_WITH_PLAYFIELD_MULTIPLIER
+        LDAB #$02
+        JMP AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER
 
 DELUXE_RULES_END:
 ; Preserve the canonical $FF fill up to the fixed interrupt module at $E000.

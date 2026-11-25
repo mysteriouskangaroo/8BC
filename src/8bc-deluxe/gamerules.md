@@ -221,9 +221,12 @@ completion milestones, or the C/P anti-shatz latch.
   approximately three seconds before the orbit-value arrows turn off. This is
   a lamp-only preview and does not reactivate either orbit collect. The combined
   advance saturates at 100,000/Special and cannot wrap past it.
-- When it is not active, switch 13 awards 500 and does not advance the shared
-  orbit value. It uses the same `$31` center-rollover sound as an inactive left
-  orbit, instead of the active right-orbit sound.
+- When it is not active, switch 13 awards 500 and advances the retained shared
+  orbit value by 10,000, stopping at 100,000/Special. The new numeric arrow
+  value blinks for approximately three seconds without activating or moving the
+  collect feature, and the advance uses one `$2A` right-orbit sound. If the
+  retained value is already 100,000/Special, the hit does not advance or start
+  a preview; it awards only 500 with the ordinary inactive `$31` sound.
 
 ## Hole / saucer
 
@@ -560,12 +563,17 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
 - Verify collecting the lit 8-ball activates the current location when it is
   inactive, does nothing to an already-active collect state, and is never
   queued for the next location. Verify ordinary saucer hits do not activate it.
-- Verify unlit left/right orbit shots score 500 without advancing their value
-  and use the same sound as the playfield's 500-point center rollover. Verify
-  the active left collect retains its original side-specific sound and the
-  active right collect scores double the lit arrow value and sends its original
+- Verify an inactive left-orbit shot scores 500 without advancing the retained
+  value and uses the playfield 500-point center rollover's `$31` sound. Verify
+  an inactive right-orbit shot also scores 500, advances the retained arrows by
+  10,000, sends one `$2A`, and blinks the new value for approximately three
+  seconds without activating or moving the collect. At 100,000/Special, verify
+  that inactive right shot instead leaves the value unchanged, starts no
+  preview, and uses the ordinary inactive `$31` sound. Verify the active left
+  collect retains its original side-specific sound and the active right collect
+  scores double the lit arrow value and sends its original
   `$2A` sound twice back-to-back before the terminal value, then uses the left
-  orbit's single `$29` collect sound once the value is maxed.
+  orbit's single collect-sound path once the value is maxed.
 - Verify either rollover can collect during both the opening and repeating
   active orbit stages. The left must score the current value and the right must
   score twice that value; both must finish the original fast upward arrow chase,

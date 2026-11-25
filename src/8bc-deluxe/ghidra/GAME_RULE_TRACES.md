@@ -268,12 +268,16 @@ right rollover with terminal retained value `10FF = 00` and replaces B with
 `29`, preventing `2A` from ever being stored in the pending command at `1024`.
 That exceptional path branches explicitly to the right-side rules after the
 gate. All other hits use the selector stored at `1024` to recover the side after
-the gate has overwritten B. Inactive orbit hits still take the unlit 500-point path and
-do not change the retained value. Before sending sound through `C27E`, that
-inactive path substitutes command `31`, the command loaded by switch 29's
-500-point center-rollover handler at `CAA3`. Active orbit hits normally keep
-their original side-specific `29`/`2A` commands; a right-side collect at the
-terminal orbit value deliberately substitutes the left collect's `29`.
+the gate has overwritten B. An inactive left hit takes the unlit 500-point path
+without changing the retained value and substitutes command `31`, the command
+loaded by switch 29's 500-point center-rollover handler at `CAA3`. Below the
+terminal value, an inactive right hit applies one state-only 10,000 step to
+`10FF`, loads preview timer `1115`, shows the new numeric arrows, sends one `2A`,
+and then takes the same 500-point award without changing `10FB`. At terminal
+`10FF = 00`, it applies no step or preview and instead uses that ordinary `31`
+inactive sound. Active orbit hits normally keep their original side-specific
+`29`/`2A` commands; a right-side collect at the terminal orbit value deliberately
+substitutes the left collect's `29`.
 
 Both the opening (`03`) and repeating (`01`) active orbit encodings accept
 either physical rollover. An active hit on either side calls the canonical
@@ -306,8 +310,9 @@ three nonconsecutive transitions (`D->B`, `B->7`, and `5->3`) explicitly and
 otherwise decrements once. It returns immediately at `00`, which clamps every
 right-side advance at the 100,000/Special state instead of wrapping.
 
-Both paths move to spinner inactive and load timer `1115` with `BF`.
-`DELUXE_PERIODIC_TICK` uses
+Both active-collect paths move to spinner inactive and load timer `1115` with
+`BF`; a below-terminal inactive right advance loads the same timer but leaves
+the collect location unchanged. `DELUXE_PERIODIC_TICK` uses
 timer bit 4 to alternate `1044`'s low nibble between the retained value at
 `10FF` and all-off for roughly 3.2 seconds, matching the E-I-G-H-T spinner
 preview cadence. The preview changes only lamp output; scoring and collect

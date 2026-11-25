@@ -1,5 +1,5 @@
 param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
-# Deluxe orbits: unlit orbit shots, the active left and right collects (score,
+# Deluxe orbits: inactive orbit shots, the active left and right collects (score,
 # sound, arrow chase, value advance, value preview), the 100,000/Special
 # terminal state, and collection in both the opening and repeating orbit
 # stages, all by play on one player's first two balls.
@@ -12,7 +12,7 @@ param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
 # the lit arrows add up to it.
 # Clauses of gamerules.md "Required gameplay verification" checked here
 # (tools/tests/Test-DeluxeCoverage.ps1):
-# Clause: Verify unlit left/right orbit shots
+# Clause: Verify an inactive left-orbit shot
 # Clause: Verify the left rollover advances
 # Clause: Verify an inactive left rollover
 Import-Module (Join-Path $PSScriptRoot '../../tools/GameTest.psm1') -Force
@@ -23,8 +23,9 @@ $Right = 'src/8bc-deluxe/gamerules.md "Right orbit"'
 $Rules = 'src/8bc-deluxe/gamerules.md "Existing rules established in the original ROM"'
 $Specials = 'src/8bc-deluxe/gamerules.md "Specials"'
 
-# "Left orbit"/"Right orbit": an inactive orbit awards 500 with sound $31, the
-# center rollover's sound.
+# "Left orbit"/"Right orbit": either inactive orbit awards 500. Left always
+# uses the center rollover's $31 sound. Right advances 10,000 with one $2A below
+# maximum, but at 100,000 uses $31 and does nothing else.
 $Unlit = 500
 $CenterSound = 0x31
 # "Required gameplay verification": the left collect advances the printed
@@ -206,16 +207,14 @@ Add-EbcCredit | Out-Null
 Start-EbcPlay | Out-Null
 Step-EbcFrames -Frames 120
 
-# ---- Ball 1: unlit shots at the opening orbit stage ----
+# ---- Ball 1: inactive shots at the opening orbit stage ----
 $seen = Get-EbcEventCount
 $center = Invoke-EbcScoredHit 'Center Rollover Button'
 $centerCmds = @(Get-Commands $seen | Where-Object { $_.B -lt 0x41 -or $_.B -gt 0x80 })   # speech excluded
-$unlitShots = @()
-foreach ($side in 'Left', 'Right') {
-    $seen = Get-EbcEventCount
-    $d = Invoke-EbcScoredHit "$side Rollover Button"
-    $unlitShots += [PSCustomObject]@{ Side = $side; Award = $d; Commands = @(Get-Commands $seen | Where-Object { $_.B -lt 0x41 -or $_.B -gt 0x80 }) }
-}
+$seen = Get-EbcEventCount
+$inactiveLeft = Invoke-EbcScoredHit 'Left Rollover Button'
+$inactiveLeftCommands = @(Get-Commands $seen | Where-Object { $_.B -lt 0x41 -or $_.B -gt 0x80 })
+$inactiveRightAdvance = Invoke-Collect 'Right'
 # The first newly sunk ball activates the opening orbit stage.
 Invoke-NewSink
 Step-EbcFrames -Frames 30
@@ -232,10 +231,15 @@ $c += Invoke-Collect 'Left'                       # repeating stage, 80K -> 90K
 $spin += Step-ToActiveOrbit
 $c += Invoke-Collect 'Right'                      # 90K -> 100K, no wrap
 
-Test-EbcItem -Name 'Unlit left and right orbit shots score 500 without advancing the value, with the center rollover''s sound ($31)' -Doc "$Doc; $Left; $Right" -Body {
-    $seen = @("center rollover sounds [$(Format-Commands $centerCmds)]") + @($unlitShots | ForEach-Object { "$($_.Side) unlit: $($_.Award), sounds [$(Format-Commands $_.Commands)]" }) + @("first activation shows $($c[0].Shown)")
-    $want = @(('center rollover sounds [{0:X2}]' -f $CenterSound)) + @('Left', 'Right' | ForEach-Object { "$_ unlit: $Unlit, sounds [{0:X2}]" -f $CenterSound }) + @("first activation shows $FirstValue")
-    Assert-EbcEqual -Expected $want -Actual $seen -What 'unlit orbit shots at the start of ball 1'
+Test-EbcItem -Name 'An inactive left orbit scores 500 without advancing and uses the center rollover sound ($31)' -Doc "$Doc; $Left" -Body {
+    $seen = "center [$(Format-Commands $centerCmds)]; inactive left $inactiveLeft [$(Format-Commands $inactiveLeftCommands)]"
+    $want = 'center [{0:X2}]; inactive left {1} [{0:X2}]' -f $CenterSound, $Unlit
+    Assert-EbcEqual -Expected $want -Actual $seen -What 'inactive left orbit at the start of ball 1'
+}
+Test-EbcItem -Name 'Below maximum, an inactive right orbit scores 500, advances 10,000 with one $2A, and previews the new value without activating the collect' -Doc "$Doc; $Right" -Body {
+    $seen = "award $($inactiveRightAdvance.Award); sounds [$(Format-Commands $inactiveRightAdvance.Commands)]; preview $(Get-PreviewValue $inactiveRightAdvance); first activation $($c[0].Shown)"
+    $want = "award $Unlit; sounds [{0:X2}]; preview $FirstValue; first activation $FirstValue" -f $RightSound
+    Assert-EbcEqual -Expected $want -Actual $seen -What 'inactive right advance at the start of ball 1'
 }
 Test-EbcItem -Name 'The left rollover advances by 10,000 and scores the current value; the right advances by 20,000 and scores double the current value, with one chase and preview' -Doc "$Doc; $Left; $Right; $Rules" -Body {
     $seen = @($c | ForEach-Object { Format-Collect $_ })
@@ -247,6 +251,11 @@ Test-EbcItem -Name 'The left rollover advances by 10,000 and scores the current 
         (Want-Collect 'Left' 80000 (80000 + $LeftStep)),
         (Want-Collect 'Right' 90000 $Terminal))
     Assert-EbcEqual -Expected $want -Actual $seen -What 'collects on ball 1 (each value shown is the previous preview)'
+    $displayedSteps = @(
+        ((Get-PreviewValue $c[0]) - $c[0].Shown) / 10
+        ((Get-PreviewValue $c[1]) - $c[1].Shown) / 10
+    )
+    Assert-EbcEqual -Expected @((10000 / 10), (20000 / 10)) -Actual $displayedSteps -What 'Deluxe-scaled left and right value advances'
 }
 Test-EbcItem -Name 'Every active right rollover award is exactly twice the lit arrow value under the Deluxe scale' -Doc "$Doc; $Right" -Body {
     $seen = @($c | Where-Object { $_.Side -eq 'Right' } | ForEach-Object { "shown $($_.Shown), award $($_.Award)" })
@@ -292,6 +301,11 @@ $seen = Get-EbcEventCount
 $inactiveLeft = Invoke-EbcScoredHit 'Left Rollover Button'
 $inactiveKnocks = @(Get-EbcEvents -Since $seen | Where-Object { $_ -match "^\d+ sol $Knocker 1$" }).Count
 $specAfterInactive = Get-SpecialLit
+$seen = Get-EbcEventCount
+$inactiveRightMax = Invoke-EbcScoredHit 'Right Rollover Button'
+$inactiveRightMaxCommands = @(Get-Commands $seen | Where-Object { $_.B -lt 0x41 -or $_.B -gt 0x80 })
+$inactiveRightMaxPreview = Read-EbcByte $PreviewTimer
+$inactiveRightMaxArrows = Get-ArrowValue
 Invoke-NewSink                                  # orbit active at 100K
 Step-EbcFrames -Frames 30
 $specActive = Get-SpecialLit
@@ -305,6 +319,11 @@ Test-EbcItem -Name 'An inactive left rollover at the retained 100,000/Special st
     $seen = "inactive left: $inactiveLeft, knocks $inactiveKnocks; special after it $(Format-Special $specAfterInactive), then $(Format-Special $specActive) once the orbit activates"
     $want = "inactive left: $Unlit, knocks 0; special after it dark, then flashing once the orbit activates"
     Assert-EbcEqual -Expected $want -Actual $seen -What 'left rollover with the orbit inactive at 100,000'
+}
+Test-EbcItem -Name 'At 100,000/Special, an inactive right rollover scores only 500 with $31 and starts no advance preview' -Doc "$Doc; $Right" -Body {
+    $seen = "award $inactiveRightMax; sounds [$(Format-Commands $inactiveRightMaxCommands)]; preview timer $inactiveRightMaxPreview; arrows $inactiveRightMaxArrows"
+    $want = "award $Unlit; sounds [{0:X2}]; preview timer 0; arrows 0" -f $CenterSound
+    Assert-EbcEqual -Expected $want -Actual $seen -What 'maxed inactive right rollover'
 }
 Test-EbcItem -Name 'The special indication is hidden while neither orbit is active, blinks when the orbit activates, and hides again when that collect advances' -Doc "$Doc; $Left; $Right" -Body {
     $seen = "spinner inactive: $(Format-Special $specSpinner); orbit inactive: $(Format-Special $specInactive); orbit active: $(Format-Special $specActive); after the collect: $(Format-Special $specAfterCollect)"
