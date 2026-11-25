@@ -229,8 +229,11 @@
   <path d="M420,850 H730 L760,890 730,930 H420 L449,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
   <path d="M770,850 H1080 L1110,890 1080,930 H770 L799,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
 
-  <text x="240" y="880" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#ffbd35">EXTRA BALLS ALTERNATE</text>
-  <text x="240" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#fff2c2">SPECIAL FROM A ON</text>
+  <text x="240" y="873" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#ffbd35">COMPLETE B-A-L-L</text>
+  <text x="175" y="895" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="16" letter-spacing="0.1" fill="#fff2c2">STACKABLE</text>
+  <text x="175" y="916" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="16" letter-spacing="0.1" fill="#fff2c2">EXTRA BALLS</text>
+  <text x="261" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="19" fill="#fff2c2">+</text>
+  <text x="285" y="907" text-anchor="start" font-family="Arial Black, Arial, sans-serif" font-size="17" letter-spacing="0.1" fill="#fff2c2">SPECIALS</text>
 
   <text x="590" y="880" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#ffbd35">COMPLETE 2+ RACKS</text>
   <text x="590" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#fff2c2">FOR SPECIALS</text>
