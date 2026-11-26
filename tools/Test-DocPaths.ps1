@@ -37,6 +37,8 @@ function Get-RepositoryRelative([string]$Folder, [string]$Path) {
 
 function Test-Exempt([string]$Path) {
     $normalized = $Path -replace '^\./', ''
+    # Reference ROMs are user-supplied, ignored inputs, absent in a clean clone.
+    if ($normalized -match '^src/[^/]+/roms(/|$)') { return $true }
     foreach ($prefix in $exemptPrefixes) {
         if ($normalized.StartsWith($prefix)) { return $true }
     }

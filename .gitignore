@@ -31,6 +31,10 @@
 # Game-test reports and build logs (tools/Invoke-GameTests.ps1).
 /build/
 
+# User-supplied reference ROMs stay local, including copies in variations.
+/src/**/roms/*.128
+/src/**/roms/*.532
+
 # Plan-execution scratch
 /.superpowers/
 

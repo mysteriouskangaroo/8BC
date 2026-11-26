@@ -66,7 +66,7 @@ I/O is required before calling it suitable to burn and install in a machine.
 
 After the canonical Ghidra analysis and assembly source are verified, copy
 them to a named variation directory (currently
-`src/loop-score-change/ghidra/` and `src/loop-score-change/asm/`). Make
+`src/8bc-deluxe/ghidra/` and `src/8bc-deluxe/asm/`). Make
 behavior-changing source edits, experimental restructuring that changes the
 binary, and ROM modifications only in that variation. A variation must always
 be traceable back to the validated canonical source and its recorded build.

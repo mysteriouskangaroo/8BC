@@ -7,6 +7,23 @@ solenoids, sound board, and MPU remain in use.
 
 ## Scope and preservation
 
+Original CPU and sound ROM files are not distributed in this repository.
+Before building, supply your own authorized copies of `u3_cpu.128`,
+`u3_snd.532`, `u4_snd.532`, and `u5_snd.532` in `src/originals/roms/`.
+These files are ignored by Git and remain immutable local build inputs.
+The expected hashes are recorded in `tools/rom-hashes.sha1`; that manifest
+also identifies reference-copy locations used by the variations.
+
+The hosted CI workflow currently expects reference inputs in its checkout,
+so ROM-dependent jobs cannot pass on a public checkout without those files.
+A workflow update is needed to skip those jobs or supply inputs privately.
+Run the build and PinMAME checks locally with your authorized inputs;
+all existing validation requirements still apply.
+
+The repository still contains reconstructed assembly, Ghidra analysis, and
+modified release images. Removing the original ROM files does not make
+the repository a patch-only distribution.
+
 `src/originals/roms/` is immutable reference material.  In particular,
 `u3_cpu.128` is the original 16 KiB game ROM, mapped from `$C000` through
 `$FFFF`.  Its verified SHA-1 is:
@@ -43,10 +60,10 @@ MC6801/6803 disassembler; it is not a separate disassembler.
 | `src/originals/ghidra/` | Ghidra project analyzing the untouched CPU ROM. |
 | `src/originals/asm/` | Canonical commented DASM source for behaviorally faithful builds. |
 | `src/originals/build/` | Generated canonical ROM, listing, symbols, and verification report. |
-| `src/loop-score-change/ghidra/` | Independent Ghidra copy for the named behavior variation. |
-| `src/loop-score-change/asm/` | Copy of verified canonical source once behavior changes begin. |
-| `src/loop-score-change/build/` | Generated modified ROM images and listings. |
-| `src/loop-score-change/notes/` | Rule-change and emulator/machine test records. |
+| `src/8bc-deluxe/ghidra/` | Independent Ghidra copy for the Deluxe variation. |
+| `src/8bc-deluxe/asm/` | Modified source based on the verified canonical reconstruction. |
+| `src/8bc-deluxe/build/` | Generated modified ROM images and listings. |
+| `src/8bc-deluxe/gamerules.md` | Deluxe rules and required gameplay verification. |
 
 ## Initial vector map
 

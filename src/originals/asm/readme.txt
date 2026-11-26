@@ -170,7 +170,7 @@ Beginning a rules variation
 
 Do not intentionally change game rules here. Once this canonical build passes
 its structural checks and PinMAME validation, copy this source tree to a named
-variation such as src/loop-score-change/asm/. Make
+variation such as src/8bc-deluxe/asm/. Make
 scoring, control-flow, or other byte-changing edits only in that variation.
 The variation should retain its own build output and a documented comparison
 against this canonical source.
