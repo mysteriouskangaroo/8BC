@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="5.375in" height="3.125in" viewBox="0 0 1800 975" preserveAspectRatio="none" role="img" aria-labelledby="title desc">
+  <title id="title">Eight Ball Champ Deluxe rules scorecard</title>
+  <desc id="desc">A five and three eighths inch by three and one eighth inch printable player rules card with a transparent Eight Ball Champ Deluxe title treatment.</desc>
+
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a2c12"/>
+      <stop offset="0.48" stop-color="#371b0d"/>
+      <stop offset="1" stop-color="#1d110a"/>
+    </linearGradient>
+    <pattern id="woodLines" width="150" height="80" patternUnits="userSpaceOnUse">
+      <path d="M0,18 C35,2 78,34 150,12 M0,61 C48,40 95,78 150,49" fill="none" stroke="#a25a20" stroke-width="4" opacity="0.14"/>
+    </pattern>
+    <filter id="shadow" x="-12%" y="-18%" width="130%" height="145%">
+      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000000" flood-opacity="0.78"/>
+    </filter>
+    <filter id="logoShadow" x="-20%" y="-30%" width="150%" height="170%">
+      <feDropShadow dx="5" dy="6" stdDeviation="2" flood-color="#000000" flood-opacity="0.9"/>
+    </filter>
+    <clipPath id="playerClip">
+      <rect x="0" y="610" width="1800" height="365"/>
+    </clipPath>
+    <clipPath id="tableFootprintClip">
+      <path d="M215,865 H1800 V975 H0 Z"/>
+    </clipPath>
+    <clipPath id="tableExtensionClip">
+      <rect x="1396" y="865" width="404" height="110"/>
+    </clipPath>
+    <style>
+      .rule-title { font-family: "Arial Black", Arial, sans-serif; font-size: 32px; font-weight: 900; letter-spacing: 0.7px; fill: #ffbd31; }
+      .section-title { font-family: "Arial Black", Arial, sans-serif; font-size: 27px; font-weight: 900; fill: #ffbd31; }
+      .rule-copy { font-family: "Arial Black", Arial, sans-serif; font-size: 23px; font-weight: 900; fill: #fff2c2; }
+      .indicator-count { font-family: "Arial Black", Arial, sans-serif; font-size: 14px; font-weight: 900; text-anchor: middle; fill: #ffbd31; }
+      .indicator-label { font-family: "Arial Black", Arial, sans-serif; font-size: 13px; font-weight: 900; text-anchor: middle; fill: #fff2c2; }
+      .accent { fill: #ff7a25; font-weight: 900; }
+      .gold { fill: #ffd65b; font-weight: 900; }
+      .number { font-family: "Arial Black", Arial, sans-serif; font-size: 27px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; fill: #17110b; }
+      .value { font-family: "Arial Black", Arial, sans-serif; font-size: 22px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; fill: #fff3c7; }
+      .value-arrow { font-family: "Arial Black", Arial, sans-serif; font-size: 28px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; fill: #ff9a25; }
+      .saucer-arrow { font-family: "Arial Black", Arial, sans-serif; font-size: 16px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; fill: #ff9a25; }
+      .saucer-value { font-family: "Arial Black", Arial, sans-serif; font-size: 17px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; fill: #fff3c7; }
+      .saucer-key { font-family: "Arial Black", Arial, sans-serif; font-size: 15px; font-weight: 900; text-anchor: middle; fill: #ffbd31; }
+    </style>
+  </defs>
+
+  <!-- Full-bleed tavern field with a simplified two-line frame. -->
+  <rect width="1800" height="975" fill="url(#wood)"/>
+  <rect width="1800" height="975" fill="url(#woodLines)"/>
+  <rect x="6" y="6" width="1788" height="963" rx="19" fill="none" stroke="#ef9f21" stroke-width="11"/>
+
+  <!-- Compact left-aligned masthead leaves the full lower third available for the player art. -->
+  <image href="scorecard-title.png" x="100" y="15" width="990" height="212" preserveAspectRatio="xMinYMid meet"/>
+
+  <!-- Bally Midway fills the otherwise unused upper-right corner. -->
+  <g transform="translate(1245 71)" filter="url(#logoShadow)">
+    <text x="0" y="70" font-family="Brush Script MT, Segoe Script, cursive" font-size="88" font-style="italic" fill="#fff2c2">Bally</text>
+    <text x="190" y="68" font-family="Arial Black, Arial, sans-serif" font-size="42" font-style="italic" letter-spacing="1.2" fill="#fff2c2">MIDWAY</text>
+  </g>
+
+  <!-- Four compact rules plus one tall progressive panel in the open right side. -->
+  <g transform="translate(0 -110)">
+  <g filter="url(#shadow)">
+    <rect x="35" y="340" width="605" height="185" rx="16" fill="#083e20" fill-opacity="0.97" stroke="#e8921d" stroke-width="5"/>
+    <rect x="660" y="340" width="535" height="185" rx="16" fill="#083e20" fill-opacity="0.97" stroke="#e8921d" stroke-width="5"/>
+    <rect x="35" y="535" width="605" height="185" rx="16" fill="#083e20" fill-opacity="0.97" stroke="#e8921d" stroke-width="5"/>
+    <rect x="660" y="535" width="535" height="185" rx="16" fill="#083e20" fill-opacity="0.97" stroke="#e8921d" stroke-width="5"/>
+    <rect x="1215" y="340" width="550" height="515" rx="16" fill="#083e20" fill-opacity="0.97" stroke="#e8921d" stroke-width="5"/>
+  </g>
+
+  <!-- 1 ball: yellow -->
+  <g>
+  <circle cx="111" cy="388" r="33" fill="#e8bd27" stroke="#17110b" stroke-width="5"/>
+  <circle cx="111" cy="388" r="16" fill="#fff5d4"/>
+  <circle cx="99" cy="376" r="6" fill="#ffffff" opacity="0.5"/>
+  <text class="number" x="111" y="390">1</text>
+  <text class="rule-title" x="165" y="398">C-H-A-M-P</text>
+  <!-- Match the Bonus X Saucer's connected rounded progression nodes. -->
+  <g>
+    <rect x="70" y="423" width="160" height="38" rx="19" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="250" y="423" width="160" height="38" rx="19" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="430" y="423" width="160" height="38" rx="19" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <text class="saucer-value" x="150" y="443">RIGHT POP 3K</text>
+    <text class="saucer-arrow" x="240" y="443">&#8594;</text>
+    <text class="saucer-value" x="330" y="443">2X PLAYFIELD</text>
+    <text class="saucer-arrow" x="420" y="443">&#8594;</text>
+    <text class="saucer-value" x="510" y="443">LEFT POP 3K</text>
+  </g>
+  <g>
+    <rect x="70" y="470" width="160" height="38" rx="19" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="250" y="470" width="160" height="38" rx="19" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="430" y="470" width="160" height="38" rx="19" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <text class="saucer-value" x="150" y="490">3X PLAYFIELD</text>
+    <text class="saucer-arrow" x="240" y="490">&#8594;</text>
+    <text class="saucer-value" x="330" y="480" style="font-size:14px">
+      <tspan x="330">LIGHT OUTLANE</tspan>
+      <tspan x="330" dy="16">SPECIALS + 30K</tspan>
+    </text>
+    <text class="saucer-arrow" x="420" y="490">&#8594;</text>
+    <text class="saucer-value" x="510" y="490" style="font-size:20px">30K &#8635;</text>
+  </g>
+  </g>
+
+  <!-- 2 ball: blue -->
+  <g transform="translate(15 0)">
+  <circle cx="681" cy="388" r="33" fill="#2764a5" stroke="#17110b" stroke-width="5"/>
+  <circle cx="681" cy="388" r="16" fill="#fff5d4"/>
+  <circle cx="669" cy="376" r="6" fill="#ffffff" opacity="0.5"/>
+  <text class="number" x="681" y="390">2</text>
+  <text class="rule-title" x="735" y="398">CALLED BALL</text>
+  <text class="rule-copy gold" x="660" y="444">
+    <tspan x="660">5K START</tspan><tspan fill="#fff2c2"> &#8226; </tspan><tspan>+5K / MAKE</tspan><tspan fill="#fff2c2"> &#8226; </tspan><tspan>MAX 50K</tspan>
+    <tspan x="660" dy="34" fill="#fff2c2">CARRIES BETWEEN DRAINS</tspan>
+  </text>
+  </g>
+
+  <!-- 3 ball: red; tall combined Orbit / Spinner progressive explanation -->
+  <g transform="translate(10 0)">
+  <circle cx="1251" cy="388" r="33" fill="#c52d2d" stroke="#17110b" stroke-width="5"/>
+  <circle cx="1251" cy="388" r="16" fill="#fff5d4"/>
+  <circle cx="1239" cy="376" r="6" fill="#ffffff" opacity="0.5"/>
+  <text class="number" x="1251" y="390">3</text>
+  <text class="rule-title" x="1305" y="398" style="font-size:30px">PROGRESSIVE COLLECT</text>
+  <text class="rule-copy" x="1470" y="441" text-anchor="middle">NEW BALL LIGHTS EACH STAGE</text>
+  <g>
+    <rect x="1230" y="454" width="210" height="36" rx="18" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="1490" y="454" width="210" height="36" rx="18" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <text class="value" x="1335" y="473">ORBITS</text>
+    <text class="value-arrow" x="1465" y="473">&#8644;</text>
+    <text class="value" x="1595" y="473">SPINNER</text>
+  </g>
+  <text class="section-title" x="1250" y="535">ORBITS</text>
+  <line x1="1250" y1="550" x2="1690" y2="550" stroke="#d8871b" stroke-width="3"/>
+  <text class="rule-copy" x="1250" y="580">
+    <tspan class="gold">LEFT:</tspan><tspan> COLLECT + ADV. 10K</tspan>
+    <tspan x="1250" dy="32" class="gold">RIGHT:</tspan><tspan style="font-size:21px"> COLLECT 2X VALUE + ADV. 20K</tspan>
+    <tspan x="1250" dy="32">REACH </tspan><tspan class="gold">100K</tspan><tspan> TO LIGHT </tspan><tspan class="accent">SPECIAL</tspan>
+    <tspan x="1250" dy="32">CARRIES BETWEEN DRAINS</tspan>
+  </text>
+
+  <text class="section-title" x="1250" y="749">SPINNER</text>
+  <line x1="1250" y1="764" x2="1690" y2="764" stroke="#d8871b" stroke-width="3"/>
+  <text class="rule-copy" x="1250" y="794">
+    <tspan class="gold">E-I-G-H-T</tspan><tspan> ADDS TO SPINNER VALUE</tspan>
+    <tspan x="1250" dy="32">MAX </tspan><tspan class="gold">9K PER SPIN</tspan><tspan> &#8226; RESETS ON DRAIN</tspan>
+  </text>
+  </g>
+
+  <!-- 4 ball: purple; automatic opening ladder plus explicit Progressive gates. -->
+  <g transform="translate(15 10)">
+  <circle cx="111" cy="563" r="33" fill="#6b3f8f" stroke="#17110b" stroke-width="5"/>
+  <circle cx="111" cy="563" r="16" fill="#fff5d4"/>
+  <circle cx="99" cy="551" r="6" fill="#ffffff" opacity="0.5"/>
+  <text class="number" x="111" y="565">4</text>
+  <text class="rule-title" x="165" y="573">BONUS X SAUCER</text>
+  <g>
+    <rect x="35" y="600" width="128" height="34" rx="17" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="181" y="600" width="128" height="34" rx="17" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="327" y="600" width="128" height="34" rx="17" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <rect x="473" y="600" width="128" height="34" rx="17" fill="#165b31" stroke="#e8a020" stroke-width="3"/>
+    <text class="value" x="99" y="617">2X</text>
+    <text class="saucer-arrow" x="172" y="617">&#8594;</text>
+    <text class="value" x="245" y="617">3X</text>
+    <text class="saucer-arrow" x="318" y="617">&#8594;</text>
+    <text class="value" x="391" y="617">5X</text>
+    <text class="saucer-arrow" x="464" y="617">&#8594;</text>
+    <text class="value" x="537" y="617">100K</text>
+  </g>
+  <g>
+    <rect x="35" y="643" width="128" height="34" rx="17" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="181" y="643" width="128" height="34" rx="17" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="327" y="643" width="128" height="34" rx="17" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <rect x="473" y="643" width="128" height="34" rx="17" fill="#9f241e" stroke="#e8a020" stroke-width="3"/>
+    <text class="saucer-value" x="99" y="660" style="font-size:16px">P 7X+100K</text>
+    <text class="saucer-arrow" x="172" y="660">&#8594;</text>
+    <text class="saucer-value" x="245" y="660" style="font-size:16px">P 8X+100K</text>
+    <text class="saucer-arrow" x="318" y="660">&#8594;</text>
+    <text class="saucer-value" x="391" y="660" style="font-size:16px">P 10X+100K</text>
+    <text class="saucer-arrow" x="464" y="660">&#8594;</text>
+    <text class="saucer-value" x="537" y="660" style="font-size:16px">P 100K &#8635;</text>
+  </g>
+  <text class="saucer-key" x="330" y="701">P = COMPLETE PROGRESSIVE COLLECT TO LIGHT</text>
+  </g>
+
+  <!-- 5 ball: orange; three deliberately separated lines -->
+  <g transform="translate(15 10)">
+  <circle cx="681" cy="563" r="33" fill="#e47b22" stroke="#17110b" stroke-width="5"/>
+  <circle cx="681" cy="563" r="16" fill="#fff5d4"/>
+  <circle cx="669" cy="551" r="6" fill="#ffffff" opacity="0.5"/>
+  <text class="number" x="681" y="565">5</text>
+  <text class="rule-title" x="735" y="573">END-OF-BALL BONUS</text>
+  <text class="rule-copy" x="660" y="624">
+    <tspan x="660" class="gold">15K / BALL SUNK</tspan><tspan fill="#fff2c2"> &#8226; </tspan><tspan class="gold">120K / RACK</tspan>
+    <tspan x="660" dy="30" class="gold">10K / E-I-G-H-T</tspan><tspan fill="#fff2c2"> &#8226; </tspan><tspan class="gold">50K / B-A-L-L</tspan>
+    <tspan x="660" dy="30">CARRIES BETWEEN DRAINS</tspan>
+  </text>
+  </g>
+  </g>
+
+  <!-- Pool-table field and backglass-style player -->
+  <g clip-path="url(#playerClip)">
+    <!-- Continue the table behind the figure: diagonal at lower left, full bleed at right/bottom. -->
+    <g clip-path="url(#tableFootprintClip)">
+      <rect x="0" y="865" width="1800" height="110" fill="#075221"/>
+      <svg x="0" y="865" width="1800" height="40" viewBox="2075 565 50 65" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="0" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="300" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="600" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="900" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1200" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1500" y="905" width="300" height="70" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+    </g>
+    <path d="M0,975 L215,865" fill="none" stroke="#2a1007" stroke-width="18"/>
+    <path d="M0,975 L215,865" fill="none" stroke="#9f3e0d" stroke-width="9"/>
+    <path d="M0,975 L215,865" fill="none" stroke="#e8921d" stroke-width="3"/>
+    <image href="scorecard-pool-player.png" x="170" y="540" width="1250" height="417" preserveAspectRatio="xMidYMid meet"/>
+    <!-- Continue clean source-art bands over the illustration's tapered end. -->
+    <g clip-path="url(#tableExtensionClip)">
+      <svg x="1396" y="865" width="404" height="37.41" viewBox="2075 565 50 65" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1396" y="902.41" width="101" height="72.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1497" y="902.41" width="101" height="72.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1598" y="902.41" width="101" height="72.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+      <svg x="1699" y="902.41" width="101" height="72.59" viewBox="950 665 200 59" preserveAspectRatio="none"><image href="scorecard-pool-player.png" width="2172" height="724"/></svg>
+    </g>
+  </g>
+
+  <g transform="translate(0 24)">
+  <path d="M70,850 H380 L410,890 380,930 H70 L99,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
+  <path d="M420,850 H730 L760,890 730,930 H420 L449,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
+  <path d="M770,850 H1080 L1110,890 1080,930 H770 L799,890 Z" fill="#26140c" fill-opacity="0.92" stroke="#e99920" stroke-width="4"/>
+
+  <text x="240" y="873" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#ffbd35">COMPLETE B-A-L-L</text>
+  <text x="175" y="895" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="16" letter-spacing="0.1" fill="#fff2c2">STACKABLE</text>
+  <text x="175" y="916" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="16" letter-spacing="0.1" fill="#fff2c2">EXTRA BALLS</text>
+  <text x="261" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="19" fill="#fff2c2">+</text>
+  <text x="285" y="907" text-anchor="start" font-family="Arial Black, Arial, sans-serif" font-size="17" letter-spacing="0.1" fill="#fff2c2">SPECIALS</text>
+
+  <text x="590" y="880" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#ffbd35">COMPLETE 2+ RACKS</text>
+  <text x="590" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#fff2c2">FOR SPECIALS</text>
+
+  <text x="940" y="880" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="19" letter-spacing="0.3" fill="#ffbd35">ALL SPECIALS</text>
+  <text x="940" y="907" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="18" letter-spacing="0.1" fill="#fff2c2">250K &#215; PLAYFIELD</text>
+  </g>
+
+  <!-- Keep the cabinet perimeter above the full-bleed table artwork. -->
+  <rect x="6" y="6" width="1788" height="963" rx="19" fill="none" stroke="#ef9f21" stroke-width="11"/>
+</svg>
