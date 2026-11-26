@@ -7,8 +7,8 @@ distinguishing established facts from remaining schematic-tracing work.
 
 ## Evidence
 
-- **ROM:** `../roms/u3_cpu.128` (16 KiB, mapped at `C000-FFFF`). Its SHA-1 is `25D310F169B92CE6B348330816DDC3B5710E57DA`.
-- **Manual:** `../../../docs/Eight_Ball_Champ_OPS.pdf`, especially section 3: control-board layout/designations and cabinet/playfield schematics.
+- **CPU address range:** 16 KiB mapped at `C000-FFFF`; reconstructed source is in `asm/`.
+- **Manual:** `../../docs/Eight_Ball_Champ_OPS.pdf`, especially section 3: control-board layout/designations and cabinet/playfield schematics.
 - **Ghidra program:** `u3_cpu.128`, analyzed as a Motorola 6801/6803-family processor.
 - **Squawk & Talk command responses:** [PinWiki's Eight Ball Champ speech-command table](https://www.pinwiki.com/wiki/index.php/Eight_Ball_Champ), credited there to PinSider "Quench". The ROM confirms the command-byte transport described below; the audible response names remain community-sourced pending independent sound-ROM or hardware verification.
 

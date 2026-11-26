@@ -18,14 +18,14 @@
 # them to -ReportPath, ends with
 #   Game tests: <p> passed, <f> failed, <s> seeded, <n> files
 # and exits 1 on any failure.
-# Usage: pwsh tools/Invoke-GameTests.ps1 [-Tree originals,loop-score-change,8bc-deluxe]
+# Usage: pwsh tools/Invoke-GameTests.ps1 [-Tree originals,8bc-deluxe]
 #        [-Path <file, folder or glob>] [-Jobs 1..4] [-Long] [-TimeoutSeconds 300]
 #        [-LongTimeoutSeconds 1800]
 #        [-TestRoot tests] [-ReportPath build/game-tests/report.txt] [-ListOnly]
 
 [CmdletBinding()]
 param(
-    [string[]]$Tree = @('originals', 'loop-score-change', '8bc-deluxe'),
+    [string[]]$Tree = @('originals', '8bc-deluxe'),
     [string]$Path,
     [ValidateRange(1, 4)][int]$Jobs = 1,
     [switch]$Long,
@@ -111,16 +111,23 @@ function Label($e) { $file = Split-Path -Leaf $e.Name; if ($e.Tree) { "$($e.Tree
 # ---- Build each needed tree once, copying its zip before the next build. ----
 $built = @{}
 $buildError = @{}
-function Get-Sha1([byte[]]$Bytes) { [Convert]::ToHexString([Security.Cryptography.SHA1]::HashData($Bytes)) }
-function Get-ZipCpuSha1([string]$Zip) {
+function Test-CpuBytesEqual([byte[]]$Expected, [byte[]]$Actual) {
+    if ($null -eq $Expected -or $null -eq $Actual -or $Expected.Length -ne $Actual.Length) { return $false }
+    for ($index = 0; $index -lt $Expected.Length; $index++) {
+        if ($Expected[$index] -ne $Actual[$index]) { return $false }
+    }
+    return $true
+}
+function Get-ZipCpuBytes([string]$Zip) {
     try {
         $z = [IO.Compression.ZipFile]::OpenRead($Zip)
         try {
-            $e = $z.GetEntry('u3_cpu.128'); if (-not $e) { return '(no u3_cpu.128 entry)' }
-            $ms = [IO.MemoryStream]::new(); $st = $e.Open(); try { $st.CopyTo($ms) } finally { $st.Dispose() }
-            Get-Sha1 $ms.ToArray()
+            $e = $z.GetEntry('u3_cpu.128'); if (-not $e) { return $null }
+            $ms = [IO.MemoryStream]::new(); $st = $e.Open()
+            try { $st.CopyTo($ms); return ,$ms.ToArray() }
+            finally { $st.Dispose(); $ms.Dispose() }
         } finally { $z.Dispose() }
-    } catch { "(unreadable: $($_.Exception.Message))" }
+    } catch { return $null }
 }
 $needed = @($Tree | Where-Object { $t = $_; @($plan | Where-Object { $t -in $_.Needs }).Count -gt 0 })
 if ($needed.Count) {
@@ -131,7 +138,6 @@ foreach ($t in $needed) {
     $b = [Diagnostics.Stopwatch]::StartNew()
     $log = Join-Path $logDir "build-$t.log"
     $buildArgs = @('-NoProfile', '-File', (Join-Path $repo "src/$t/asm/build.ps1"))
-    if ($t -eq 'originals') { $buildArgs += '-RequireByteIdentical' }
     & $pwshPath @buildArgs *> $log
     $ok = $LASTEXITCODE -eq 0
     $zip = Join-Path $repo 'VisualPinballX/VPinMAME/roms/eballchp.zip'
@@ -141,25 +147,25 @@ foreach ($t in $needed) {
         $copy = Join-Path $dest 'eballchp.zip'
         Copy-Item -LiteralPath $zip -Destination $copy -Force
         # The copy must hold this tree's CPU ROM, whatever was built before.
-        $want = Get-Sha1 ([IO.File]::ReadAllBytes((Join-Path $repo "src/$t/build/u3_cpu.rebuilt.128")))
-        $have = Get-ZipCpuSha1 $copy
-        if ($have -eq $want) {
+        $want = [IO.File]::ReadAllBytes((Join-Path $repo "src/$t/build/u3_cpu.rebuilt.128"))
+        $have = Get-ZipCpuBytes $copy
+        if (Test-CpuBytesEqual $want $have) {
             $built[$t] = $copy
-            Write-Output ("BUILD {0} ok in {1:N1} s (u3_cpu.128 SHA-1 {2})" -f $t, $b.Elapsed.TotalSeconds, $want)
+            Write-Output ("BUILD {0} ok in {1:N1} s (packaged CPU matches source build)" -f $t, $b.Elapsed.TotalSeconds)
         }
-        else { $buildError[$t] = "zip check failed: $copy u3_cpu.128 SHA-1 $have, src/$t/build/u3_cpu.rebuilt.128 $want"; Write-Output "BUILD $t FAILED: $($buildError[$t])" }
+        else { $buildError[$t] = "zip check failed: $copy CPU does not match src/$t/build/u3_cpu.rebuilt.128"; Write-Output "BUILD $t FAILED: $($buildError[$t])" }
     }
     else { $buildError[$t] = "build failed (exit $LASTEXITCODE; see $log)"; Write-Output "BUILD $t FAILED (exit $LASTEXITCODE); see $log" }
 }
 # Each build deploys its zip to VisualPinballX; name the tree whose CPU ROM is
-# left there, matched by SHA-1 against this run's checked copies.
+# left there, compared byte for byte against this run's checked copies.
 if ($needed.Count) {
     $zip = Join-Path $repo 'VisualPinballX/VPinMAME/roms/eballchp.zip'
-    $deployedSha = if (Test-Path -LiteralPath $zip) { Get-ZipCpuSha1 $zip } else { '(missing)' }
-    $owner = @($needed | Where-Object { $built.ContainsKey($_) -and (Get-ZipCpuSha1 $built[$_]) -eq $deployedSha } | Select-Object -Last 1)
+    $deployedBytes = if (Test-Path -LiteralPath $zip) { Get-ZipCpuBytes $zip } else { $null }
+    $owner = @($needed | Where-Object { $built.ContainsKey($_) -and (Test-CpuBytesEqual (Get-ZipCpuBytes $built[$_]) $deployedBytes) } | Select-Object -Last 1)
     if ($owner.Count -and $owner[0] -eq $needed[-1]) { Write-Output "Deployed eballchp.zip: $($owner[0]) (last built)" }
     elseif ($owner.Count) { Write-Output "Deployed eballchp.zip: $($owner[0]) (the last build, $($needed[-1]), failed)" }
-    else { Write-Output "Deployed eballchp.zip: no tree built this run (u3_cpu.128 SHA-1 $deployedSha)" }
+    else { Write-Output "Deployed eballchp.zip: no matching CPU image built this run" }
 }
 
 # ---- Run each file in its own pwsh, at most -Jobs at a time. ----

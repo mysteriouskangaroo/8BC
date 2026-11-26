@@ -3,14 +3,14 @@
 This is the authoritative hardware and working-memory reference for the Eight
 Ball Champ Deluxe variation. It carries forward the verified physical map of
 the original ROM and adds the Deluxe RAM allocation. Original behavior remains
-traceable to `../../originals/ghidra/HARDWARE_MAP.md`; variation-only state is
+traceable to `../originals/HARDWARE_MAP.md`; variation-only state is
 identified explicitly below.
 
 ## Evidence
 
-- **Original reference ROM:** `../roms/u3_cpu.128` (16 KiB, mapped at `C000-FFFF`). Its SHA-1 is `25D310F169B92CE6B348330816DDC3B5710E57DA`.
-- **Deluxe build:** `../build/u3_cpu.rebuilt.128`; the current hash and structural checks are recorded by `../asm/build.ps1` in `../build/verification.txt`.
-- **Manual:** `../../../docs/Eight_Ball_Champ_OPS.pdf`, especially section 3: control-board layout/designations and cabinet/playfield schematics.
+- **CPU address range:** 16 KiB mapped at `C000-FFFF`; reconstructed source is in `asm/`.
+- **Deluxe build:** `build/u3_cpu.rebuilt.128`; structural checks are recorded by `asm/build.ps1` in `build/verification.txt`.
+- **Manual:** `../../docs/Eight_Ball_Champ_OPS.pdf`, especially section 3: control-board layout/designations and cabinet/playfield schematics.
 - **Ghidra program:** `u3_cpu.128`, analyzed as a Motorola 6801/6803-family processor.
 - **Squawk & Talk command responses:** [PinWiki's Eight Ball Champ speech-command table](https://www.pinwiki.com/wiki/index.php/Eight_Ball_Champ), credited there to PinSider "Quench". The ROM confirms the command-byte transport described below; the audible response names remain community-sourced pending independent sound-ROM or hardware verification.
 
@@ -210,8 +210,8 @@ address means:
 
 Bits 0 and 1 are relevant, but not to this address choice: bit 0 enables or
 disables interrupts from the `CA1`/`CB1` control input, and bit 1 selects which
-edge triggers that input. Bits 3–5 configure the second control wire
-(`CA2`/`CB2`) as an interrupt input or an output control signal; bits 6–7 are
+edge triggers that input. Bits 3â€“5 configure the second control wire
+(`CA2`/`CB2`) as an interrupt input or an output control signal; bits 6â€“7 are
 read-only interrupt-status flags. The analysis calls out bit 2 most often
 because it alone changes whether an instruction at a port address is a pin
 configuration access or a live I/O access.
@@ -239,7 +239,7 @@ through `PA07`:
 
 | PIA0 signal | Firmware address | Physical purpose |
 | --- | --- | --- |
-| `PA00-PA03` | bits 0–3 of `0020` | Four-bit address shared by lamp decoders U15, U16, and U17 |
+| `PA00-PA03` | bits 0â€“3 of `0020` | Four-bit address shared by lamp decoders U15, U16, and U17 |
 | `PA05` | bit 5 of `0020` | Enable/inhibit control for one 16-lamp bank (U15) |
 | `PA06` | bit 6 of `0020` | Enable/inhibit control for one 16-lamp bank (U16) |
 | `PA07` | bit 7 of `0020` | Enable/inhibit control for one 16-lamp bank (U17) |
@@ -334,7 +334,7 @@ eight-return switch scan: 40 possible switch positions. Firmware keeps the
 sampled state in RAM and combines successive samples for debounce/edge
 handling before game rules consume an event.
 
-The wiring table assigns a switch number as `(strobe × 8) + return + 1`.
+The wiring table assigns a switch number as `(strobe Ã— 8) + return + 1`.
 The scan order in the ROM is therefore strobe 4 down to strobe 0. The exact
 PIA-package identity (U7 versus U8) remains deliberately unnamed, but the
 address-level relationship is confirmed: `0020` drives the matrix strobe and
@@ -406,7 +406,7 @@ named directly on the board schematic:
 
 | PIA1 signal | Firmware address | Physical purpose |
 | --- | --- | --- |
-| `PB10-PB13` | bits 0–3 of `0042` | Four-bit momentary-solenoid number into U14 (74LS154) |
+| `PB10-PB13` | bits 0â€“3 of `0042` | Four-bit momentary-solenoid number into U14 (74LS154) |
 | `CB12` | PIA1 control-B output via `0043` | Solenoid-bank select |
 
 The helper at `F5DF` preserves the upper nibble of `0042`, writes the
@@ -520,7 +520,7 @@ The driver schematic shows a 74LS154 decoding momentary-solenoid data lines
 and three 4514-based lamp-strobe circuits. The ROM behavior above ties those
 circuits to specific PIA registers. The switch matrix, display path, sound
 control lines, the PIA0/PIA1-to-U7/U8 package relationship, and the remaining
-solenoid outputs still require sheets 1–4 or an equivalent independent trace.
+solenoid outputs still require sheets 1â€“4 or an equivalent independent trace.
 
 ## Annotation policy
 
@@ -534,9 +534,9 @@ Ghidra labels and comments use these rules:
   signal is followed through the schematic and cross-checked against ROM use.
 
 The physical names and original-ROM evidence originate in the canonical
-analysis under `../../originals/ghidra/`. Deluxe-specific RAM and rule behavior
-must remain identified as variation work and agree with `../asm/`,
-`GAME_RULE_TRACES.md`, and `../gamerules.md`.
+analysis under `../originals/ghidra/`. Deluxe-specific RAM and rule behavior
+must remain identified as variation work and agree with `asm/`,
+`GAME_RULE_TRACES.md`, and `gamerules.md`.
 
 
 ## More information

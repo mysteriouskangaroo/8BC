@@ -6,8 +6,7 @@ Purpose
 
 This directory is the buildable 6803 source for the Eight Ball Champ Deluxe
 rules variation. It began as a copy of the canonical source in
-`src/originals/asm/`. Original ROM files under `src/originals/roms/` are
-immutable build inputs and are never modified.
+`src/originals/asm/`. No original CPU ROM is needed to build it.
 
 The source is split into address-ordered modules. Instructions recognized in
 the canonical Ghidra project are represented as real DASM 6803 mnemonics.
@@ -31,14 +30,14 @@ which tools/Get-Dasm.ps1 downloads and verifies:
   dasm-2.20.14.1-osx-x64/dasm       macOS (runs under Rosetta on Apple silicon)
   dasm-2.20.14.1-linux-x64/dasm     Linux
 
-It also reads:
+No ROM inputs are needed when building with -SkipPackaging (as CI does).
+Local packaging without that flag reads these user-supplied sound files:
 
-  src/originals/roms/u3_cpu.128
-  src/originals/roms/u3_snd.532
-  src/originals/roms/u4_snd.532
-  src/originals/roms/u5_snd.532
+  src/roms/u3_snd.532
+  src/roms/u4_snd.532
+  src/roms/u5_snd.532
 
-The reference CPU and sound ROMs are read but never modified.
+The sound files are never modified. No original CPU ROM is read or compared.
 
 Recompilation process
 ---------------------
@@ -46,26 +45,21 @@ Recompilation process
 From the repository root, run it with PowerShell 7 on any OS, or with Windows
 PowerShell 5.1:
 
-  pwsh -File src/8bc-deluxe/asm/build.ps1
-  powershell -ExecutionPolicy Bypass -File .\src\8bc-deluxe\asm\build.ps1
+  pwsh -File src/8bc-deluxe/asm/build.ps1 -SkipPackaging
+  powershell -ExecutionPolicy Bypass -File .\src\8bc-deluxe\asm\build.ps1 -SkipPackaging
 
-The script performs the structural build checks and records comparison data:
+The script performs structural checks:
 
-  1. Verifies the immutable reference ROM's SHA-1.
-  2. Performs a first assembly with a generated checksum placeholder.
-  3. Calculates the compensation byte at C000, then reassembles so the final
+  1. Performs a first assembly with a generated checksum placeholder.
+  2. Calculates the compensation byte at C000, then reassembles so the final
      listing and ROM contain that value.
-  4. Requires exactly 16,384 bytes and an eight-bit ROM sum of FF, as required
-     by the machine's startup check at E3DB-E40D.
-  5. Validates that every interrupt/reset vector points inside C000-FFFF.
-  6. Verifies every Deluxe fixed-address rule hook in the executable image.
-  7. Compares every rebuilt byte with the reference ROM and records both
-     hashes plus the number and first differences.
-  8. Packages the rebuilt CPU ROM with the three immutable sound ROMs as
-     VisualPinballX/VPinMAME/roms/eballchp.zip.
-  9. Generates and verifies a 2 MiB Weebly M27C160 programmer image containing
-     64 identical 32 KiB slots. Each slot is a 16 KiB FF-filled U2 half
-     followed by the rebuilt 16 KiB U3 ROM.
+  3. Requires exactly 16,384 bytes and an eight-bit ROM sum of FF.
+  4. Validates that every interrupt/reset vector points inside C000-FFFF.
+  5. Verifies Deluxe RAM layout, rule hooks and the Weebly programmer image.
+
+Omit -SkipPackaging to package and deploy the CPU image with local sound
+inputs as VisualPinballX/VPinMAME/roms/eballchp.zip. CI skips this step and
+runs no PinMAME boot or game tests. No ROM hash comparisons are performed.
 
 Generated files are written to ../build/:
 
@@ -75,7 +69,7 @@ Generated files are written to ../build/:
   rom_checksum.inc    generated second-pass checksum value
   eballchp-weebly-m27c160.bin
                       2 MiB Weebly programmer image (64 x [FF U2 + rebuilt U3])
-  verification.txt   size, hash, and byte-comparison result
+  verification.txt   structural build-check results
 
 The packaged PinMAME set contains exactly these archive entries:
 
@@ -84,24 +78,16 @@ The packaged PinMAME set contains exactly these archive entries:
   u4_snd.532   unchanged sound ROM
   u5_snd.532   unchanged sound ROM
 
-Each successful build replaces VisualPinballX/VPinMAME/roms/eballchp.zip. If
+Each successful packaging build replaces VisualPinballX/VPinMAME/roms/eballchp.zip. If
 an archive is already present and no backup has yet been made, the script
 first preserves it at:
 
   src/8bc-deluxe/build/visual-pinball-package-backup/eballchp.pre-8bc-deluxe.zip
 
-This local package is a generated deployment artifact. It does not modify the
-reference ROM files in `src/originals/roms/`. Because the CPU ROM is
-intentionally changed, VPinMAME can warn that its catalogue CRC or SHA-1 does
-not match the original set. That audit warning is expected. The machine's own
-additive startup checksum is separate and must still pass; `build.ps1`
-calculates and verifies its compensation byte on every build.
-
-A structurally valid Deluxe build reports PASS while also recording every byte
-that differs from the original. Byte identity is not expected for this rules
-variation. PinMAME validation and targeted gameplay/service tests are still
-required before treating a changed image as runnable. Timing-sensitive I/O and
-solenoid paths require additional care before burning a physical EPROM.
+This local package is a generated deployment artifact and never modifies
+sound inputs. A source build proves structural checks passed. PinMAME
+validation and targeted gameplay/service tests remain required before
+calling a changed image runnable; physical hardware needs timing review.
 
 PinMAME boot test
 -----------------
@@ -155,7 +141,7 @@ eballchp.zip. Run one file, folder or glob with -Path:
 -Long adds the slower runs in tests/8bc-deluxe/long/.
 
 Tests in tests/compare/ run only when every tree named on the file's
-"# Trees:" line is selected, so the default command (all three trees) runs
+"# Trees:" line is selected, so the default command (both source trees) runs
 them and -Tree 8bc-deluxe alone does not. The result lines are written to
 build/game-tests/report.txt.
 
@@ -183,7 +169,7 @@ Variation boundary
 ------------------
 
 Make Deluxe rule changes here, not in `src/originals/`. Keep the canonical
-analysis/source and every file in `src/originals/roms/` unchanged. Preserve
+analysis/source unchanged. Preserve
 fixed addresses unless all incoming references and timing consequences have
 been traced, then rerun both the build and PinMAME boot test after each
 executable change.

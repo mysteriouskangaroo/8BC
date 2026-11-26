@@ -11,7 +11,7 @@ follow all material RAM changes and helper calls, and end at the observable
 game behavior. Names are treated as final only after the manual and ROM agree.
 
 The detailed names and instruction-level comments are applied to the Ghidra
-program by `../../../tools/ghidra_scripts/AnnotateEightBallChampRules.java`,
+program by `../../tools/ghidra_scripts/AnnotateEightBallChampRules.java`,
 separately from the physical-I/O annotations in
 `AnnotateEightBallChampHardware.java`.
 This document is the readable index and cross-function explanation; it is not

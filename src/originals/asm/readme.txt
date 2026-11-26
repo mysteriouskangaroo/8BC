@@ -17,7 +17,7 @@ pretending that unknown data has already been understood.
 
 Labels, RAM names, hardware-register names, and instruction comments are
 exported from the canonical Ghidra project. Cross-function explanations remain
-in ../ghidra/GAME_RULE_TRACES.md and should be reflected in local source
+in ../GAME_RULE_TRACES.md and should be reflected in local source
 comments as the corresponding routines are refined.
 
 Prerequisites
@@ -30,14 +30,14 @@ which tools/Get-Dasm.ps1 downloads and verifies:
   dasm-2.20.14.1-osx-x64/dasm       macOS (runs under Rosetta on Apple silicon)
   dasm-2.20.14.1-linux-x64/dasm     Linux
 
-It also reads:
+No ROM inputs are needed when building with -SkipPackaging (as CI does).
+Local packaging without that flag reads these user-supplied sound files:
 
-  src/originals/roms/u3_cpu.128
-  src/originals/roms/u3_snd.532
-  src/originals/roms/u4_snd.532
-  src/originals/roms/u5_snd.532
+  src/roms/u3_snd.532
+  src/roms/u4_snd.532
+  src/roms/u5_snd.532
 
-The reference CPU and sound ROMs are read but never modified.
+The sound files are never modified. No original CPU ROM is read or compared.
 
 Recompilation process
 ---------------------
@@ -45,22 +45,20 @@ Recompilation process
 From the repository root, run it with PowerShell 7 on any OS, or with Windows
 PowerShell 5.1:
 
-  pwsh -File src/originals/asm/build.ps1
-  powershell -ExecutionPolicy Bypass -File .\src\originals\asm\build.ps1
+  pwsh -File src/originals/asm/build.ps1 -SkipPackaging
+  powershell -ExecutionPolicy Bypass -File .\src\originals\asm\build.ps1 -SkipPackaging
 
-The script performs the structural build checks and records comparison data:
+The script performs structural checks:
 
-  1. Verifies the immutable reference ROM's SHA-1.
-  2. Performs a first assembly with a generated checksum placeholder.
-  3. Calculates the compensation byte at C000, then reassembles so the final
+  1. Performs a first assembly with a generated checksum placeholder.
+  2. Calculates the compensation byte at C000, then reassembles so the final
      listing and ROM contain that value.
-  4. Requires exactly 16,384 bytes and an eight-bit ROM sum of FF, as required
-     by the machine's startup check at E3DB-E40D.
-  5. Validates that every interrupt/reset vector points inside C000-FFFF.
-  6. Compares every rebuilt byte with the reference ROM.
-  7. Records the rebuilt SHA-1 and the number and first differences.
-  8. Packages the rebuilt CPU ROM with the three immutable sound ROMs as
-     VisualPinballX/VPinMAME/roms/eballchp.zip.
+  3. Requires exactly 16,384 bytes and an eight-bit ROM sum of FF.
+  4. Validates that every interrupt/reset vector points inside C000-FFFF.
+
+Omit -SkipPackaging to package and deploy the CPU image with local sound
+inputs as VisualPinballX/VPinMAME/roms/eballchp.zip. CI skips this step and
+runs no PinMAME boot or game tests. No ROM hash comparisons are performed.
 
 Generated files are written to ../build/:
 
@@ -68,7 +66,7 @@ Generated files are written to ../build/:
   u3_cpu.rebuilt.lst  assembler listing
   u3_cpu.rebuilt.sym  symbol table
   rom_checksum.inc    generated second-pass checksum value
-  verification.txt   size, hash, and byte-comparison result
+  verification.txt   structural build-check results
 
 The packaged PinMAME set contains exactly these archive entries:
 
@@ -77,25 +75,16 @@ The packaged PinMAME set contains exactly these archive entries:
   u4_snd.532   unchanged sound ROM
   u5_snd.532   unchanged sound ROM
 
-Each successful build replaces VisualPinballX/VPinMAME/roms/eballchp.zip. If
+Each successful packaging build replaces VisualPinballX/VPinMAME/roms/eballchp.zip. If
 an archive is already present and no backup has yet been made, the script
 first preserves it at:
 
   src/originals/build/visual-pinball-package-backup/eballchp.pre-build.zip
 
-This local package is a generated deployment artifact. It does not modify the
-reference ROM files in src/originals/roms/.
-
-A structurally valid build reports PASS even when deliberate restructuring
-changes its bytes. To require the original byte sequence while checking the
-initial reconstruction or an intentionally unchanged baseline, run:
-
-  powershell -ExecutionPolicy Bypass -File .\src\originals\asm\build.ps1 -RequireByteIdentical
-
-Byte identity is useful evidence, but it is not the permanent definition of
-correctness. PinMAME validation and targeted gameplay/service tests are
-required before treating a changed image as runnable. Timing-sensitive I/O
-and solenoid paths require additional care before burning a physical EPROM.
+This local package is a generated deployment artifact and never modifies
+sound inputs. A source build proves structural checks passed. PinMAME
+validation and targeted gameplay/service tests remain required before
+calling a changed image runnable; physical hardware needs timing review.
 
 PinMAME boot test
 -----------------
@@ -108,8 +97,7 @@ OS:
 It uses libpinmame, which tools/Get-LibPinmame.ps1 downloads and verifies.
 
 By default it runs 1500 unthrottled frames. Use -Frames to request a longer
-run, or -RequireByteIdentical when testing an intentionally unchanged source
-baseline. The script:
+run. The script:
 
   1. Runs build.ps1 and all structural ROM checks.
   2. Copies the complete package emitted by build.ps1 into an isolated test
@@ -141,7 +129,7 @@ eballchp.zip. Run one file, folder or glob with -Path:
   pwsh tools/Invoke-GameTests.ps1 -Tree originals -Path <file>
 
 Tests in tests/compare/ run only when every tree named on the file's
-"# Trees:" line is selected, so the default command (all three trees) runs
+"# Trees:" line is selected, so the default command (both source trees) runs
 them and -Tree originals alone does not. The result lines are written to
 build/game-tests/report.txt.
 

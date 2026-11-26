@@ -99,9 +99,7 @@ finally {
 [pscustomobject]@{
     Path = $OutputPath
     Size = (Get-Item -LiteralPath $OutputPath).Length
-    Sha1 = (Get-FileHash -Algorithm SHA1 -LiteralPath $OutputPath).Hash
     SlotCount = $slotCount
     SlotSize = $slotSize
     U2Fill = $u2Fill.ToString('X2')
-    U3Sha1 = (Get-FileHash -Algorithm SHA1 -LiteralPath $U3Rom).Hash
 }

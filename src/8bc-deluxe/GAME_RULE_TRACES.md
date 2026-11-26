@@ -2,7 +2,7 @@
 
 This note records cross-function behavior for the Eight Ball Champ Deluxe
 variation, building on the canonical original-ROM analysis in
-`../../originals/ghidra/GAME_RULE_TRACES.md`. It follows physical events
+`../originals/GAME_RULE_TRACES.md`. It follows physical events
 through dispatchers, gameplay state, scoring, lamps, sounds, and output queues.
 Physical addresses, player-memory allocations, switch-matrix positions, and
 driver identities remain in [HARDWARE_MAP.md](HARDWARE_MAP.md).
@@ -12,7 +12,7 @@ follow all material RAM changes and helper calls, and end at the observable
 game behavior. Names are treated as final only after the manual and ROM agree.
 
 The detailed names and instruction-level comments are applied to the Ghidra
-program by `../../../tools/ghidra_scripts/AnnotateEightBallChampRules.java`,
+program by `../../tools/ghidra_scripts/AnnotateEightBallChampRules.java`,
 separately from the physical-I/O annotations in
 `AnnotateEightBallChampHardware.java`.
 This document is the readable index and cross-function explanation; it is not

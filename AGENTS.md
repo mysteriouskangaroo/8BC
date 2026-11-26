@@ -1,4 +1,6 @@
-Never modify the ROM files in `src/originals/roms/`.
+Build CPU images from the assembly source. Do not read or test against original
+CPU ROM files. CI must not use original CPU or sound ROMs, ROM hash checks, or
+the removed `loop-score-change` tree.
 
 Perform the initial, canonical analysis of the original ROM in
 `src/originals/ghidra/`. The purpose of `src/originals/` is not merely to
@@ -10,30 +12,31 @@ Create and maintain commented, reassemblable 6803/DASM source under
 with labels, constants, comments, and analysis-driven restructuring. Unknown
 regions may remain byte declarations until they are understood. The permanent
 requirement is a valid, behaviorally faithful 16 KiB ROM mapped at
-`C000-FFFF`, not the original assembler's exact byte sequence. Compare each
-canonical build with `src/originals/roms/u3_cpu.128` and report all differences
-and both hashes. Byte identity is a valuable bootstrap/regression check, but
-deliberate restructuring or equivalent instruction encodings may change the
-hash. SHA-1 `25D310F169B92CE6B348330816DDC3B5710E57DA` identifies only the
-immutable reference ROM.
+`C000-FFFF`, not the original assembler's exact byte sequence. Do not compare
+canonical builds against original ROM binaries or hashes.
 
 Treat every canonical output as if it may be burned to an EPROM and installed
 in a machine. Require a successful assembly, exactly 16 KiB of output, valid
 vectors and address layout, no unresolved or overlapping regions, and a
-recorded build hash. Validate it in PinMAME before calling it runnable. Test
+recorded structural verification report. Validate it in PinMAME before calling
+it runnable. Test
 boot/attract, switch handling, lamps, displays, sounds, solenoids, scoring,
 ball start/end, tilt, and service diagnostics in proportion to the changed
 areas. Give timing-sensitive interrupt, PIA, lamp-refresh, switch-scan, and
 momentary-solenoid paths extra scrutiny; an emulator boot alone is not proof
 that a ROM is safe for physical hardware.
 
-As part of a successful build, package the rebuilt CPU image together with
-the three unchanged sound ROMs from `src/originals/roms/` as
+For local builds, package the rebuilt CPU image together with
+the three locally supplied sound ROMs from `src/roms/` as
 `VisualPinballX/VPinMAME/roms/eballchp.zip`. Never source the sound ROMs from
 an existing ZIP, and never alter the immutable copies. Preserve the first
 pre-build archive as a recoverable backup. The PinMAME boot test must
 exercise the exact complete archive produced by the build, not construct a
 different test-only ROM set.
+
+CI runs builds with `-SkipPackaging`: validate the CPU image and the Deluxe
+programmer image without reading sound ROMs, packaging, deploying, or running
+PinMAME. Keep emulator tests local; source-build success is not emulator validation.
 
 After every assembly or code change that can affect a ROM image, automatically
 run that source tree's build script before handing the work back; do not wait
@@ -47,7 +50,7 @@ require a rebuild unless they accompany a code change.
 Every CPU-ROM build must preserve the machine's internal startup integrity
 check. Assemble in two passes: generate the compensation byte at `C000`,
 reassemble so the listing and ROM agree, and require the eight-bit sum of all
-16 KiB from `C000-FFFF` to equal `FF` before comparing, packaging, or testing.
+16 KiB from `C000-FFFF` to equal `FF` before packaging or testing.
 Never bypass the check in a hardware-targeted image. The canonical value is
 `88`; variations will usually generate another value. The PinMAME boot test
 fails an image stuck in the checksum-failure loop at `E3E0`, but it does not
@@ -74,7 +77,7 @@ be traceable back to the validated canonical source and its recorded build.
 ## Eight Ball Champ analysis references
 
 Before naming hardware or changing game behavior, start with
-`src/originals/ghidra/HARDWARE_MAP.md`. It records the evidence-backed memory
+`src/originals/HARDWARE_MAP.md`. It records the evidence-backed memory
 map, interrupt flow, and the ROM-to-schematic links already established.
 
 Use the canonical Ghidra project at `src/originals/ghidra/EightBallChamp.gpr`
@@ -125,7 +128,7 @@ Keep documentation at the right level:
 
 For a behavior mod, trace the relevant event from an interrupt or main-loop
 caller, through its RAM state and PIA writes, then make the change only in the
-named variation. Keep the canonical project and its original ROM as the
+named variation. Keep the canonical project and reconstructed source as the
 reproducible reference point.
 
 For scoring changes, distinguish stable gameplay state from blinking output

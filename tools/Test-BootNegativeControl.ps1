@@ -1,18 +1,17 @@
 [CmdletBinding()]
 param()
 
-# Negative control for the libpinmame boot test: boots the immutable original
-# ROM set with the C000 checksum byte inverted, in a temporary folder, and
-# passes only if the boot test reports FAIL with the CPU in the E3E0
-# checksum-failure loop. Proves the boot test cannot pass a stuck ROM. Reads
-# src/originals/roms/ and never writes there. Run in its own pwsh process
-# (libpinmame allows one boot per process).
+# Local-only negative control: builds the canonical CPU from source, inverts
+# C000 in a temporary ROM set, and requires detection of the checksum-failure
+# loop. Sound inputs are local files under src/roms. Run in its own pwsh process.
 
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 . (Join-Path $repositoryRoot 'tools/LibPinmameBoot.ps1')
 $libraryPath = & (Join-Path $repositoryRoot 'tools/Get-LibPinmame.ps1')
+
+& (Join-Path $repositoryRoot 'src/originals/asm/build.ps1') -SkipPackaging
 
 $workDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('ebc-negative-control-' + [System.IO.Path]::GetRandomFileName())
 $romSetDirectory = Join-Path $workDirectory 'roms'
@@ -24,7 +23,8 @@ try {
         (Join-Path $romSetDirectory 'eballchp.zip'), [System.IO.Compression.ZipArchiveMode]::Create)
     try {
         foreach ($name in 'u3_cpu.128', 'u3_snd.532', 'u4_snd.532', 'u5_snd.532') {
-            $bytes = [System.IO.File]::ReadAllBytes((Join-Path $repositoryRoot "src/originals/roms/$name"))
+            $source = if ($name -eq 'u3_cpu.128') { 'src/originals/build/u3_cpu.rebuilt.128' } else { "src/roms/$name" }
+            $bytes = [System.IO.File]::ReadAllBytes((Join-Path $repositoryRoot $source))
             if ($name -eq 'u3_cpu.128') { $bytes[0] = $bytes[0] -bxor 0xFF }
             $stream = $archive.CreateEntry($name).Open()
             try { $stream.Write($bytes, 0, $bytes.Length) } finally { $stream.Dispose() }

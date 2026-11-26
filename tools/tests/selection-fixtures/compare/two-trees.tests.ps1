@@ -12,5 +12,5 @@ Invoke-EbcComparedScenario -Name 'Normalize hides the tree' -Doc 'fixture' -Tree
 $writer = { try { Write-EbcRam -Address 0x17FE -Bytes ([byte[]]@(0x5A)) } catch { }; Add-EbcObservation 'wrote' }
 Invoke-EbcComparedScenario -Name 'Seeded compare passes' -Doc 'fixture' -Seeded -Trees originals, originals -Scenario $writer
 Invoke-EbcComparedScenario -Name 'Unlabelled compare write fails' -Doc 'fixture' -Trees originals, originals -Scenario $writer
-Invoke-EbcComparedScenario -Name 'Unbuilt tree fails' -Doc 'fixture' -Trees originals, loop-score-change -Scenario $scenario
+Invoke-EbcComparedScenario -Name 'Unbuilt tree fails' -Doc 'fixture' -Trees originals, unbuilt-tree -Scenario $scenario
 Complete-EbcTests

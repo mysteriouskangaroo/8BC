@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$RequireByteIdentical
+    # Assemble and validate without reading sound ROMs or deploying a package.
+    [switch]$SkipPackaging
 )
 
 $ErrorActionPreference = 'Stop'
@@ -8,14 +9,12 @@ $ErrorActionPreference = 'Stop'
 $asmDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $variationDirectory = Split-Path -Parent $asmDirectory
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $variationDirectory)
-$canonicalDirectory = Join-Path $repositoryRoot 'src/originals'
 # Windows PowerShell 5.1 has no $IsWindows; treat it as Windows.
 $dasmDirectory = if ($IsMacOS) { 'dasm-2.20.14.1-osx-x64' }
                  elseif ($IsLinux) { 'dasm-2.20.14.1-linux-x64' }
                  else { 'dasm-2.20.14.1-win-x64' }
 $dasmName = if ($IsMacOS -or $IsLinux) { 'dasm' } else { 'dasm.exe' }
 $assembler = Join-Path (Join-Path $repositoryRoot $dasmDirectory) $dasmName
-$originalRom = Join-Path $canonicalDirectory 'roms/u3_cpu.128'
 $buildDirectory = Join-Path $variationDirectory 'build'
 $rebuiltRom = Join-Path $buildDirectory 'u3_cpu.rebuilt.128'
 $listing = Join-Path $buildDirectory 'u3_cpu.rebuilt.lst'
@@ -29,31 +28,25 @@ $pinmameArchive = Join-Path $pinmameRomDirectory 'eballchp.zip'
 $packageBackupDirectory = Join-Path $buildDirectory 'visual-pinball-package-backup'
 $packageBackup = Join-Path $packageBackupDirectory 'eballchp.pre-8bc-deluxe.zip'
 $temporaryArchive = Join-Path $buildDirectory 'eballchp.packaging.zip'
-$expectedSha1 = '25D310F169B92CE6B348330816DDC3B5710E57DA'
+$soundDirectory = Join-Path $repositoryRoot 'src/roms'
 $soundRoms = @(
-    (Join-Path $canonicalDirectory 'roms/u3_snd.532')
-    (Join-Path $canonicalDirectory 'roms/u4_snd.532')
-    (Join-Path $canonicalDirectory 'roms/u5_snd.532')
+    (Join-Path $soundDirectory 'u3_snd.532')
+    (Join-Path $soundDirectory 'u4_snd.532')
+    (Join-Path $soundDirectory 'u5_snd.532')
 )
 
 if (-not (Test-Path -LiteralPath $assembler -PathType Leaf)) {
     throw "DASM was not found at $assembler"
 }
-if (-not (Test-Path -LiteralPath $originalRom -PathType Leaf)) {
-    throw "The immutable reference ROM was not found at $originalRom"
-}
 if (-not (Test-Path -LiteralPath $weeblyBuilder -PathType Leaf)) {
     throw "The Weebly image builder was not found at $weeblyBuilder"
 }
-foreach ($soundRom in $soundRoms) {
-    if (-not (Test-Path -LiteralPath $soundRom -PathType Leaf)) {
-        throw "An immutable sound ROM was not found at $soundRom"
+if (-not $SkipPackaging) {
+    foreach ($soundRom in $soundRoms) {
+        if (-not (Test-Path -LiteralPath $soundRom -PathType Leaf)) {
+            throw "A local sound ROM was not found at $soundRom. Use -SkipPackaging to assemble without sound ROMs."
+        }
     }
-}
-
-$referenceHash = (Get-FileHash -Algorithm SHA1 -LiteralPath $originalRom).Hash
-if ($referenceHash -ne $expectedSha1) {
-    throw "Reference ROM SHA-1 is $referenceHash; expected $expectedSha1. Refusing to build."
 }
 
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
@@ -98,7 +91,6 @@ $checksumCompensation = ($firstPassBytes[0] + (0xFF - $firstPassSum)) -band 0xFF
 Write-ChecksumInclude ([byte]$checksumCompensation)
 Invoke-DasmBuild
 $rebuiltBytes = [System.IO.File]::ReadAllBytes($rebuiltRom)
-$originalBytes = [System.IO.File]::ReadAllBytes($originalRom)
 if ($rebuiltBytes.Length -ne 16384) {
     throw "Rebuilt ROM is $($rebuiltBytes.Length) bytes; expected 16384."
 }
@@ -296,20 +288,6 @@ foreach ($qualifiedState in @(0x00, 0x80)) {
     }
 }
 
-$firstDifferences = [System.Collections.Generic.List[string]]::new()
-$differenceCount = 0
-for ($index = 0; $index -lt $originalBytes.Length; $index++) {
-    if ($originalBytes[$index] -ne $rebuiltBytes[$index]) {
-        $differenceCount++
-        $address = 0xC000 + $index
-        if ($firstDifferences.Count -lt 20) {
-            $firstDifferences.Add(('$' + $address.ToString('X4') + ': original $' +
-                $originalBytes[$index].ToString('X2') + ', rebuilt $' +
-                $rebuiltBytes[$index].ToString('X2')))
-        }
-    }
-}
-
 $vectorNames = @('SCI', 'timer overflow', 'timer output compare', 'timer input capture',
     'external IRQ', 'SWI', 'NMI', 'reset')
 $vectorLines = [System.Collections.Generic.List[string]]::new()
@@ -322,16 +300,9 @@ for ($vectorIndex = 0; $vectorIndex -lt $vectorNames.Count; $vectorIndex++) {
     $vectorLines.Add("$($vectorNames[$vectorIndex]) vector: $('$' + $target.ToString('X4'))")
 }
 
-$rebuiltHash = (Get-FileHash -Algorithm SHA1 -LiteralPath $rebuiltRom).Hash
-$isByteIdentical = $differenceCount -eq 0
-
 $report = @(
     'Eight Ball Champ Deluxe build: PASS'
     'Size: 16384 bytes'
-    "Reference SHA-1: $referenceHash"
-    "Rebuilt SHA-1:   $rebuiltHash"
-    "Byte-identical to reference: $isByteIdentical"
-    "Byte differences: $differenceCount"
     "Startup checksum compensation at C000: $('$' + $checksumCompensation.ToString('X2'))"
     "Startup additive checksum: $('$' + $startupChecksum.ToString('X2')) (PASS)"
     "Canonical player slots: $('$' + $canonicalPlayerRecordStart.ToString('X4'))-$('$' + $canonicalPlayerRecordEnd.ToString('X4')) (4 x 13 bytes)"
@@ -341,23 +312,18 @@ $report = @(
     "Shared saucer/B-A-L-L truth-table cases: $sharedBallAwardStateCaseCount (PASS)"
     $vectorLines
 )
-if ($firstDifferences.Count -ne 0) {
-    $report += 'First byte differences:'
-    $report += $firstDifferences
-}
-
-if ($RequireByteIdentical -and -not $isByteIdentical) {
-    $report += 'PinMAME package: not written because byte identity was required.'
-    $report | Set-Content -LiteralPath $verification -Encoding ascii
-    $report
-    throw "The build is structurally valid but differs from the reference in $differenceCount byte(s)."
-}
 
 $weeblyResult = & $weeblyBuilder -U3Rom $rebuiltRom -OutputPath $weeblyRom
 $report += "Weebly M27C160 image: $($weeblyResult.Path)"
 $report += "Weebly image size: $($weeblyResult.Size) bytes (64 x 32768-byte U2/U3 slots)"
 $report += "Weebly slot layout: 16384 x FF followed by rebuilt 16384-byte U3 (PASS)"
-$report += "Weebly image SHA-1: $($weeblyResult.Sha1)"
+
+if ($SkipPackaging) {
+    $report += 'PinMAME package: skipped (-SkipPackaging); emulator validation has not run.'
+    $report | Set-Content -LiteralPath $verification -Encoding ascii
+    $report
+    return
+}
 
 New-Item -ItemType Directory -Path $pinmameRomDirectory -Force | Out-Null
 if ((Test-Path -LiteralPath $pinmameArchive -PathType Leaf) -and
@@ -414,29 +380,23 @@ try {
             throw "Packaged $entryName is missing or has the wrong length."
         }
 
+        $sourceBytes = [System.IO.File]::ReadAllBytes($source)
         $entryStream = $entry.Open()
-        $sha1 = [System.Security.Cryptography.SHA1]::Create()
         try {
-            $entryHash = [System.BitConverter]::ToString(
-                $sha1.ComputeHash($entryStream)).Replace('-', '')
+            for ($index = 0; $index -lt $sourceBytes.Length; $index++) {
+                if ($entryStream.ReadByte() -ne $sourceBytes[$index]) {
+                    throw "Packaged $entryName differs from its build input at byte $index."
+                }
+            }
         }
-        finally {
-            $sha1.Dispose()
-            $entryStream.Dispose()
-        }
-        $sourceHash = (Get-FileHash -Algorithm SHA1 -LiteralPath $source).Hash
-        if ($entryHash -ne $sourceHash) {
-            throw "Packaged $entryName does not match its build input."
-        }
+        finally { $entryStream.Dispose() }
     }
 }
 finally {
     $archive.Dispose()
 }
 
-$packageHash = (Get-FileHash -Algorithm SHA1 -LiteralPath $pinmameArchive).Hash
 $report += "PinMAME package: $pinmameArchive"
-$report += "PinMAME package SHA-1: $packageHash"
 $report += "Package entries: $($expectedEntries -join ', ')"
 if (Test-Path -LiteralPath $packageBackup -PathType Leaf) {
     $report += "First pre-build package backup: $packageBackup"

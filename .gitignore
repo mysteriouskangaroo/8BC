@@ -11,12 +11,10 @@
 /tools/*
 !/tools/New-WeeblyM27C160Image.ps1
 !/tools/Get-Dasm.ps1
-!/tools/rom-hashes.sha1
 !/tools/Test-DocPaths.ps1
 !/tools/Get-LibPinmame.ps1
 !/tools/LibPinmameBoot.ps1
 !/tools/LibPinmameMachine.ps1
-!/tools/Compare-RomHashes.ps1
 !/tools/Test-BootNegativeControl.ps1
 !/tools/GameNames.psd1
 !/tools/GameTest.psm1

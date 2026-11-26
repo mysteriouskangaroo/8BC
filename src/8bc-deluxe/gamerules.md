@@ -460,13 +460,13 @@ completion milestones, or the C/P anti-shatz latch.
 
 The original player records occupy four 13-byte slots at `$10C7-$10FA`.
 Each slot contains nine saved bytes plus four reserved stride bytes; the exact
-per-player and per-field layout is in [HARDWARE_MAP.md](ghidra/HARDWARE_MAP.md#u4-ram-canonical-per-player-record-slots).
+per-player and per-field layout is in [HARDWARE_MAP.md](HARDWARE_MAP.md#u4-ram-canonical-per-player-record-slots).
 Deluxe begins at the next byte and uses `$10FB-$1157` for active state,
 temporary bonus/display work, and parallel per-player counters. The
-[authoritative Deluxe allocation](ghidra/HARDWARE_MAP.md#u4-ram-deluxe-allocation)
+[authoritative Deluxe allocation](HARDWARE_MAP.md#u4-ram-deluxe-allocation)
 lists every assigned address, storage role, active-player mirror, reserved gap,
 and scratch range. Its
-[logical combined player table](ghidra/HARDWARE_MAP.md#logical-combined-player-state)
+[logical combined player table](HARDWARE_MAP.md#logical-combined-player-state)
 presents the original and Deluxe fields as one player record without changing
 their safe physical layout.
 

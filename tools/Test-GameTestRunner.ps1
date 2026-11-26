@@ -54,7 +54,7 @@ try {
         @{ Args = @('-Tree', 'originals'); Expect = @('RUN originals kit/k', 'RUN originals originals/o') },
         @{ Args = @('-Tree', 'originals', '-Long'); Expect = @('RUN originals kit/k', 'RUN originals originals/long/l', 'RUN originals originals/o') },
         @{ Args = @('-Tree', 'originals,8bc-deluxe'); Expect = @('RUN 8bc-deluxe kit/k', 'RUN compare compare/two-trees', 'RUN originals kit/k', 'RUN originals originals/o') },
-        @{ Args = @('-Tree', 'loop-score-change'); Expect = @('RUN loop-score-change kit/k') }
+        @{ Args = @('-Tree', '8bc-deluxe'); Expect = @('RUN 8bc-deluxe kit/k') }
     )
     foreach ($c in $cases) {
         $got = Get-Planned $c.Args
@@ -84,7 +84,7 @@ try {
     Write-Check 'Compared scenario: a difference fails at its first line' (@($cmp | Where-Object { $_ -like "FAIL *two-trees :: Different trees differ :: *observation 1*'tree originals'*'tree 8bc-deluxe'*" }).Count -eq 1 -and $cmpCode -eq 1) "exit $cmpCode; $cmpAll"
     Write-Check 'Compared scenario: a seeded scenario that writes RAM passes' (@($cmp | Where-Object { $_ -like 'PASS *two-trees :: Seeded compare passes `[seeded`]' }).Count -eq 1) $cmpAll
     Write-Check 'Compared scenario: an unlabelled RAM write fails' (@($cmp | Where-Object { $_ -like 'FAIL *two-trees :: Unlabelled compare write fails :: *without -Seeded*' }).Count -eq 1) $cmpAll
-    Write-Check 'Compared scenario: a tree the runner did not build fails' (@($cmp | Where-Object { $_ -like "FAIL *two-trees :: Unbuilt tree fails :: *loop-score-change*not built*" }).Count -eq 1) $cmpAll
+    Write-Check 'Compared scenario: a tree the runner did not build fails' (@($cmp | Where-Object { $_ -like "FAIL *two-trees :: Unbuilt tree fails :: *unbuilt-tree*not built*" }).Count -eq 1) $cmpAll
     $bare = @(& $pwshPath -NoProfile -File (Join-Path $sel 'compare/two-trees.tests.ps1') 2>&1 | ForEach-Object { "$_" })
     Write-Check 'Compared scenario: outside the runner no tree counts as built' (@($bare | Where-Object { $_ -like 'FAIL *two-trees :: Same tree matches :: *not built*' }).Count -eq 1) ($bare -join "`n")
 

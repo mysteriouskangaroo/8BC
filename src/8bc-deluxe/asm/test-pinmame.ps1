@@ -1,8 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidateRange(600, 36000)]
-    [int]$Frames = 1500,
-    [switch]$RequireByteIdentical
+    [int]$Frames = 1500
 )
 
 # Builds this tree, then boots the exact eballchp.zip the build packaged in
@@ -27,12 +26,7 @@ $treeName = 'Deluxe'
 $libraryPath = & (Join-Path $repositoryRoot 'tools/Get-LibPinmame.ps1')
 
 $buildScript = Join-Path $asmDirectory 'build.ps1'
-if ($RequireByteIdentical) {
-    & $buildScript -RequireByteIdentical
-}
-else {
-    & $buildScript
-}
+& $buildScript
 if (-not (Test-Path -LiteralPath $packagedArchive -PathType Leaf)) {
     throw "The build did not create $packagedArchive"
 }
@@ -42,7 +36,6 @@ Copy-Item -LiteralPath $packagedArchive -Destination $testArchive -Force
 
 $result = Invoke-EightBallChampBootTest -LibraryPath $libraryPath -VpmPath $smokeRoot -Frames $Frames
 
-$rebuiltHash = (Get-FileHash -Algorithm SHA1 -LiteralPath $rebuiltRom).Hash
 $report = @(
     "Eight Ball Champ $treeName PinMAME boot test: $(if ($result.Pass) { 'PASS' } else { 'FAIL' })"
     "Result: $($result.Reason)"
@@ -51,7 +44,6 @@ $report = @(
     "Stack 00FC-00FF at last frame: $($result.Stack00FC)"
     "U4 RAM bytes written: $($result.U4WrittenBytes)"
     "Event digest (SHA-256): $($result.Digest)"
-    "ROM SHA-1: $rebuiltHash"
     "Packaged ROM set: $packagedArchive"
     "Isolated ROM set: $testArchive"
     "libpinmame: $libraryPath"

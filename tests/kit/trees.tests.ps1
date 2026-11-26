@@ -17,7 +17,11 @@ Test-EbcItem -Name 'Each tree boots its own ROM' -Doc "src/$Tree/build/u3_cpu.re
     $expected = [IO.File]::ReadAllBytes($rebuilt)
     # Byte 0 is the checksum-compensation byte; it could coincide between trees.
     Assert-EbcEqual -Expected ('{0:X2}' -f $expected[0]) -Actual ('{0:X2}' -f $running[0]) -What 'C000 compensation byte'
-    $sha = [Security.Cryptography.SHA1]::Create()
-    Assert-EbcEqual -Expected ([Convert]::ToHexString($sha.ComputeHash($expected))) -Actual ([Convert]::ToHexString($sha.ComputeHash($running))) -What 'SHA-1 of C000-FFFF'
+    Assert-EbcEqual -Expected $expected.Length -Actual $running.Length -What 'C000-FFFF byte count'
+    $firstDifference = -1
+    for ($index = 0; $index -lt [Math]::Min($expected.Length, $running.Length); $index++) {
+        if ($expected[$index] -ne $running[$index]) { $firstDifference = $index; break }
+    }
+    Assert-EbcEqual -Expected -1 -Actual $firstDifference -What 'First differing byte in C000-FFFF (-1 means source build matches)'
 }
 Complete-EbcTests

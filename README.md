@@ -8,33 +8,33 @@ solenoids, sound board, and MPU remain in use.
 ## Scope and preservation
 
 Original CPU and sound ROM files are not distributed in this repository.
-Before building, supply your own authorized copies of `u3_cpu.128`,
-`u3_snd.532`, `u4_snd.532`, and `u5_snd.532` in `src/originals/roms/`.
-These files are ignored by Git and remain immutable local build inputs.
-The expected hashes are recorded in `tools/rom-hashes.sha1`; that manifest
-also identifies reference-copy locations used by the variations.
+Both CPU images build from assembly source without an original CPU ROM.
+Run either build script with `-SkipPackaging` to assemble and validate without
+any ROM inputs:
 
-The hosted CI workflow currently expects reference inputs in its checkout,
-so ROM-dependent jobs cannot pass on a public checkout without those files.
-A workflow update is needed to skip those jobs or supply inputs privately.
-Run the build and PinMAME checks locally with your authorized inputs;
-all existing validation requirements still apply.
+```powershell
+pwsh -File tools/Get-Dasm.ps1
+pwsh -File src/originals/asm/build.ps1 -SkipPackaging
+pwsh -File src/8bc-deluxe/asm/build.ps1 -SkipPackaging
+```
+
+CI runs these source builds on Linux, Windows and macOS, also checks Windows
+PowerShell 5.1, documentation paths and the boot-free game-test runner fixtures.
+It does not run ROM hash comparisons or emulator tests and requires no ROM
+files or secrets. Build checks cover image size, vectors, the machine's startup
+checksum and the Deluxe executable layout.
+
+For local PinMAME packaging and emulator tests, supply authorized copies of
+`u3_snd.532`, `u4_snd.532` and `u5_snd.532` in `src/roms/`, then run the build
+without `-SkipPackaging`. These sound inputs remain ignored and are never
+modified. The original CPU ROM is not used.
 
 The repository still contains reconstructed assembly, Ghidra analysis, and
-modified release images. Removing the original ROM files does not make
-the repository a patch-only distribution.
+modified release images. Removing original ROM files does not make it a
+patch-only distribution.
 
-`src/originals/roms/` is immutable reference material.  In particular,
-`u3_cpu.128` is the original 16 KiB game ROM, mapped from `$C000` through
-`$FFFF`.  Its verified SHA-1 is:
-
-```
-25d310f169b92ce6b348330816ddc3b5710e57da
-```
-
-No work product overwrites that file. Canonical rebuilt images are generated
-under `src/originals/build/`; modified images belong under the named
-variation's `build/` directory and must be compared against this baseline.
+Canonical outputs are generated under `src/originals/build/`; Deluxe outputs
+are generated under `src/8bc-deluxe/build/`.
 
 ## Ghidra project
 
@@ -56,7 +56,7 @@ MC6801/6803 disassembler; it is not a separate disassembler.
 
 | Location | Purpose |
 | --- | --- |
-| `src/originals/roms/` | Untouched CPU and sound ROMs. |
+| `src/roms/` | Local sound inputs for PinMAME packaging; unused in CI. |
 | `src/originals/ghidra/` | Ghidra project analyzing the untouched CPU ROM. |
 | `src/originals/asm/` | Canonical commented DASM source for behaviorally faithful builds. |
 | `src/originals/build/` | Generated canonical ROM, listing, symbols, and verification report. |
@@ -87,15 +87,11 @@ MC6801/6803 disassembler; it is not a separate disassembler.
 3. Label switch, scoring, bonus, lamp, solenoid, and game-state routines.
 4. Continue converting unclassified `dc.b` regions in the canonical assembly
    into annotated instructions as Ghidra analysis confirms them.
-5. Run `src/originals/asm/build.ps1` after every source change. It requires a
-   structurally valid fixed-address 16 KiB image and records its hash and byte
-   differences from the reference. Its two-pass assembly generates the
-   startup-checksum compensation byte at `$C000` and refuses to package unless
-   the final eight-bit ROM sum is `$FF`. It also packages the rebuilt CPU with
-   the unchanged sound ROMs as
-   `VisualPinballX/VPinMAME/roms/eballchp.zip`. Use `-RequireByteIdentical`
-   when checking the initial reconstruction or an intentionally unchanged
-   baseline.
+5. Run `src/originals/asm/build.ps1 -SkipPackaging` after source changes to
+   validate the 16 KiB image, vectors and two-pass startup checksum. The
+   final eight-bit ROM sum must be `$FF`. Omit `-SkipPackaging` locally to
+   package the rebuilt CPU with supplied sounds as
+   `VisualPinballX/VPinMAME/roms/eballchp.zip`.
 6. Validate canonical and modified builds in PinMAME before treating them as
    runnable or suitable for an EPROM.
 

@@ -49,7 +49,7 @@ $ExpectedLaneCScore = if ($Tree -eq '8bc-deluxe') { '300' } else { '3000' }
 # Self-test and Cancel presses this test's fixed schedule needs (measured;
 # each press lands on a frame where the ROM accepts it, see
 # Invoke-EbcSelfTestPress). The miss frames depend on the ROM image: on the
-# originals and loop-score-change the press at frame 2100 misses (probe10:
+# originals the press at frame 2100 misses (probe10:
 # 1015 never set) and the next one enters; on 8bc-deluxe the first press
 # enters and the press toward test 90 misses once (measured in Task 4).
 $ExpectedServiceEntryPresses = if ($Tree -eq '8bc-deluxe') { 1 } else { 2 }
