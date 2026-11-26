@@ -1,0 +1,50 @@
+Eight Ball Champ Deluxe build: PASS
+Size: 16384 bytes
+Reference SHA-1: 25D310F169B92CE6B348330816DDC3B5710E57DA
+Rebuilt SHA-1:   8BED58E39A7517C8E74967855361010A1E7255E9
+Byte-identical to reference: False
+Byte differences: 3272
+Startup checksum compensation at C000: $11
+Startup additive checksum: $FF (PASS)
+Canonical player slots: $10C7-$10FA (4 x 13 bytes)
+Deluxe RAM: $10FB-$1157 (non-overlap PASS)
+Deluxe fixed-address executable checks: 79 (PASS)
+Shared saucer/B-A-L-L executable checks: 4 (PASS)
+Shared saucer/B-A-L-L truth-table cases: 32 (PASS)
+SCI vector: $E05B
+timer overflow vector: $E05B
+timer output compare vector: $E022
+timer input capture vector: $E05C
+external IRQ vector: $E032
+SWI vector: $E388
+NMI vector: $E387
+reset vector: $E388
+First byte differences:
+$C000: original $88, rebuilt $11
+$C01D: original $CA, rebuilt $D5
+$C01E: original $9C, rebuilt $74
+$C01F: original $CA, rebuilt $D5
+$C020: original $9C, rebuilt $82
+$C14E: original $FE, rebuilt $BD
+$C14F: original $10, rebuilt $D3
+$C150: original $B3, rebuilt $B2
+$C1AC: original $A6, rebuilt $BD
+$C1AD: original $05, rebuilt $DD
+$C1AE: original $B8, rebuilt $71
+$C1AF: original $10, rebuilt $01
+$C1B0: original $BF, rebuilt $01
+$C1B1: original $A7, rebuilt $01
+$C1B2: original $05, rebuilt $01
+$C1BC: original $B8, rebuilt $BD
+$C1BD: original $10, rebuilt $DB
+$C1BE: original $C1, rebuilt $D4
+$C1D6: original $86, rebuilt $7E
+$C1D7: original $6F, rebuilt $DE
+Weebly M27C160 image: C:\code\8BC\src\8bc-deluxe\build\eballchp-weebly-m27c160.bin
+Weebly image size: 2097152 bytes (64 x 32768-byte U2/U3 slots)
+Weebly slot layout: 16384 x FF followed by rebuilt 16384-byte U3 (PASS)
+Weebly image SHA-1: 10498D1963F53CFEFBF4F8C3C89FDCE118B80595
+PinMAME package: C:\code\8BC\VisualPinballX\VPinMAME\roms\eballchp.zip
+PinMAME package SHA-1: F82B402F0F501858E772ECDE6182418BFD55BE91
+Package entries: u3_cpu.128, u3_snd.532, u4_snd.532, u5_snd.532
+First pre-build package backup: C:\code\8BC\src\8bc-deluxe\build\visual-pinball-package-backup\eballchp.pre-8bc-deluxe.zip
