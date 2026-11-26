@@ -1,4 +1,4 @@
-# Eight Ball Champ rules-ROM project
+# Eight Ball Champ Deluxe (EBCD)
 
 This project documents and modifies the game logic for the 1985 Bally/Midway
 **Eight Ball Champ** pinball machine.  The target is the game-ROM code running
