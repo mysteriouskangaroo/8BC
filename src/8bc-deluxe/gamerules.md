@@ -457,7 +457,10 @@ completion milestones, or the C/P anti-shatz latch.
 - Collecting any special also awards 25,000 points multiplied by the current
   playfield value: 25,000 at 1x, 50,000 at 2x, or 75,000 at 3x.
 - These points are additional to the original adjustment-controlled special
-  award and do not replace its sound, animation, or knocker behavior.
+  award and do not replace its sound or animation. Every collected Special
+  knocks exactly once, including at maximum credits and with any operator
+  award selection. Credits remain capped, and the selected points, Extra
+  Ball or replay award still runs normally.
 - The terminal active right orbit is the sound-only exception: its normal
   single Special award is accompanied by two consecutive `$6F` "Super"
   commands.
@@ -468,8 +471,9 @@ completion milestones, or the C/P anti-shatz latch.
   original collector enters `$C1DB` directly. All five confirmed collection
   routes therefore pass through `$C1DB`. Deluxe hooks that single convergence
   point, adds two scaled multiplier-aware 10,000 awards plus one scaled
-  multiplier-aware 5,000 award, and resumes the untouched original routine at
-  `$C1DE`.
+  multiplier-aware 5,000 award, and ensures one knocker pulse before resuming
+  the original routine at `$C1DE`. Below the credit cap the replay award
+  supplies its normal knock; other cases use the same timed pulse separately.
 
 ## Deluxe implementation state
 

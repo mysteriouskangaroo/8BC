@@ -2014,13 +2014,13 @@ DELUXE_AWARD_SPECIAL_POINTS:
 ; All original special collectors converge at C1DB. Award an additional
 ; scaled 25,000 through the same multiplier-aware helpers used by normal
 ; scoring: 10,000 + 10,000 + 5,000 gives 25K/50K/75K at 1x/2x/3x.
-; Then execute C1DB's displaced instruction and resume the original special
-; processing, including its single adjustment-controlled award and knocker.
+; The high-ROM continuation supplies a knocker pulse if the selected action
+; will not provide one, then resumes the original single operator award.
         JSR $c96c
         JSR $c96c
         JSR $c994
         LDX #$165f
-        JMP $c1de
+        JMP DELUXE_COMPLETE_SPECIAL_WITH_KNOCKER
 
 DELUXE_TICK_STARTUP_MUSIC_GUARD:
 ; Called from the periodic tail using three bytes reclaimed from its reserved

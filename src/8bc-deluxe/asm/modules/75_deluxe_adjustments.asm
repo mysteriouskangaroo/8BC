@@ -1,4 +1,4 @@
-; Deluxe service adjustment and spinner timeout, in canonical FF padding.
+; Deluxe adjustment, spinner and Special continuations in canonical FF padding.
 ; Range: FA56-FFEF; the vectors remain fixed at FFF0.
 ;
 ; Switch 32 reaches CA3B -> DELUXE_HANDLE_SPINNER -> D516 after the
@@ -94,6 +94,29 @@ DELUXE_CONSUME_QUALIFIED_SPINNER:
         JMP DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
 DELUXE_QUALIFIED_SPINNER_DONE:
         RTS
+
+DELUXE_COMPLETE_SPECIAL_WITH_KNOCKER:
+; All actual Special collectors converge through C1DB, including the direct
+; rack award and the context-aware orbit sound path. Register 25's packed
+; action at 1680 bits 4-5 selects none/points/Extra Ball/replay. Only replay
+; normally knocks: F6F8 calls F73C and returns immediately when credits are
+; at/above the cap, before calling the C085 knocker pointer or adding credit.
+; Below the cap, leave that single normal knock to F6F8. For every other
+; case, supply exactly one identical timed pulse without changing credits,
+; the selected award, audit counters, Special sound, or scoring scale.
+        LDAA $1680
+        ANDA #$30
+        CMPA #$30
+        BNE DELUXE_SPECIAL_NEEDS_KNOCK
+        JSR $F73C
+        BCS DELUXE_RESUME_SPECIAL_AWARD
+DELUXE_SPECIAL_NEEDS_KNOCK:
+        JSR CREDIT_AWARD_KNOCKER_PULSE
+DELUXE_RESUME_SPECIAL_AWARD:
+; The credit comparison and pulse both use X. Restore the displaced Special
+; audit pointer before C1DE performs its original increment and action dispatch.
+        LDX #$165F
+        JMP $C1DE
 
 DELUXE_ADJUSTMENTS_END:
         ds.b $FFF0-DELUXE_ADJUSTMENTS_END,$FF

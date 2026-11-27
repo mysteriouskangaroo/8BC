@@ -137,6 +137,8 @@ $deluxeHookChecks = @(
     @{ Address = 0xC1D6; Opcode = 0x7E; Target = 'DELUXE_HANDLE_SPECIAL_COLLECT_SOUND'; Name = 'context-aware Special sound gate' }
     @{ Address = 0xC1D9; Bytes = [byte[]](0x01, 0x01); Name = 'Special sound gate fixed-address padding' }
     @{ Address = 0xC1DB; Opcode = 0x7E; Target = 'DELUXE_AWARD_SPECIAL_POINTS'; Name = 'common special points handler' }
+    @{ Address = 0xDE63; Opcode = 0x7E; Target = 'DELUXE_COMPLETE_SPECIAL_WITH_KNOCKER'; Name = 'common Special single-knock continuation' }
+    @{ Address = 0xD3A6; Bytes = [byte[]](0x86, 0x0E, 0xC6, 0x0A, 0xBD, 0xF5, 0xC2, 0xC6, 0x0C, 0x7E, 0xC9, 0x19); Name = 'canonical timed knocker pulse and recovery delay retained' }
     @{ Address = 0xD415; Opcode = 0xBD; Target = 'DELUXE_TICK_CHAMP_SKILL_SHOT'; Name = 'periodic H/A/M skill-shot timer' }
     @{ Address = 0xD418; Opcode = 0xBD; Target = 'DELUXE_PERIODIC_FINALIZE'; Name = 'periodic stacked Extra Ball same-turn latch guard' }
     @{ Address = 0xC220; Bytes = [byte[]](0xFF, 0x00, 0x8B, 0xFE, 0x10, 0x1D, 0xE5, 0x00, 0x26, 0x06, 0xEA, 0x00, 0xE7, 0x00, 0x20, 0x02, 0x86, 0x20); Name = 'canonical award-history qualifier restored' }

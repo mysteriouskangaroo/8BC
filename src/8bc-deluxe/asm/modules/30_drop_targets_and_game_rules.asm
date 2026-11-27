@@ -381,8 +381,16 @@ AWARD_LIT_DROP_TARGET_5000:
         dc.b $00,$00,$10,$03,$00,$00,$20,$03,$00,$00,$40,$03,$00,$00,$FF,$FF ; $D371 data/unclassified
         dc.b $FF,$FF,$01,$04,$00,$00,$02,$04,$00,$00,$04,$04,$00,$00,$08,$04 ; $D381 data/unclassified
         dc.b $00,$00,$10,$04,$00,$00,$20,$04,$00,$00,$40,$04,$00,$00,$FF,$FF ; $D391 data/unclassified
-        dc.b $86,$19,$BD,$C2,$7E,$86,$0E,$C6,$0A,$BD,$F5,$C2,$C6,$0C,$7E,$C9 ; $D3A1 data/unclassified
-        dc.b $19                                             ; $D3B1 final byte of live canonical code
+        dc.b $86,$19,$BD,$C2,$7E                              ; $D3A1 preceding sound
+CREDIT_AWARD_KNOCKER_PULSE:
+; C085 points here for successful replay-credit awards. Reuse the exact
+; canonical M14 pulse and recovery delay for Specials at the credit cap too.
+; The blocking helper retains the existing timer-controlled coil release.
+        LDAA #$0E                                            ; $D3A6 knocker M14
+        LDAB #$0A                                            ; $D3A8 canonical pulse ticks
+        JSR PULSE_MOMENTARY_SOLENOID_BLOCKING                  ; $D3AA
+        LDAB #$0C                                            ; $D3AD recovery delay
+        JMP $C919                                            ; $D3AF-$D3B1
 ; The canonical image is all $FF from $D3B2 through $DFFF. The deluxe build
 ; replaces the beginning of that verified padding in 35_deluxe_rules.asm and
 ; fills the unused remainder back to $FF.

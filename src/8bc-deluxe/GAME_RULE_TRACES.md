@@ -473,6 +473,29 @@ handler continues to authorize the accumulated award solely from `10FB`, so a
 spinner pulse during the preview follows the unlit 10-point path. Activating
 spinner clears `1114` before displaying `10FE` steadily.
 
+## Special knocker at maximum credits
+
+All confirmed Special routes converge at `C1DB`, including the direct-entry
+120K/240K rack award. After adding the existing scaled multiplier-aware
+points, `DELUXE_COMPLETE_SPECIAL_WITH_KNOCKER` checks the selected Special
+action at `1680` bits `30`. A replay uses `F6F8`: its `F73C` comparison
+returns carry clear at/above the credit limit, so it returns at `F709`
+without adding credit or calling the knocker pointer at `C085`.
+
+Below the limit, the Deluxe continuation leaves that normal replay knock
+alone. At the limit, or for a non-replay Special action, it calls the same
+`D3A6` knocker routine once, restores the `165F` audit pointer, and resumes
+`C1DE`. The original award and audit processing still occur once. This keeps
+credits capped, preserves the sound (including the right-orbit double sound),
+and also knocks when a Special selects points, Extra Ball, or no operator
+award. Ordinary credit/replay paths are unchanged.
+
+`D3A6` selects M14 (Knocker, J7-2) through the unchanged blocking helper at
+`F5C2`, with its existing ten-tick pulse and twelve-tick recovery delay.
+The PIA writes and interrupt-driven release are unchanged. The build checks
+these exact pulse bytes, and local tests check one on/off event pair per
+Special. That evidence does not establish physical-machine I/O safety.
+
 ## Repeating B-A-L-L Extra Ball and Special awards
 
 The completed-word hook at `CCD4` increments the authoritative active-player
