@@ -25,7 +25,7 @@ $RightStep = 20000
 $SpinnerSteps = @(1000, 3000, 4000, 5000, 6000, 8000, 9000)
 $SpinnerUnlit = 10
 $Fps = (Get-EbcNames).FramesPerSecond
-$SpinnerStopFrames = $Fps * 11
+$SpinnerStopFrames = $Fps * 13
 # Frames read after the activating sink and after the E-I-G-H-T hit: past
 # any preview (about three seconds plus 20%).
 $WatchFrames = [int]($Fps * 3 * 1.2) + 60

@@ -147,8 +147,13 @@ $deluxeHookChecks = @(
     @{ Address = 0xD3B3; Bytes = [byte[]](0x7D, 0x10, 0xFC); Name = 'independent spinner collecting overlay active flag' }
     @{ Address = 0xD3B8; Bytes = [byte[]](0xFE, 0x11, 0x17); Name = '16-bit spinner collecting inactivity countdown' }
     @{ Address = 0xD4E2; Opcode = 0xBD; Target = 'DELUXE_TEST_SPINNER_COLLECT_VALUE_ACTIVE'; Name = 'spinner sound accepts active or collecting overlay' }
+    @{ Address = 0xD50E; Bytes = [byte[]](0xB6, 0x10, 0xFB, 0x84, 0x07); Name = 'spinner collect transition tests main state independently of timer' }
     @{ Address = 0xD513; Opcode = 0xBD; Target = 'DELUXE_BEGIN_SPINNER_COLLECTING'; Name = 'first spinner pulse releases orbit location immediately' }
-    @{ Address = 0xD516; Opcode = 0xBD; Target = 'DELUXE_RELOAD_SPINNER_COLLECTING_TIMER'; Name = 'first and continuing spinner pulse ten-second timer refresh' }
+    @{ Address = 0xDE49; Opcode = 0x7E; Target = 'DELUXE_CONSUME_QUALIFIED_SPINNER'; Name = 'qualified spinner guard preserves concurrent orbit activation' }
+    @{ Address = 0xD516; Opcode = 0xBD; Target = 'DELUXE_RELOAD_SPINNER_COLLECTING_TIMER'; Name = 'first and continuing spinner pulse adjustable timer refresh' }
+    @{ Address = 0xE5B2; Opcode = 0xBD; Target = 'DELUXE_INITIALIZE_SPINNER_ADJUSTMENT'; Name = 'persistent register 52 initialization' }
+    @{ Address = 0xE709; Opcode = 0xBD; Target = 'DELUXE_SELECT_ADJUSTMENT_TABLE'; Name = 'register 52 service-table selection' }
+    @{ Address = 0xFA56; Bytes = [byte[]](52, 0x16, 0x8E, 2, 0x60, 0xFF); Name = 'register 52 two-digit descriptor and maximum 60' }
     @{ Address = 0xD519; Bytes = [byte[]](0x01, 0x01); Name = 'spinner timer refresh fixed-address padding' }
     @{ Address = 0xD530; Opcode = 0x7E; Target = 'AWARD_B_HUNDRED_WITH_PLAYFIELD_MULTIPLIER'; Name = 'spinner collecting retains lit multiplied scoring' }
     @{ Address = 0xC1AC; Opcode = 0xBD; Target = 'DELUXE_FLASH_DROP_TARGET_LAMPS'; Name = 'canonical-cadence called drop-target lamp flash' }
@@ -190,7 +195,7 @@ $deluxeHookChecks = @(
     @{ Address = 0xCCE9; Opcode = 0x7E; Target = 'DELUXE_AWARD_BALL_LETTER_COMPLETION'; Name = 'repeating B-A-L-L Extra Ball/Special dispatcher' }
     @{ Address = 0xCB07; Opcode = 0x7E; Target = 'DELUXE_ADVANCE_CHAMP'; Name = 'CHAMP completion handler' }
     @{ Address = 0xD56E; Bytes = [byte[]](0xC6, 0x03, 0x7E, 0xC9, 0xA6); Name = 'CHAMP 30,000 base through playfield multiplier' }
-    @{ Address = 0xD951; Bytes = [byte[]](0x86, 0x08);       Name = 'approximately 33-percent-faster sunk-ball bonus-step delay' }
+    @{ Address = 0xD951; Bytes = [byte[]](0x86, 0x03);       Name = 'original fastest sunk-ball bonus-step delay on every pass' }
     @{ Address = 0xDA47; Bytes = [byte[]](0xC6, 0x06);       Name = '33-percent-faster completed B-A-L-L bonus-step delay' }
     @{ Address = 0xCB55; Opcode = 0x7E; Target = 'DELUXE_HANDLE_ORBIT'; Name = 'left/right orbit handler' }
     @{ Address = 0xD598; Bytes = [byte[]](0xC1, 0x2A, 0x26, 0x0C, 0xB6, 0x10, 0xFF, 0x26, 0x07, 0xC6, 0x29, 0xBD, 0xCA, 0xAA, 0x20, 0x0A); Name = 'terminal right orbit substitutes left-orbit sound before queueing' }
@@ -290,6 +295,11 @@ foreach ($qualifiedState in @(0x00, 0x80)) {
 
 $vectorNames = @('SCI', 'timer overflow', 'timer output compare', 'timer input capture',
     'external IRQ', 'SWI', 'NMI', 'reset')
+$adjustmentsStart = Get-DasmSymbolAddress 'DELUXE_SPINNER_ADJUSTMENT_DESCRIPTOR'
+$adjustmentsEnd = Get-DasmSymbolAddress 'DELUXE_ADJUSTMENTS_END'
+if ($adjustmentsStart -ne 0xFA56 -or $adjustmentsEnd -gt 0xFFF0) {
+    throw 'Deluxe adjustment expansion overlaps canonical helpers or vectors.'
+}
 $vectorLines = [System.Collections.Generic.List[string]]::new()
 for ($vectorIndex = 0; $vectorIndex -lt $vectorNames.Count; $vectorIndex++) {
     $offset = 0x3FF0 + ($vectorIndex * 2)
@@ -310,6 +320,8 @@ $report = @(
     "Deluxe fixed-address executable checks: $($deluxeHookChecks.Count) (PASS)"
     "Shared saucer/B-A-L-L executable checks: $($sharedBallAwardStateChecks.Count) (PASS)"
     "Shared saucer/B-A-L-L truth-table cases: $sharedBallAwardStateCaseCount (PASS)"
+    "Deluxe adjustment ROM: $('$' + $adjustmentsStart.ToString('X4'))-$('$' + ($adjustmentsEnd - 1).ToString('X4')) (non-overlap PASS)"
+    'Spinner register 52: 0-60 seconds; 0 uses 12 seconds; 120 ticks/second'
     $vectorLines
 )
 

@@ -189,14 +189,17 @@ public static class EightBallChampMachine {
         if (!paused.WaitOne(0)) throw new InvalidOperationException(what + ": the emulation thread is not paused.");
     }
 
-    public static void Start(string vpmPath) {
+    public static void Start(string vpmPath, bool preserveNvram = false) {
         if (libraryHandle == IntPtr.Zero) throw new InvalidOperationException("Call LoadLibrary first.");
         // libpinmame keeps process-wide state between runs (zip cache, sound-board
         // state), so only the first boot in a process is trustworthy.
         if (booted) throw new InvalidOperationException("libpinmame allows one boot per process; run each machine in a new pwsh process.");
         booted = true;
         if (!vpmPath.EndsWith("/") && !vpmPath.EndsWith("\\")) vpmPath += Path.DirectorySeparatorChar;
-        foreach (string d in new[] { "nvram", "cfg", "hi" }) { string p = vpmPath + d; if (Directory.Exists(p)) Directory.Delete(p, true); }
+        foreach (string d in new[] { "nvram", "cfg", "hi" }) {
+            if (d == "nvram" && preserveNvram) continue;
+            string p = vpmPath + d; if (Directory.Exists(p)) Directory.Delete(p, true);
+        }
         state = -1; frame = 0; target = 0; lastDisplay = -1; stopping = false; stopped = false; faulted = false;
         paused.Reset();
         lock (gate) { events = new List<string>(); logs = new List<string>(); disp = new Dictionary<int, string>(); closed = false; }
@@ -321,11 +324,13 @@ function Start-EbcMachine {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string]$LibraryPath,
-        # Folder holding roms/eballchp.zip; its nvram/, cfg/ and hi/ are cleared first.
-        [Parameter(Mandatory = $true)][string]$VpmPath
+        # Folder holding roms/eballchp.zip; cfg/ and hi/ are cleared first.
+        [Parameter(Mandatory = $true)][string]$VpmPath,
+        # Only persistence tests opt in; normal boots always use fresh NVRAM.
+        [switch]$PreserveNvram
     )
     [EightBallChampMachine]::LoadLibrary((Resolve-Path -LiteralPath $LibraryPath).Path)
-    [EightBallChampMachine]::Start((Resolve-Path -LiteralPath $VpmPath).Path)
+    [EightBallChampMachine]::Start((Resolve-Path -LiteralPath $VpmPath).Path, [bool]$PreserveNvram)
 }
 
 function Stop-EbcMachine { [EightBallChampMachine]::Stop() }

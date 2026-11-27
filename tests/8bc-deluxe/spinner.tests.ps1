@@ -51,20 +51,19 @@ $TierSound = @{ 10 = $Sound100; 100 = $Sound1K; 300 = $Sound3K; 400 = $Sound3K; 
 # awards 250 at 1x, 500 at 2x, 750 at 3x.
 $LetterAward = @{ 1 = 250; 2 = 500; 3 = 750 }
 # CHAMP completions 2 and 4 light 2x and 3x (gamerules.md "CHAMP").
-# The preview is about three seconds. Spinner collecting now uses a 600-tick
-# hardware timeout (about ten seconds). DELUXE_PERIODIC_TICK runs twice per
-# libpinmame video frame, so the expected emulator duration is 300 frames.
+# The preview is about three seconds. Register 52 = 0 uses the 12-second default. DELUXE_PERIODIC_TICK runs twice
+# per 60 Hz libpinmame video frame, giving 1440 ticks / 720 frames.
 $Fps = (Get-EbcNames).FramesPerSecond
 $PreviewMin = [int]($Fps * 3 * 0.8); $PreviewMax = [int]($Fps * 3 * 1.2)
-$SpinnerCollectingTicks = 0x0258
+$SpinnerCollectingTicks = 12 * 120
 $PeriodicTicksPerFrame = 2
 $StopFrames = [int]($SpinnerCollectingTicks / $PeriodicTicksPerFrame)
 $StopMin = [int]($StopFrames * 0.8); $StopMax = [int]($StopFrames * 1.2)
-# Pulses 200 frames apart keep spinning; four of them span 800 frames, longer
+# Pulses 500 frames apart keep spinning; four of them span 2000 frames, longer
 # than the longest emulated stop window ($StopMax), so they score only if each
 # refreshes the timer. A pulse $StopMin - 1 frames after the last is still
-# within the ten-second hardware timeout; one $StopMax + 6 frames after is past it.
-$RefreshGap = 200
+# within the 12-second timeout; one $StopMax + 6 frames after is past it.
+$RefreshGap = 500
 $GapsAt100 = @(0, $RefreshGap, $RefreshGap, $RefreshGap, $RefreshGap, ($StopMin - 1), ($StopMax + 6))
 # Register 49 (OPS manual p. 1-5, "Spinner start at": 1 = 1000 points). The
 # doc starts every ball at the printed 1,000; the setting is made explicit.
@@ -339,7 +338,7 @@ $Collected = $script:Collected
 # frames from that pulse's closure (read only, reported with the stop item).
 $lastLit = @($seq100.Pulses | Where-Object { $_.Score -eq 100 })[-1].At
 $stopFrames = -1; for ($k = $lastLit; $k -lt $seq100.Timer.Count; $k++) { if ($seq100.Timer[$k] -eq 0) { $stopFrames = $k - $lastLit + 1; break } }
-Write-Host ("spinner collecting ended {0} frames after the last lit pulse (DELUXE_SPINNER_COLLECTING_TICKS 0258 at 2 ticks per frame); previews lit runs (from the letter's closure, +frames): I [{1}], G [{2}], G at 2x [{3}]" -f $stopFrames, (Format-Runs $p1), (Format-Runs $p3), (Format-Runs $p4))
+Write-Host ("spinner collecting ended {0} frames after the last lit pulse (register 52 = 0, default 1440 ticks at 2 ticks per frame); previews lit runs (from the letter's closure, +frames): I [{1}], G [{2}], G at 2x [{3}]" -f $stopFrames, (Format-Runs $p1), (Format-Runs $p3), (Format-Runs $p4))
 
 Test-EbcItem -Name 'Spinner values and lamps advance through the weighted binary states (printed 1,000 -> 3,000 -> 4,000 -> 5,000 -> 6,000 -> 8,000 -> 9,000, scoring 100 -> 300 -> 400 -> 500 -> 600 -> 800 -> 900), and the visible lamp combinations include both 8K and 9K' -Doc "$Doc; $Spin" -Body {
     # The value each activation shows (one new letter between activations),
@@ -438,7 +437,7 @@ Test-EbcItem -Name 'Every continuing spinner pulse retains its lit value and mul
     $want = @(0..4 | ForEach-Object { "1x pulse at +$($_ * $RefreshGap): 100" }) + @(0..2 | ForEach-Object { "2x pulse at +$($_ * $RefreshGap): 1800" }) + @(0..2 | ForEach-Object { "3x pulse at +$($_ * $RefreshGap): 2700" })
     Assert-EbcEqual -Expected $want -Actual $seen -What 'continuing pulses'
 }
-Test-EbcItem -Name "Roughly ten hardware seconds with no pulse ends spinner scoring (libpinmame timing window: $StopMin-$StopMax frames)" -Doc "$Doc; $Spin" -Body {
+Test-EbcItem -Name "Twelve seconds at register 52 = 0 with no pulse ends spinner scoring (libpinmame timing window: $StopMin-$StopMax frames)" -Doc "$Doc; $Spin" -Body {
     # A pulse $($StopMin - 1) frames after the last is inside the window, so
     # still lit; one $($StopMax + 6) frames after that is past it.
     $seen = @($seq100.Pulses[5..6] | ForEach-Object { "pulse $($_.At - $seq100.At[[Array]::IndexOf($seq100.At, $_.At) - 1]) frames after the previous: $($_.Score)" })

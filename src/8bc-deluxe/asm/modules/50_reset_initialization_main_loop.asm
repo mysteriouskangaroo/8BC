@@ -328,7 +328,9 @@ PIA_INITIALIZATION:
         dc.b $7F,$10,$09                                     ; $E5AB unconfirmed: CLR $1009
         dc.b $0E                                             ; $E5AE unconfirmed: CLI
         dc.b $BD,$EE,$F2                                     ; $E5AF unconfirmed: JSR $eef2
-        dc.b $BD,$EA,$7F                                     ; $E5B2 unconfirmed: JSR $ea7f
+; Validate the new battery-backed adjustment, then perform the displaced
+; canonical adjustment-checksum/default initialization at EA7F.
+        JSR DELUXE_INITIALIZE_SPINNER_ADJUSTMENT              ; $E5B2
         dc.b $BD,$F9,$63                                     ; $E5B5 unconfirmed: JSR $f963
         dc.b $FE,$C0,$7F                                     ; $E5B8 unconfirmed: LDX $c07f
         dc.b $AD,$00                                         ; $E5BB unconfirmed: JSR $0,X
@@ -483,7 +485,10 @@ PROCESS_SWITCH_EVENTS:
         dc.b $B7,$10,$69                                     ; $E702 unconfirmed: STAA $1069
         dc.b $B7,$10,$6A                                     ; $E705 unconfirmed: STAA $106a
         dc.b $39                                             ; $E708 unconfirmed: RTS
-        dc.b $CE,$EA,$D5,$8D,$09,$5D,$26,$05,$FE,$C0,$B1,$8D,$01,$39,$B6,$00 ; $E709 data/unclassified
+; E717 scans five-byte descriptors. Select a one-entry table for register 52;
+; every other number retains the canonical primary and extension tables.
+        JSR DELUXE_SELECT_ADJUSTMENT_TABLE                    ; $E709
+        dc.b $8D,$09,$5D,$26,$05,$FE,$C0,$B1,$8D,$01,$39,$B6,$00 ; $E70C
         dc.b $8D,$E6,$00,$C1,$FF,$27,$09,$A1,$00,$27,$06,$C6,$05,$3A,$20,$F1 ; $E719 data/unclassified
         dc.b $5F,$39,$4F,$20,$22,$86,$01,$20,$1E,$86,$02,$20,$1A,$86,$03,$20 ; $E729 data/unclassified
         dc.b $16,$86,$04,$20,$12,$86,$05,$20,$0E,$86,$06,$20,$0A,$86,$07,$20 ; $E739 data/unclassified

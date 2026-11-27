@@ -368,12 +368,43 @@ The three physical paths that end an active collect call
 inactive state: either orbit chase advances to spinner inactive, and spinner
 first-pulse collection advances the main location to orbit inactive. That same
 pulse sets the active flag at `10FC` and loads the big-endian 16-bit inactivity
-timer at `1117-1118` with `0258`, creating a separate spinner-collecting scoring
-overlay for approximately ten seconds; every continuing pulse retains the lit
-value and refreshes the full timer. Because
-the location is already orbit inactive, a newly sunk pool ball can activate it
-before the spinner stops. Timer expiration ends only the overlay and never
-overwrites the possibly reactivated orbit state. The helper requires both
+timer at `1117-1118` from service register **52**, creating a separate
+spinner-collecting scoring overlay. The binary setting is split
+across the high nibbles at `168E-168F` (low nibble first): 12 stores `C0,00`
+and 60 stores `C0,30`. It accepts 0-60 seconds; zero/unset means 12.
+Each continuing pulse
+retains the lit value and reloads `seconds * 120` ticks (1440 by default,
+7200 maximum). The observed cadence is two ticks per 60 Hz libpinmame frame;
+the previous fixed 600 ticks lasted five emulator seconds despite earlier
+ten-second hardware comments. The operator reports different timing on the
+actual machine; register 52 allows local tuning without another ROM change.
+
+The `E709` lookup hook selects a five-byte descriptor for register 52 in
+previously unused ROM at `FA56`; all other registers retain their original
+lookup tables. Canonical `E96E` code reads, validates (maximum BCD `60`),
+writes and displays the setting. The `E5B2` hook validates the new NVRAM
+value after startup RAM recovery and on service Cancel, resets invalid
+legacy values to zero, then tail-calls the displaced `EA7F` initialization.
+The reload entry keeps its old address and jumps into the high-ROM helper,
+which preserves B/X and uses one fixed-cost MUL instruction. No low-level I/O
+interrupt or output timing routine is edited.
+
+Because the location is already orbit inactive, a newly sunk pool ball can activate it
+before the spinner stops. The pulse hook at `D50E-D513` passes the masked
+main collect state to `DELUXE_CONSUME_QUALIFIED_SPINNER`: only state `06`
+consumes a spinner collect and releases the orbit. This check is independent
+of the timer flag, so another newly qualified spinner can be consumed while
+a previous scoring window is still running. Activation itself does not call
+the relight helper. If the saucer award is collected during a spinner window,
+further pulses without a newly qualified collect keep it dark: they refresh
+the timer but cannot clear the waiting flag or set authorization.
+A pulse with only that old window
+active preserves any newer orbit state and cannot qualify a saucer award.
+Previously the hook skipped the transition whenever the old timer flag was
+set, leaving a requalified spinner stuck active until the window expired.
+Timer expiration ends only the overlay and never
+overwrites the possibly reactivated orbit state.
+`DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION` requires both
 `10C1` bit `08`
 and the waiting flag, then clears waiting, sets the generic
 collect-deactivation authorization, and installs the next full blinking mask.
@@ -399,12 +430,27 @@ Each loads the authoritative `1149` value, runs the complete bonus pass that
 many times, and uses `114A` only as a temporary countdown. This applies the
 same 1x/2x/3x/5x/7x/8x/10x multiplier to both bonus phases.
 
-Deluxe shortens only the selectors consumed by the existing delay calls. The
-sunk-ball/rack selector changes from `$0B` to `$08`, the B-A-L-L pass selector
-from `$10` to `$0C`, the completed-letter selector from `$08` to `$06`, and the
-individual E-I-G-H-T selector from `$09` to `$07`. These nearest-integer
-three-quarter delays make both visible bonus phases about 33% faster without
-changing a counter, score addend, lamp transition, sound, or multiplier pass.
+The canonical dispatcher at `C77D-C7A6` chooses pool-ball wait selectors
+`$03`, `$05`, `$07`, `$09`, then `$0B` for successive multiplier passes.
+`C7A6` saves the selector in `$10BB`; after each sunk-ball award, `C801`
+loads it into B and calls `C919`. That wait stores B in `$100E`, services
+coin events while waiting, and ends when the input-capture interrupt at
+`E07B-E081` has counted the timer down to zero. The outhole rule reaches this
+bonus from `C71D`, with the drain-state snapshots taken before `C765`.
+
+Deluxe uses the original fastest selector, `$03`, on every pool-ball pass
+(previously fixed at `$08`). Partial racks and all eight balls of each
+completed rack keep this rate down to the last ball, at every multiplier.
+The existing pass/rack transition pauses remain. Pool-ball steps still update
+`$10C3`, the selected lamp shadow through `$10B7`/`C83F`, and `$103D`'s
+8-ball indication before the `C7F0` score and `$37` sound. The sound helper
+at `C27E` retains its port `$0002`/`$0003` transfer and strobe timing; the
+lamp serializer still drives PIA0 independently in periodic I/O refresh.
+No interrupt, lamp-refresh, switch-scan or momentary-solenoid code changes.
+
+B-A-L-L and E-I-G-H-T retain their preceding Deluxe timing: pass `$0C`,
+completed-letter `$06`, individual-letter `$07`. Counters, score addends,
+lamp order, sounds, and multiplier pass counts are unchanged in both phases.
 
 ## E-I-G-H-T stand-up targets: scaled 2,500 per hit
 

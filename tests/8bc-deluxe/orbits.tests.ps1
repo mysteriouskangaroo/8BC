@@ -71,9 +71,9 @@ $AwardReplay = 3
 # starts after the chase.
 $PreviewTimer = 0x1115
 # A spinner pulse: unlit 10 ("Spinner"); an active pulse starts spinner
-# collecting, which stops after about ten hardware seconds without a pulse.
+# collecting, which defaults to twelve seconds without a pulse (register 52 = 0).
 $SpinnerUnlit = 10
-$SpinnerStopFrames = $Fps * 11
+$SpinnerStopFrames = $Fps * 13
 
 $ArrowValues = @(10000, 20000, 30000, 40000)
 $ArrowLamps = @($ArrowValues | ForEach-Object { Get-EbcLampNumber ('Rollover Lanes {0:N0}' -f $_) })

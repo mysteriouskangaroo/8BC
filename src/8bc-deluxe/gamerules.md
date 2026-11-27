@@ -121,7 +121,10 @@ does not collect the lit 8-ball is not an activation event.
    active-spinner pulse immediately advances the main location to orbit
    inactive while starting a separate spinner-collecting overlay. The next
    newly sunk ball can therefore activate the orbit even while the spinner is
-   still physically spinning and scoring its lit value.
+   still physically spinning and scoring its lit value. A later spinner
+   qualification is consumed by its own first pulse even if an earlier scoring
+   window is still running. Continuing pulses without a new qualification
+   preserve the current orbit location and its activation.
 4. Sinking additional new pool balls while the current location is already
    active has no collect-state effect. They are not queued for later stages.
 5. Hitting an inactive collect location does not advance the sequence.
@@ -192,7 +195,13 @@ completion milestones, or the C/P anti-shatz latch.
   1,000 sound; printed 3,000 and 4,000 use the 3,000 sound; and printed 5,000,
   6,000, 8,000, and 9,000 use the 5,000 sound.
 - While spinner is collecting, every pulse retains the displayed value and
-  playfield multiplier and refreshes the approximately ten-second stop timer.
+  playfield multiplier and restarts the stop timer selected by operator
+  register **52**. Values **1-60** select seconds; **0** (including an unset
+  register) uses **12 seconds**. The setting persists across games and power
+  cycles and is entered through the normal service keypad. Values above 60
+  are rejected. Timing uses 120 gameplay ticks per second, measured in
+  libpinmame; actual-machine timing can differ, so adjust this value to suit
+  the machine.
 - When that timer expires with no further pulse, the spinner is considered to
   have stopped. Expiration ends only the spinner scoring overlay; it does not
   overwrite the orbit location, which may already have been activated by a
@@ -245,7 +254,10 @@ completion milestones, or the C/P anti-shatz latch.
   10x as 2x+3x+5x, with the complete combination and 100,000 blinking in phase.
 - After any terminal 100,000 has been collected and turned off, either orbit collect
   advancing to spinner inactive or the first active-spinner pulse advancing
-  the location to orbit inactive relights it. A completion before the first
+  the location to orbit inactive relights it. Spinner activation alone does
+  not relight the saucer. Only the first pulse consuming a newly qualified
+  spinner collect can do so; continuing pulses in its scoring window merely
+  refresh the timer and cannot rearm the next saucer award. A completion before the first
   100,000 is available cannot advance or skip the 2x, 3x, or 5x saucer steps.
 - If 100,000 is already lit, later active-to-inactive transitions do nothing.
 - Collecting a lit terminal award consumes that transition authorization,
@@ -336,6 +348,9 @@ completion milestones, or the C/P anti-shatz latch.
 - The selected 1x/2x/3x/5x/7x/8x/10x end-of-ball bonus multiplier applies to the entire
   result. For example, six completed racks contribute `6 * 12,000` before
   the multiplier, plus 1,500 for each sunk ball in the current partial rack.
+- The sunk-pool-ball countdown always uses the original fastest 3-tick step
+  delay, for both partial and completed racks at every multiplier, through the
+  final ball. The short pass/rack transition pauses remain.
 - Each player's completed-rack counter carries across that player's balls and
   is restored after the intervening players' turns. All four counters reset at
   the start of a new game. Each one-byte counter saturates at 255 rather than
@@ -383,10 +398,10 @@ completion milestones, or the C/P anti-shatz latch.
   Each player's counter carries across their later balls, saturates at 255,
   and resets only with a new game. The two-digit display caps at 99 without
   changing the scored count.
-- The complete drain-bonus animation runs about 33% faster than the preceding
-  Deluxe cadence. Sunk-ball/rack steps, completed B-A-L-L chunks, and individual
-  E-I-G-H-T letters all use delays nearest to 75% of their prior values. Scoring,
-  sounds, lamp order, and multiplier passes are otherwise unchanged.
+- The B-A-L-L/E-I-G-H-T animation retains its existing Deluxe cadence, about
+  33% faster than before the earlier bonus speedup (delays nearest to 75% of
+  those earlier values). Scoring, sounds, lamp order, and multiplier passes
+  are unchanged.
 
 ## CHAMP
 
@@ -623,8 +638,11 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
   the displayed value while immediately making the orbit location inactive.
   Before the spinner stops, sink a new pool ball and verify the orbit collect
   lights. Verify every continuing spinner pulse retains its lit value and
-  multiplier and refreshes the stop timer. Roughly ten seconds with no pulse
-  must end only spinner scoring without clearing or moving the orbit state.
+  multiplier and refreshes the stop timer. With register 52 unset or zero,
+  twelve seconds with no pulse must end only spinner scoring without clearing
+  or moving the orbit state. Set register 52 to 1, 12, 30 and 60 and verify
+  the selected seconds, refresh, expiry and persistence through service exit
+  and game end. Verify 61 is rejected and zero restores the 12-second default.
 - Verify the saucer displays and collects 2x, then 3x, then 5x without any
   collect transition changing or skipping those steps. Verify collecting 5x
   immediately lights the first 100,000 regardless of the current collect state.
@@ -649,10 +667,11 @@ in `$1040`, the live rack/letter shadows, or the per-player counters.
 - During that drain bonus, verify the credit display shows `06` for six
   completed racks, remains stable through every multiplier pass, and restores
   the exact prior credit count after the following B-A-L-L bonus finishes.
-- Time representative partial-rack and B-A-L-L/E-I-G-H-T drain bonuses against
-  the preceding Deluxe ROM. Verify both visible countdown phases finish in
-  approximately 75% of their prior time while awarding identical totals and
-  retaining every multiplier pass, sound, and lamp step.
+- Time representative partial-rack and completed-rack drain bonuses. Verify
+  every sunk-ball step uses the original fastest cadence through the final
+  ball of every multiplier pass. Verify the B-A-L-L/E-I-G-H-T phase retains
+  its preceding timing, and both phases retain identical totals, multiplier
+  passes, sounds, and lamp order.
 - Complete E-I-G-H-T at least five times in one ball. Verify all four physical
   B-A-L-L inserts are lit after the fourth completion, begin blinking together
   with the fifth completion, the fifth completion is retained in RAM, and the

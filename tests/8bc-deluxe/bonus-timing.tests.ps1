@@ -1,9 +1,10 @@
 param([string]$Tree, [string]$VpmZip, [string]$ObserveTo)
-# Deluxe drain-bonus timing against the preceding Deluxe ROM: the partial-rack
-# and B-A-L-L/E-I-G-H-T countdown phases take about 75% of their frames at
-# 7d9c960 (the commit before "speedier bonus count", 934986c), with identical
-# totals, multiplier passes, sounds and lamp steps. All by play on one
-# player's first ball: one completed rack and three balls of the next, one
+# Deluxe drain-bonus timing: every partial/completed-rack sunk-ball step uses
+# the original fastest cadence, including the final ball in every pass.
+# B-A-L-L/E-I-G-H-T retains the earlier speedup, about 75% of its frames at
+# 7d9c960, with identical totals, multiplier passes, sounds and lamp steps.
+# All by play on one player's first ball: one completed rack and three balls
+# of the next, one
 # completed E-I-G-H-T word and two letters of the next, at 3x.
 #
 # Phases, defined by sound commands, the same way for both ROMs. The bonus
@@ -42,10 +43,14 @@ $RackValue = 8 * 1500
 # the next B-A-L-L letter adds another 1,000.
 $PartialLetterValue = 1000
 $BallLetterValue = 5 * 1000
-# "Required gameplay verification": both visible countdown phases finish in
-# approximately 75% of their prior time; the brief's window is 75% +/- 5%.
+# B-A-L-L/E-I-G-H-T retains its earlier 75% +/- 5% timing window.
 $TimeRatio = 0.75
 $TimeTolerance = 0.05
+# The original fastest three-tick wait plus the unchanged sound transfer
+# spans two video frames between successive awards (allow one frame of phase
+# alignment). Exclude the separate pass/rack transition pauses from this bound.
+$FastStepMinFrames = 2
+$FastStepMaxFrames = 3
 $SoundRackStep = 0x37
 $SoundLetterStep = 0x38
 
@@ -120,6 +125,7 @@ function Measure-Bonus {
         RackFrames = $first38 - $first37; BallFrames = $endF - $first38
         RackTotal = $rackTotal; BallTotal = $score[$endF] - $before - $rackTotal
         Count37 = $r37.Count; Count38 = $r38.Count
+        RackStepFrames = @($r37 | ForEach-Object { $_.F })
         Sounds = (@($bonusCmds | ForEach-Object { '{0:X2}' -f $_.B }) -join ' ')
         Lamps = ($lampSteps -join ' ')
     }
@@ -155,9 +161,20 @@ function Test-Ratio([string]$What, [int]$Now, [int]$Was) {
     $ratio = $Now / $Was
     Assert-EbcTrue ([Math]::Abs($ratio - $TimeRatio) -le $TimeTolerance + 1e-9) ("{0}: {1} frames, 7d9c960 {2} frames, ratio {3:N3}; expected {4:N2} +/- {5:N2}" -f $What, $Now, $Was, $ratio, $TimeRatio, $TimeTolerance)
 }
-Test-EbcItem -Name 'The partial-rack countdown phase finishes in approximately 75% of its 7d9c960 time (timing window: 75% +/- 5% of the reference frames)' -Doc "$Doc; $Pool" -Body {
-    Assert-Reference
-    Test-Ratio 'partial-rack phase (first $37 to first $38)' $m.RackFrames $Reference.RackFrames
+Test-EbcItem -Name 'Every partial and completed rack counts at the original fastest rate through its final ball on every multiplier pass' -Doc "$Doc; $Pool" -Body {
+    $perPass = $PartialBalls + 8 * $Racks
+    Assert-EbcEqual -Expected ($Multiplier * $perPass) -Actual $m.RackStepFrames.Count -What 'sunk-ball awards across all passes'
+    for ($pass = 0; $pass -lt $Multiplier; $pass++) {
+        # Each pass counts the partial rack, then each complete eight-ball rack.
+        $offset = $pass * $perPass
+        foreach ($count in (@($PartialBalls) + @(@(8) * $Racks))) {
+            for ($step = 1; $step -lt $count; $step++) {
+                $gap = $m.RackStepFrames[$offset + $step] - $m.RackStepFrames[$offset + $step - 1]
+                Assert-EbcTrue ($gap -ge $FastStepMinFrames -and $gap -le $FastStepMaxFrames) "pass $pass, award $($offset + $step): $gap frames; expected $FastStepMinFrames-$FastStepMaxFrames"
+            }
+            $offset += $count
+        }
+    }
 }
 Test-EbcItem -Name 'The B-A-L-L/E-I-G-H-T countdown phase finishes in approximately 75% of its 7d9c960 time (timing window: 75% +/- 5% of the reference frames)' -Doc "$Doc; $BallDoc" -Body {
     Assert-Reference

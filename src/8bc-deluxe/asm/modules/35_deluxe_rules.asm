@@ -234,12 +234,15 @@ DELUXE_SPINNER_QUEUE_SOUND:
 ; the orbit in the meantime. The weighted bits are worth 1k, 3k, and 5k.
         LDAA DELUXE_SPINNER_VALUE_MASK
         STAA $10b1
-        TST DELUXE_SPINNER_COLLECTING_ACTIVE
-        BNE DELUXE_REFRESH_SPINNER_COLLECTING_TIMER
+; A prior scoring window may still be running when another spinner collect
+; becomes qualified. Consume qualification based on the main state, never
+; on the independent scoring flag. Retain these five bytes / fixed callers.
+        LDAA DELUXE_COLLECT_STATE
+        ANDA #DELUXE_COLLECT_STATE_MASK
         JSR DELUXE_BEGIN_SPINNER_COLLECTING
 DELUXE_REFRESH_SPINNER_COLLECTING_TIMER:
 ; Keep the following fixed-address score path in place while a tail helper
-; reloads the new 16-bit ten-second timer and its one-byte active flag.
+; reloads the register-52 16-bit timer and its one-byte active flag.
         JSR DELUXE_RELOAD_SPINNER_COLLECTING_TIMER
         dc.b $01,$01
         CLRB
@@ -1043,6 +1046,10 @@ DELUXE_RUN_RACK_BONUS_MULTIPLIER:
 ; Run the entire pool-rack bonus once per authoritative numeric multiplier
 ; unit. C7A6 reloads the completed-rack count for every pass and returns at
 ; C84A. RTS then returns directly to C765's original caller.
+; Always select the original fastest $03 delay, including the last ball
+; and every multiplier pass. C7A6 stores it in 10BB; C801 loads it for
+; C919, whose 100E wait timer is decremented by E07B-E081. This changes
+; only the bonus wait, not interrupt, switch-scan or coil-pulse timing.
         LDAA DELUXE_HOLE_BONUS_MULTIPLIER
         STAA DELUXE_BONUS_MULTIPLIER_PASSES_REMAINING
 DELUXE_RUN_RACK_BONUS_PASS:
@@ -1997,16 +2004,11 @@ DELUXE_SPINNER_COLLECT_TEST_TRUE:
         RTS
 
 DELUXE_BEGIN_SPINNER_COLLECTING:
-; The first pulse consumes spinner active immediately, making orbit inactive
-; and available to the next newly sunk pool ball. The timer preserves spinner
-; value scoring independently until physical rotation stops. This is the one
-; active-to-inactive transition that may qualify the next saucer 100K stage.
-        LDAA DELUXE_COLLECT_STATE
-        ANDA #$c0
-        ORAA #DELUXE_COLLECT_DUAL_ORBIT
-        STAA DELUXE_COLLECT_STATE
-        JSR DELUXE_RELIGHT_100000_ON_COLLECT_DEACTIVATION
-        RTS
+; Every lit pulse checks the main-state qualification, even if an earlier
+; spinner scoring window is still running. Keep the public entry/following
+; rules fixed; a continuing pulse must preserve a newly activated orbit.
+        JMP DELUXE_CONSUME_QUALIFIED_SPINNER
+        ds.b 11,$01
 
 DELUXE_AWARD_SPECIAL_POINTS:
 ; All original special collectors converge at C1DB. Award an additional
@@ -2053,15 +2055,10 @@ DELUXE_CLEAR_SPINNER_COLLECTING:
         RTS
 
 DELUXE_RELOAD_SPINNER_COLLECTING_TIMER:
-; $0258 ticks is approximately ten seconds at the physical machine's periodic
-; gameplay cadence. Each registered spinner pulse reloads the entire window.
-        LDAA #DELUXE_SPINNER_COLLECTING_TICKS_HIGH
-        STAA DELUXE_SPINNER_COLLECTING_TIMER
-        LDAA #DELUXE_SPINNER_COLLECTING_TICKS_LOW
-        STAA DELUXE_SPINNER_COLLECTING_TIMER+1
-        LDAA #$01
-        STAA DELUXE_SPINNER_COLLECTING_ACTIVE
-        RTS
+; Preserve the established entry and all following rule addresses. The
+; adjustable conversion lives in the second expansion area at FA56.
+        JMP DELUXE_RELOAD_ADJUSTABLE_SPINNER_TIMER
+        ds.b 13,$01
 
 DELUXE_AWARD_CURRENT_ORBIT_VALUE_AGAIN:
 ; DELUXE_HANDLE_ACTIVE_RIGHT_ORBIT jumps here without growing or moving the

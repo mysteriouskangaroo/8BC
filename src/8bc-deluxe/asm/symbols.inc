@@ -82,7 +82,8 @@ DELUXE_ORBIT_PREVIEW_TIMER                   equ $1115
 ; sound hook uses it to send "Super" twice; award processing remains single.
 DELUXE_DOUBLE_RIGHT_ORBIT_SPECIAL_SOUND      equ $1116
 ; Big-endian 16-bit spinner-collecting inactivity countdown. The periodic
-; gameplay hook runs at about 60 Hz on hardware; $0258 is about ten seconds.
+; gameplay hook runs twice per 60 Hz libpinmame frame. Register 52 supplies
+; seconds at 120 ticks/second; physical duration still needs machine testing.
 DELUXE_SPINNER_COLLECTING_TIMER              equ $1117
 DELUXE_PHASE_B_LAMP_OUTPUT_BUFFER             equ $1119
 ; Temporary sunk-ball award display. The seven digit bytes use the canonical
@@ -138,6 +139,10 @@ EXTRA_BALL_LAMP_STATE_CLEAR_MASK                   equ $FC
 ; starts flashing and is collected with B; clear delays it until A.
 X_BALL_OPTION_PACKED_REGISTER                    equ $168B
 X_BALL_AT_B_SETTING_BIT                          equ $40
+; Register 52 uses the canonical two-digit adjustment format: binary low/high
+; nibbles in the high nibbles of two battery-backed bytes (F18E decodes it).
+DELUXE_SPINNER_SECONDS_REGISTER                 equ $168E
+DELUXE_SPINNER_SECONDS_REGISTER_TENS            equ $168F
 
 PLAYER_SCORE_DISPLAY_START                    equ $1046
 PLAYER_SCORE_DISPLAY_END                      equ $1062
@@ -195,9 +200,8 @@ DELUXE_SPINNER_1000_LAMP                     equ $20
 DELUXE_SPINNER_3000_LAMP                     equ $40
 DELUXE_SPINNER_5000_LAMP                     equ $80
 DELUXE_SPINNER_ALL_VALUE_LAMPS               equ $E0
-DELUXE_SPINNER_COLLECTING_TICKS              equ $0258
-DELUXE_SPINNER_COLLECTING_TICKS_HIGH         equ $02
-DELUXE_SPINNER_COLLECTING_TICKS_LOW          equ $58
+DELUXE_SPINNER_DEFAULT_SECONDS              equ 12
+DELUXE_SPINNER_TICKS_PER_SECOND             equ 120
 ; $BF is about 3.2 seconds at this tick rate and begins bit 4 at the start of
 ; a complete visible blink phase instead of entering halfway through one.
 DELUXE_SPINNER_PREVIEW_TICKS                 equ $BF
@@ -214,7 +218,9 @@ DELUXE_SUNK_BALL_SCORE_BLINK_BIT              equ $10
 DELUXE_SUNK_BALL_SCORE_OVERLAY_ACTIVE         equ $A5
 DELUXE_SCORE_DISPLAY_BLANK_DIGIT              equ $F0
 DELUXE_SCORE_DISPLAY_BACKUP_OFFSET            equ DELUXE_SUNK_BALL_SCORE_DISPLAY_BACKUP-PLAYER_SCORE_DISPLAY_START
-DELUXE_RACK_BONUS_STEP_DELAY                 equ $08
+; Original C77D selects $03 for its fastest pool-ball multiplier pass.
+; Use that cadence for every partial/completed rack, down to the last ball.
+DELUXE_RACK_BONUS_STEP_DELAY                 equ $03
 DELUXE_BALL_BONUS_PASS_DELAY                 equ $0c
 DELUXE_BALL_BONUS_STEP_DELAY                 equ $06
 DELUXE_EIGHT_BONUS_LETTER_DELAY              equ $07
